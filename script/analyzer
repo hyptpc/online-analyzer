@@ -15,14 +15,15 @@ ana_dir=$(dirname $(readlink -f $0))/..
 bin_dir=$ana_dir/bin
 
 ##### execute file
-exe_file=$bin_dir/raw_hist_e70
+exe_file=$bin_dir/jsroot
 
 ##### data directory
 data_dir=($ana_dir/data $ana_dir/data_bench)
 
 ##### configure file
 # Do NOT change here. Change symbolic link.
-conf_file=/misc/software/param/conf/analyzer.conf
+#conf_file=/misc/software/param/conf/analyzer.conf
+conf_file=$HOME/param/conf/tohoku_20241029.conf
 
 #######################################################################
 if [ ! -f $exe_file ]; then

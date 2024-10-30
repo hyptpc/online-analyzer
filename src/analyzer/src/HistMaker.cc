@@ -277,6 +277,32 @@ HistMaker::createTimeStamp( Bool_t flag_ps )
 
 //_____________________________________________________________________________
 TList*
+HistMaker::createCaenV792(Bool_t flag_ps)
+{
+  TString strDet = "CaenV792";
+  name_created_detectors_.push_back(strDet);
+  if(flag_ps){
+    name_ps_files_.push_back(strDet);
+  }
+  const char* nameDetector = strDet.Data();
+  TList *top_dir = new TList;
+  top_dir->SetName(nameDetector);
+
+  const Int_t n_seg = 32;
+  { ///// ADC
+    Int_t target_id = getUniqueID(kCaenV792, 0, kADC);
+    for(Int_t i = 0; i<n_seg; ++i){
+      auto title = Form("%s_ADC_%d", nameDetector, i);
+      top_dir->Add(createTH1(target_id + i, title,
+			     0x1000, 0, 0x1000,
+			     "ADC [ch]", ""));
+    }
+  }
+  return top_dir;
+}
+
+//_____________________________________________________________________________
+TList*
 HistMaker::createBH1(Bool_t flag_ps)
 {
   TString strDet = CONV_STRING(kBH1);
