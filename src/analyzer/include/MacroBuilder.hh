@@ -39,8 +39,12 @@ TCanvas* HitPatternScat();
 TCanvas* TriggerFlagU();
 TCanvas* TriggerFlagD();
 TCanvas* TriggerFlagHitPat();
+
 TCanvas* CaenV792_00_15();
 TCanvas* CaenV792_16_31();
+TCanvas* HulHrTdc_00_15();
+TCanvas* HulHrTdc_16_31();
+
 TCanvas* BH1ADC();
 TCanvas* BH1TDC();
 TCanvas* BFT();

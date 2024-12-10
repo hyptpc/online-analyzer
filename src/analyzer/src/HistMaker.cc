@@ -277,9 +277,9 @@ HistMaker::createTimeStamp( Bool_t flag_ps )
 
 //_____________________________________________________________________________
 TList*
-HistMaker::createCaenV792(Bool_t flag_ps)
+HistMaker::createHODO(Bool_t flag_ps)
 {
-  TString strDet = "CaenV792";
+  TString strDet = "HODO";
   name_created_detectors_.push_back(strDet);
   if(flag_ps){
     name_ps_files_.push_back(strDet);
@@ -290,7 +290,7 @@ HistMaker::createCaenV792(Bool_t flag_ps)
 
   const Int_t n_seg = 32;
   { ///// ADC
-    Int_t target_id = getUniqueID(kCaenV792, 0, kADC);
+    Int_t target_id = getUniqueID(kHODO, 0, kADC);
     for(Int_t i = 0; i<n_seg; ++i){
       auto title = Form("%s_ADC_%d", nameDetector, i);
       top_dir->Add(createTH1(target_id + i, title,
@@ -298,6 +298,25 @@ HistMaker::createCaenV792(Bool_t flag_ps)
 			     "ADC [ch]", ""));
     }
   }
+  { ///// ADCwTDC
+    Int_t target_id = getUniqueID(kHODO, 0, kADCwTDC);
+    for(Int_t i = 0; i<n_seg; ++i){
+      auto title = Form("%s_ADCwTDC_%d", nameDetector, i);
+      top_dir->Add(createTH1(target_id + i, title,
+			     0x1000, 0, 0x1000,
+			     "ADC [ch]", ""));
+    }
+  }
+  { ///// TDC
+    Int_t target_id = getUniqueID(kHODO, 0, kTDC);
+    for(Int_t i = 0; i<n_seg; ++i){
+      auto title = Form("%s_TDC_%d", nameDetector, i);
+      top_dir->Add(createTH1(target_id + i, title,
+			     10000, 0, 400000,
+			     "TDC [ch]", ""));
+    }
+  }
+
   return top_dir;
 }
 
@@ -373,7 +392,7 @@ HistMaker::createBH1(Bool_t flag_ps)
       }
       sub_dir->Add(createTH1(target_id + i+1, title, // 1 origin
 			     //			     10000, 0, 400000,
-     			     50000, 0, 2000000,
+     			     10000, 0, 500000,
 			     "TDC [ch]", ""));
     }
     top_dir->Add(sub_dir);

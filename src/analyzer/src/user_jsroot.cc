@@ -114,7 +114,7 @@ process_begin(const std::vector<std::string>& argv)
      << "width: 100%; height: 100%;'>"
      << "Tag cheker is running" << "</div>";
   gHttp.SetItemField("/Tag", "value", ss.str().c_str());
-  gHttp.Register(gHist.createCaenV792());
+  gHttp.Register(gHist.createHODO());
   // gHttp.Register(gHist.createMatrix());
 
   if(0 != gHist.setHistPtr(hptr_array)){ return -1; }
@@ -122,6 +122,8 @@ process_begin(const std::vector<std::string>& argv)
   //___ Macro for HttpServer
   gHttp.Register(http::CaenV792_00_15());
   gHttp.Register(http::CaenV792_16_31());
+  gHttp.Register(http::HulHrTdc_00_15());
+  gHttp.Register(http::HulHrTdc_16_31());
 
   for(Int_t i=0, n=hptr_array.size(); i<n; ++i){
     hptr_array[i]->SetDirectory(0);
@@ -183,16 +185,33 @@ process_event(void)
     }
   }
 
-  { ///// CaenV792
-    static const auto device_id = gUnpacker.get_device_id("CaenV792");
-    static const auto adc_id = gUnpacker.get_data_id("CaenV792", "adc");
-    static const auto adc_hid = gHist.getSequentialID(kCaenV792, 0, kADC);
+  { ///// HODO
+    static const auto device_id = gUnpacker.get_device_id("HODO");
+    static const auto adc_id = gUnpacker.get_data_id("HODO", "adc");
+    static const auto tdc_id = gUnpacker.get_data_id("HODO", "tdc");
+    static const auto adc_hid = gHist.getSequentialID(kHODO, 0, kADC);
+    static const auto tdc_hid = gHist.getSequentialID(kHODO, 0, kTDC);
+    static const auto awt_hid = gHist.getSequentialID(kHODO, 0, kADCwTDC);
     static const Int_t n_seg = 32;
     for(Int_t seg=0; seg<n_seg; ++seg){
       auto nhit = gUnpacker.get_entries(device_id, 0, seg, 0, adc_id);
+      UInt_t adc = 0;
       if (nhit != 0) {
-	UInt_t adc = gUnpacker.get(device_id, 0, seg, 0, adc_id);
+	adc = gUnpacker.get(device_id, 0, seg, 0, adc_id);
 	hptr_array[adc_hid + seg]->Fill(adc);
+      }
+      Bool_t hit_flag = false;
+      for(Int_t m=0, n=gUnpacker.get_entries(device_id, 0, seg, 0, tdc_id);
+	  m<n; ++m) {
+	auto tdc = gUnpacker.get(device_id, 0, seg, 0, tdc_id, m);
+	if (tdc != 0) {
+	  hptr_array[tdc_hid + seg]->Fill(tdc);
+	  // ADC wTDC
+	  hit_flag = true;
+	}
+	if (hit_flag) {
+	  hptr_array[awt_hid + seg]->Fill(adc);
+	}
       }
     }
 #if 0

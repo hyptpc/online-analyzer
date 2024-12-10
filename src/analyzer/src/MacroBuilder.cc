@@ -132,23 +132,69 @@ CaenV792_00_15()
   c1->Divide(4, 4);
   for(Int_t i=0; i<16; ++i){
     c1->cd(i+1)->SetLogy();
-    auto h1id = HistMaker::getUniqueID(kCaenV792, 0, kADC, i+1);
+    auto h1id = HistMaker::getUniqueID(kHODO, 0, kADC, i+1);
+    auto h1 = GHist::get(h1id);
+    if(!h1) continue;
+    // h1->GetXaxis()->SetRangeUser(0, 2000);
+    h1->Draw();
+    auto h2id = HistMaker::getUniqueID(kHODO, 0, kADCwTDC, i+1);
+    auto h2 = GHist::get(h2id);
+    if(!h2) continue;
+    // h2->GetXaxis()->SetRangeUser(0, 2000);
+    h2->SetLineColor(kRed+1);
+    h2->Draw("same");
+  }
+  return c1;
+}
+  
+//_____________________________________________________________________________
+TCanvas*
+CaenV792_16_31()
+{
+  auto c1 = new TCanvas(__func__, __func__);
+  c1->Divide(4, 4);
+  for(Int_t i=0; i<16; ++i){
+    c1->cd(i+1)->SetLogy();
+    auto h1id = HistMaker::getUniqueID(kHODO, 0, kADC, i+17);
     auto h1 = GHist::get(h1id);
     if(!h1) continue;
     h1->GetXaxis()->SetRangeUser(0, 2000);
+    h1->Draw();
+    auto h2id = HistMaker::getUniqueID(kHODO, 0, kADCwTDC, i+17);
+    auto h2 = GHist::get(h2id);
+    if(!h2) continue;
+    h2->GetXaxis()->SetRangeUser(0, 2000);
+    h2->SetLineColor(kRed+1);
+    h2->Draw("same");
+  }
+  return c1;
+}
+
+//_____________________________________________________________________________
+TCanvas*
+HulHrTdc_00_15()
+{
+  auto c1 = new TCanvas(__func__, __func__);
+  c1->Divide(4, 4);
+  for(Int_t i=0; i<16; ++i){
+    c1->cd(i+1)->SetLogy();
+    auto h1id = HistMaker::getUniqueID(kHODO, 0, kTDC, i+1);
+    auto h1 = GHist::get(h1id);
+    if(!h1) continue;
     h1->Draw();
   }
   return c1;
 }
   
 //_____________________________________________________________________________
-TCanvas* CaenV792_16_31()
+TCanvas*
+HulHrTdc_16_31()
 {
   auto c1 = new TCanvas(__func__, __func__);
   c1->Divide(4, 4);
   for(Int_t i=0; i<16; ++i){
     c1->cd(i+1)->SetLogy();
-    auto h1id = HistMaker::getUniqueID(kCaenV792, 0, kADC, i+17);
+    auto h1id = HistMaker::getUniqueID(kHODO, 0, kTDC, i+17);
     auto h1 = GHist::get(h1id);
     if(!h1) continue;
     h1->GetXaxis()->SetRangeUser(0, 2000);
