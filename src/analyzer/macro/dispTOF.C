@@ -1,27 +1,24 @@
-#include "DetectorID.hh"
-
 // Updater belongs to the namespace hddaq::gui
 using namespace hddaq::gui;
 
-#include "UserParamMan.hh"
-
 void dispTOF()
 {
-  const UserParamMan& gUser = UserParamMan::GetInstance();
   // You must write these lines for the thread safe
   // ----------------------------------
   if(Updater::isUpdating()){return;}
   Updater::setUpdating(true);
   // ----------------------------------
 
+  const int n_seg = 24;
+
   // draw ADC U
   {
     TCanvas *c = (TCanvas*)gROOT->FindObject("c1");
     c->Clear();
-    c->Divide(5,4);
-    int adc_id     = HistMaker::getUniqueID( kTOF, 0, kADC );
-    int adcwtdc_id = HistMaker::getUniqueID( kTOF, 0, kADCwTDC );
-    for( int i=0; i<NumOfSegTOF; ++i ){
+    c->Divide(6,4);
+    int adc_id     = HistMaker::getUniqueID( kTOF, 0, kADC, 1 );
+    int adcwtdc_id = HistMaker::getUniqueID( kTOF, 0, kADCwTDC, 1 );
+    for( int i=0; i<n_seg; ++i ){
       c->cd(i+1);
       gPad->SetLogy();
       TH1 *h = (TH1*)GHist::get( adc_id + i );
@@ -41,10 +38,10 @@ void dispTOF()
   {
     TCanvas *c = (TCanvas*)gROOT->FindObject("c2");
     c->Clear();
-    c->Divide(5,4);
-    int adc_id     = HistMaker::getUniqueID(kTOF, 0, kADC, 1+NumOfSegTOF);
-    int adcwtdc_id = HistMaker::getUniqueID(kTOF, 0, kADCwTDC, 1+NumOfSegTOF);
-    for( int i=0; i<NumOfSegTOF; ++i ){
+    c->Divide(6,4);
+    int adc_id     = HistMaker::getUniqueID(kTOF, 0, kADC, 1+n_seg);
+    int adcwtdc_id = HistMaker::getUniqueID(kTOF, 0, kADCwTDC, 1+n_seg);
+    for( int i=0; i<n_seg; ++i ){
       c->cd(i+1);
       gPad->SetLogy();
       TH1 *h = (TH1*)GHist::get( adc_id + i );
@@ -60,20 +57,15 @@ void dispTOF()
     c->Update();
   }
 
-  //TOF TDC gate range
-  static const unsigned int tdc_min = gUser.GetParameter("TdcTOF", 0);
-  static const unsigned int tdc_max = gUser.GetParameter("TdcTOF", 1);
-
   // draw TDC U
   {
     TCanvas *c = (TCanvas*)gROOT->FindObject("c3");
     c->Clear();
-    c->Divide(5,4);
-    int tdc_id = HistMaker::getUniqueID( kTOF, 0, kTDC );
-    for( int i=0; i<NumOfSegTOF; ++i ){
+    c->Divide(6,4);
+    int tdc_id = HistMaker::getUniqueID( kTOF, 0, kTDC, 1 );
+    for( int i=0; i<n_seg; ++i ){
       c->cd(i+1);
       TH1 *h = (TH1*)GHist::get( tdc_id + i );
-      h->GetXaxis()->SetRangeUser( tdc_min, tdc_max );
       if( h ) h->Draw();
     }
     c->Update();
@@ -83,12 +75,11 @@ void dispTOF()
   {
     TCanvas *c = (TCanvas*)gROOT->FindObject("c4");
     c->Clear();
-    c->Divide(5,4);
-    int tdc_id = HistMaker::getUniqueID( kTOF, 0, kTDC, 1+NumOfSegTOF );
-    for( int i=0; i<NumOfSegTOF; ++i ){
+    c->Divide(6,4);
+    int tdc_id = HistMaker::getUniqueID( kTOF, 0, kTDC, 1+n_seg );
+    for( int i=0; i<n_seg; ++i ){
       c->cd(i+1);
       TH1 *h = (TH1*)GHist::get( tdc_id + i );
-      h->GetXaxis()->SetRangeUser( tdc_min, tdc_max );
       if( h ) h->Draw();
     }
     c->Update();

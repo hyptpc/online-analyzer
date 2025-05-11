@@ -22,8 +22,7 @@ HodoRawHit::HodoRawHit( int detector_id, int plane_id, int segment_id )
     m_segment_id(segment_id),
     m_adc1(1, -1), m_adc2(1, -1),
     m_tdc1(1, -1), m_tdc2(1, -1),
-    m_tdc_t1(1, -1), m_tdc_t2(1, -1),
-    m_oftdc( false ), m_nhtdc(0)
+    m_nhtdc(0)
 {
   debug::ObjectCounter::increase(class_name);
 }
@@ -79,28 +78,6 @@ HodoRawHit::SetTdc2( int tdc )
 }
 
 //______________________________________________________________________________
-void
-HodoRawHit::SetTdcT1( int tdc )
-{
-  if(-1 == m_tdc_t1.at(0)){
-    m_tdc_t1.at(0) = tdc;
-  }else{
-    m_tdc_t1.push_back(tdc);
-  }
-}
-
-//______________________________________________________________________________
-void
-HodoRawHit::SetTdcT2( int tdc )
-{
-  if(-1 == m_tdc_t2.at(0)){
-    m_tdc_t2.at(0) = tdc;
-  }else{
-    m_tdc_t2.push_back(tdc);
-  }
-}
-
-//______________________________________________________________________________
 int
 HodoRawHit::SizeAdc1( void ) const
 {
@@ -141,26 +118,6 @@ HodoRawHit::SizeTdc2( void ) const
 }
 
 //______________________________________________________________________________
-int
-HodoRawHit::SizeTdcT1( void ) const
-{
-  if(-1 == m_tdc_t1.at(0))
-    return 0;
-  else
-    return m_tdc_t1.size();
-}
-
-//______________________________________________________________________________
-int
-HodoRawHit::SizeTdcT2( void ) const
-{
-  if(-1 == m_tdc_t2.at(0))
-    return 0;
-  else
-    return m_tdc_t2.size();
-}
-
-//______________________________________________________________________________
 void
 HodoRawHit::Clear( void )
 {
@@ -169,14 +126,10 @@ HodoRawHit::Clear( void )
   m_adc2.clear();
   m_tdc1.clear();
   m_tdc2.clear();
-  m_tdc_t1.clear();
-  m_tdc_t2.clear();
   m_adc1.push_back(-1);
   m_adc2.push_back(-1);
   m_tdc1.push_back(-1);
   m_tdc2.push_back(-1);
-  m_tdc_t1.push_back(-1);
-  m_tdc_t2.push_back(-1);
 }
 
 //______________________________________________________________________________
@@ -203,14 +156,6 @@ HodoRawHit::Print( const std::string& arg )
 	     std::ostream_iterator<int>(hddaq::cout," ") );
   hddaq::cout << std::endl
 	      << "tdc2        = " << m_tdc2.size() << " ";
-  std::copy( m_tdc2.begin(), m_tdc2.end(),
-	     std::ostream_iterator<int>(hddaq::cout," ") );
-  hddaq::cout << std::endl
-	      << "tdc_t1      = " << m_tdc_t1.size() << " ";
-  std::copy( m_tdc_t1.begin(), m_tdc_t1.end(),
-	     std::ostream_iterator<int>(hddaq::cout," ") );
-  hddaq::cout << std::endl
-	      << "tdc_t2      = " << m_tdc_t2.size() << " ";
   std::copy( m_tdc2.begin(), m_tdc2.end(),
 	     std::ostream_iterator<int>(hddaq::cout," ") );
   hddaq::cout << std::endl;

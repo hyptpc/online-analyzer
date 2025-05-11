@@ -11,14 +11,14 @@ void dispPiID()
 
   int n_seg = 16;
 
-  // draw HighGain 
+  // draw ADC 
   {
     TCanvas *c = (TCanvas*)gROOT->FindObject("c1");
     c->Clear();
-    c->Divide(8,4);
-    int adc_id     = HistMaker::getUniqueID(kPiID, 0, kHighGain,1);
-    int adcwtdc_id = HistMaker::getUniqueID(kPiID, 0, kADCwTDC,1);
-    for( int i=0; i<NumOfSegPiID; ++i ){
+    c->Divide(4,4);
+    int adc_id     = HistMaker::getUniqueID(kPiID, 0, kADC);
+    int adcwtdc_id = HistMaker::getUniqueID(kPiID, 0, kADCwTDC);
+    for( int i=0; i<n_seg; ++i ){
       c->cd(i+1);
       gPad->SetLogy();
       TH1 *h = (TH1*)GHist::get( adc_id + i );
@@ -34,39 +34,16 @@ void dispPiID()
     c->Update();
   }
 
-//  {
-//    TCanvas *c = (TCanvas*)gROOT->FindObject("c2");
-//    c->Clear();
-//    c->Divide(4,4);
-//    int adc_id     = HistMaker::getUniqueID(kPiID, 0, kHighGain);
-//    int adcwtdc_id = HistMaker::getUniqueID(kPiID, 0, kADCwTDC);
-//    for( int i=0; i<n_seg; ++i ){
-//      c->cd(i+1);
-//      gPad->SetLogy();
-//      TH1 *h = (TH1*)GHist::get( adc_id + i+16 );
-//      if( !h ) continue;
-//      h->GetXaxis()->SetRangeUser(0,2000);
-//      h->Draw();
-//      TH1 *hh = (TH1*)GHist::get( adcwtdc_id + i );
-//      if( !hh ) continue;
-//      hh->GetXaxis()->SetRangeUser(0,2000);
-//      hh->SetLineColor( kRed );
-//      hh->Draw("same");
-//    }
-//    c->Update();
-//  }
-
-  // draw LowGain 
   {
     TCanvas *c = (TCanvas*)gROOT->FindObject("c2");
     c->Clear();
-    c->Divide(8,4);
-    int adc_id     = HistMaker::getUniqueID(kPiID, 0, kLowGain,1);
-    int adcwtdc_id = HistMaker::getUniqueID(kPiID, 0, kADCwTDC,NumOfSegPiID+1);
-    for( int i=0; i<NumOfSegPiID; ++i ){
+    c->Divide(4,4);
+    int adc_id     = HistMaker::getUniqueID(kPiID, 0, kADC);
+    int adcwtdc_id = HistMaker::getUniqueID(kPiID, 0, kADCwTDC);
+    for( int i=0; i<n_seg; ++i ){
       c->cd(i+1);
       gPad->SetLogy();
-      TH1 *h = (TH1*)GHist::get( adc_id + i );
+      TH1 *h = (TH1*)GHist::get( adc_id + i+16 );
       if( !h ) continue;
       h->GetXaxis()->SetRangeUser(0,2000);
       h->Draw();
@@ -78,38 +55,15 @@ void dispPiID()
     }
     c->Update();
   }
-
-//  {
-//    TCanvas *c = (TCanvas*)gROOT->FindObject("c4");
-//    c->Clear();
-//    c->Divide(4,4);
-//    int adc_id     = HistMaker::getUniqueID(kPiID, 0, kLowGain);
-//    int adcwtdc_id = HistMaker::getUniqueID(kPiID, 0, kADCwTDC+NumOfSegPiID);
-//    for( int i=0; i<n_seg; ++i ){
-//      c->cd(i+1);
-//      gPad->SetLogy();
-//      TH1 *h = (TH1*)GHist::get( adc_id + i+16 );
-//      if( !h ) continue;
-//      h->GetXaxis()->SetRangeUser(0,2000);
-//      h->Draw();
-//      TH1 *hh = (TH1*)GHist::get( adcwtdc_id + i );
-//      if( !hh ) continue;
-//      hh->GetXaxis()->SetRangeUser(0,2000);
-//      hh->SetLineColor( kRed );
-//      hh->Draw("same");
-//    }
-//    c->Update();
-//  }
 
   // draw TDC 
   {
     TCanvas *c = (TCanvas*)gROOT->FindObject("c3");
     c->Clear();
-    c->Divide(8,4);
-    int tdc_id = HistMaker::getUniqueID(kPiID, 0, kTDC,1);
-    for( int i=0; i<NumOfSegPiID; ++i ){
+    c->Divide(4,4);
+    int tdc_id = HistMaker::getUniqueID(kPiID, 0, kTDC);
+    for( int i=0; i<n_seg; ++i ){
       c->cd(i+1);
-      gPad->SetLogy();
       TH1 *h = (TH1*)GHist::get( tdc_id + i );
       if( !h ) continue;
       h->Draw();
@@ -117,23 +71,22 @@ void dispPiID()
     c->Update();
   }
 
-//  {
-//    TCanvas *c = (TCanvas*)gROOT->FindObject("c4");
-//    c->Clear();
-//    c->Divide(4,4);
-//    int tdc_id = HistMaker::getUniqueID(kPiID, 0, kTDC);
-//    for( int i=0; i<n_seg; ++i ){
-//      c->cd(i+1);
-//      gPad->SetLogy();
-//      TH1 *h = (TH1*)GHist::get( tdc_id + i + 16 );
-//      if( !h ) continue;
-//      h->Draw();
-//    }
-//    c->Update();
-//  }
-
   {
     TCanvas *c = (TCanvas*)gROOT->FindObject("c4");
+    c->Clear();
+    c->Divide(4,4);
+    int tdc_id = HistMaker::getUniqueID(kPiID, 0, kTDC);
+    for( int i=0; i<n_seg; ++i ){
+      c->cd(i+1);
+      TH1 *h = (TH1*)GHist::get( tdc_id + i + 16 );
+      if( !h ) continue;
+      h->Draw();
+    }
+    c->Update();
+  }
+
+  {
+    TCanvas *c = (TCanvas*)gROOT->FindObject("c5");
     c->Clear();
     c->Divide(2,2);
     int hitpat_id = HistMaker::getUniqueID(kPiID, 0, kHitPat);

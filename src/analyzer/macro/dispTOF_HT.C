@@ -9,26 +9,84 @@ void dispTOF_HT()
   Updater::setUpdating(true);
   // ----------------------------------
 
-  // TDC gate range
-  const UserParamMan& gUser = UserParamMan::GetInstance();
-  static const unsigned int tdc_min = gUser.GetParameter("TOFHT_TDC", 0);
-  static const unsigned int tdc_max = gUser.GetParameter("TOFHT_TDC", 1);
+//  const int n_seg = 24;
+  const int n_seg = 15;
 
-  // draw TDC-HT TDC
+//  // draw ADC U
+//  {
+//    TCanvas *c = (TCanvas*)gROOT->FindObject("c1");
+//    c->Clear();
+//    c->Divide(6,4);
+//    int adc_id     = HistMaker::getUniqueID( kTOF_HT, 0, kADC, 1 );
+//    int adcwtdc_id = HistMaker::getUniqueID( kTOF_HT, 0, kADCwTDC, 1 );
+//    for( int i=0; i<n_seg; ++i ){
+//      c->cd(i+1);
+//      gPad->SetLogy();
+//      TH1 *h = (TH1*)GHist::get( adc_id + i );
+//      if( !h ) continue;
+//      h->GetXaxis()->SetRangeUser( 0, 4096 );
+//      h->Draw();
+//      TH1 *hh = (TH1*)GHist::get( adcwtdc_id + i );
+//      if( !hh ) continue;
+//      hh->GetXaxis()->SetRangeUser( 0, 4096 );
+//      hh->SetLineColor( kRed );
+//      hh->Draw("same");
+//    }
+//    c->Update();
+//  }
+//
+//  // draw ADC D
+//  {
+//    TCanvas *c = (TCanvas*)gROOT->FindObject("c2");
+//    c->Clear();
+//    c->Divide(6,4);
+//    int adc_id     = HistMaker::getUniqueID(kTOF_HT, 0, kADC, 1+n_seg);
+//    int adcwtdc_id = HistMaker::getUniqueID(kTOF_HT, 0, kADCwTDC, 1+n_seg);
+//    for( int i=0; i<n_seg; ++i ){
+//      c->cd(i+1);
+//      gPad->SetLogy();
+//      TH1 *h = (TH1*)GHist::get( adc_id + i );
+//      if( !h ) continue;
+//      h->GetXaxis()->SetRangeUser( 0, 4096 );
+//      h->Draw();
+//      TH1 *hh = (TH1*)GHist::get( adcwtdc_id + i );
+//      if( !hh ) continue;
+//      hh->GetXaxis()->SetRangeUser( 0, 4096 );
+//      hh->SetLineColor( kRed );
+//      hh->Draw("same");
+//    }
+//    c->Update();
+//  }
+
+  // draw TDC U
   {
+//    TCanvas *c = (TCanvas*)gROOT->FindObject("c3");
     TCanvas *c = (TCanvas*)gROOT->FindObject("c1");
     c->Clear();
-    c->Divide(4,4);
+//    c->Divide(6,4);
+    c->Divide(5,3);
     int tdc_id = HistMaker::getUniqueID( kTOF_HT, 0, kTDC, 1 );
-    for( int i=0; i<NumOfSegHtTOF; ++i ){
+    for( int i=0; i<n_seg; ++i ){
       c->cd(i+1);
       TH1 *h = (TH1*)GHist::get( tdc_id + i );
-      if( !h ) continue;
-      h->GetXaxis()->SetRangeUser(tdc_min-100, tdc_max+100);
-      h->Draw();
+      if( h ) h->Draw();
     }
     c->Update();
   }
+
+//  // draw TDC D
+//  {
+//    TCanvas *c = (TCanvas*)gROOT->FindObject("c4");
+//    c->Clear();
+//    c->Divide(6,4);
+//    int tdc_id = HistMaker::getUniqueID( kTOF_HT, 0, kTDC, 1+n_seg );
+//    for( int i=0; i<n_seg; ++i ){
+//      c->cd(i+1);
+//      TH1 *h = (TH1*)GHist::get( tdc_id + i );
+//      if( h ) h->Draw();
+//    }
+//    c->Update();
+//  }
 
   // You must write these lines for the thread safe
   // ----------------------------------

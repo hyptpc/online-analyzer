@@ -1,6 +1,6 @@
-// -*- C++ -*-
-
 #include "GuiPs.hh"
+#include "Controller.hh"
+#include "PsMaker.hh"
 
 #include <iostream>
 
@@ -10,18 +10,15 @@
 #include <TGTextEntry.h>
 #include <TRootBrowser.h>
 
-#include "Controller.hh"
-#include "PsMaker.hh"
-
-ClassImp( hddaq::gui::GuiPs )
+ClassImp(hddaq::gui::GuiPs)
 
 namespace hddaq
 {
 namespace gui
 {
 
-//_____________________________________________________________________________
-GuiPs::GuiPs( void )
+//______________________________________________________________________________
+GuiPs::GuiPs()
   : m_frame(0),
     m_command(k_nCommand),
     m_optButton(),
@@ -33,31 +30,31 @@ GuiPs::GuiPs( void )
 {
 }
 
-//_____________________________________________________________________________
-GuiPs::~GuiPs( void )
+//______________________________________________________________________________
+GuiPs::~GuiPs()
 {
 }
 
-//_____________________________________________________________________________
-TString
-GuiPs::getFilename( void )
+//______________________________________________________________________________
+std::string
+GuiPs::getFilename()
 {
   GuiPs& g = GuiPs::getInstance();
   return g.m_filename;
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 GuiPs&
-GuiPs::getInstance( void )
+GuiPs::getInstance()
 {
   static GuiPs g_instance;
   return g_instance;
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 void
-GuiPs::initialize( const std::vector<TString>& optList,
-                   const std::vector<TString>& devList )
+GuiPs::initialize(const std::vector<std::string>& optList,
+		    const std::vector<std::string>& devList)
 {
   m_optList = optList;
   m_optButton.resize(m_optList.size());
@@ -71,32 +68,37 @@ GuiPs::initialize( const std::vector<TString>& optList,
   browser->StartEmbedding(0);
   m_frame = new TGMainFrame(gClient->GetRoot());
   browser->StopEmbedding("Ps");
-
+  
+  
   // check button of "Option"
   TGGroupFrame* optFrame = new TGGroupFrame(m_frame, "Option");
   optFrame->SetTitlePos(TGGroupFrame::kCenter);
-  for( Int_t i=0, n=m_optList.size(); i<n; ++i ){
-    TGCheckButton* c = new TGCheckButton( optFrame, m_optList[i] );
-    optFrame->AddFrame(c, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
-    m_optButton[i] = c;
-    // if( i==k_OptAll )
-    //   c->Connect("Toggled(Bool_t)", "hddaq::gui::GuiPs", this,
-    //              "toggleAllOption()");
-  }
+  for (unsigned int i = 0; i<m_optList.size(); ++i)
+     {
+       TGCheckButton* c = new TGCheckButton(optFrame, m_optList[i].c_str());
+	 optFrame->AddFrame(c, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+       m_optButton[i] = c;
+//        if (i==k_OptAll)
+// 	 c->Connect("Toggled(Bool_t)", "hddaq::gui::GuiPs", this,
+// 		    "toggleAllOption()");
+
+    }
   m_frame->AddFrame(optFrame, new TGLayoutHints(kLHintsExpandX));
 
+  
   // check button of "Device"
   TGGroupFrame* devFrame = new TGGroupFrame(m_frame, "Device");
   devFrame->SetTitlePos(TGGroupFrame::kCenter);
-  for( Int_t i=0, n=m_devList.size(); i<n; ++i ){
-    TGCheckButton* c
-      = new TGCheckButton( devFrame, m_devList[i] );
-    devFrame->AddFrame(c, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
-    m_devButton[i] = c;
-    //       if (i==k_DevAll)
-    //	 c->Connect("Toggled(Bool_t)", "hddaq::gui::GuiPs", this,
-    //		    "toggleAllDevice()");
-  }
+  for (unsigned int i = 0; i<m_devList.size(); ++i)
+     {
+       TGCheckButton* c
+	 = new TGCheckButton(devFrame, m_devList[i].c_str());
+       devFrame->AddFrame(c, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+       m_devButton[i] = c;
+       //       if (i==k_DevAll)
+       //	 c->Connect("Toggled(Bool_t)", "hddaq::gui::GuiPs", this,
+       //		    "toggleAllDevice()");
+    }
   m_frame->AddFrame(devFrame, new TGLayoutHints(kLHintsExpandX));
 
   // text entry of " filename "
@@ -110,7 +112,7 @@ GuiPs::initialize( const std::vector<TString>& optList,
   m_textFilename->Resize(100, m_textFilename->GetDefaultHeight());
   m_textFilename->Connect("ReturnPressed()", "hddaq::gui::GuiPs", this,
 			  "setFilename()");
-  m_textFilename->SetText( m_filename );
+  m_textFilename->SetText(m_filename.c_str());
 
   // text button of "Save"
   TGHorizontalFrame* hframe = new TGHorizontalFrame(m_frame);
@@ -132,18 +134,11 @@ GuiPs::initialize( const std::vector<TString>& optList,
   m_frame->MapSubwindows();
   m_frame->Resize(m_frame->GetDefaultSize());
   m_frame->MapWindow();
-
+  
   return;
 }
 
-//_____________________________________________________________________________
-// Bool_t
-// GuiPs::isAutoMode( void )
-// {
-//   return isOptOn( PsMaker::kAutoSaveAtRunChange );
-// }
-
-//_____________________________________________________________________________
+//______________________________________________________________________________
 bool
 GuiPs::isDevOn(int i)
 {
@@ -151,7 +146,7 @@ GuiPs::isDevOn(int i)
   return g.m_devButton[i]->IsOn();
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 bool
 GuiPs::isOptOn(int i)
 {
@@ -159,24 +154,22 @@ GuiPs::isOptOn(int i)
   return g.m_optButton[i]->IsOn();
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 void
 GuiPs::print()
 {
-  std::cout << "#D GuiPs::print() this function is now no longer supported."
-            << "   Nothing was done."
-            << std::endl;
-  // std::cout << "\n#D GuiPs::print()" << std::endl;
-  // TString command = "lpr " + m_filename;
-  // std::cout << "#D " << command << std::endl;
+  std::cout << "\n#D GuiPs::print()" << std::endl;  
+  std::string command = "lpr " + m_filename;
+  std::cout << "#D " << command << std::endl;
+//   print(command);
   return;
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 void
 GuiPs::save()
 {
-  std::cout << "\n#D GuiPs::save()" << std::endl;
+  std::cout << "\n#D GuiPs::save()" << std::endl;  
   const std::vector<TGCheckButton*>& oB = m_optButton;
   const std::vector<TGCheckButton*>& dB = m_devButton;
 
@@ -194,13 +187,13 @@ GuiPs::save()
 		<< "\n";
     }
   std::cout.flush();
-
+  
   PsMaker::getInstance().makePs();
 
   return;
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 void
 GuiPs::setFilename()
 {
@@ -210,17 +203,15 @@ GuiPs::setFilename()
   return;
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 void
 GuiPs::setFilename(const char* filename)
 {
   m_filename = filename;
-  if( m_textFilename )
-    m_textFilename->SetText( m_filename );
   return;
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 void
 GuiPs::toggleAllDevice()
 {
@@ -230,11 +221,11 @@ GuiPs::toggleAllDevice()
   // else
   //   for (int i=0; i<k_nDevice; ++i)
   //     m_devButton[i]->SetOn(false);
-
+    
   return;
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 void
 GuiPs::toggleAllOption()
 {

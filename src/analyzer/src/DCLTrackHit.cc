@@ -96,7 +96,8 @@ bool
 DCLTrackHit::ReCalc( bool applyRecursively )
 {
   if( applyRecursively ){
-    if( !m_hit->ReCalcDC(applyRecursively) ) return false;
+    if( !m_hit->ReCalcDC(applyRecursively) )
+      return false;
     // if( !m_hit->ReCalcDC(applyRecursively)   ||
     // 	!m_hit->ReCalcMWPC(applyRecursively) ){
     //   return false;
@@ -106,8 +107,10 @@ DCLTrackHit::ReCalc( bool applyRecursively )
   double wp = GetWirePosition();
   double dl = GetDriftLength();
 
-  if( m_local_hit_pos>wp )  m_local_hit_pos = wp+dl;
-  else                      m_local_hit_pos = wp-dl;
+  if( m_local_hit_pos>wp )
+    m_local_hit_pos = wp+dl;
+  else
+    m_local_hit_pos = wp-dl;
 
   return true;
 }

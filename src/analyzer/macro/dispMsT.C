@@ -11,18 +11,26 @@ void dispMsT()
   Updater::setUpdating(true);
   // ----------------------------------
 
+  const int n_seg = 24;
+
   // draw TDC 1st harf
   {
     TCanvas *c = (TCanvas*)gROOT->FindObject("c1");
     c->Clear();
     c->Divide(4,3);
     int base_id = HistMaker::getUniqueID(kMsT, 0, kTDC, 1);
-    for( int i=0; i<NumOfSegTOF/2; ++i ){
+    for( int i=0; i<n_seg/2; ++i ){
       c->cd(i+1);
+      gPad->SetLogy();
       TH1 *h1 = (TH1*)GHist::get(base_id +i);
       if( !h1 ) continue;
-      h1->GetXaxis()->SetRangeUser(180000,210000);
+      h1->GetXaxis()->SetRangeUser(0,2048);
       h1->Draw();
+      TH1 *h2 = (TH1*)GHist::get(base_id +n_seg +i);
+      if( !h2 ) continue;
+      h2->GetXaxis()->SetRangeUser(0,2048);
+      h2->SetLineColor(kRed);
+      h2->Draw("same");
     }
     c->Update();
   }
@@ -32,13 +40,19 @@ void dispMsT()
     TCanvas *c = (TCanvas*)gROOT->FindObject("c2");
     c->Clear();
     c->Divide(4,3);
-    int base_id = HistMaker::getUniqueID(kMsT, 0, kTDC, 1 +NumOfSegTOF/2);
-    for( int i=0; i<NumOfSegTOF/2; ++i ){
+    int base_id = HistMaker::getUniqueID(kMsT, 0, kTDC, 1 +n_seg/2);
+    for( int i=0; i<n_seg/2; ++i ){
       c->cd(i+1);
+      gPad->SetLogy();
       TH1 *h1 = (TH1*)GHist::get(base_id + i);
       if( !h1 ) continue;
-      h1->GetXaxis()->SetRangeUser(180000,210000);
+      h1->GetXaxis()->SetRangeUser(0,2048);
       h1->Draw();
+      TH1 *h2 = (TH1*)GHist::get(base_id +n_seg +i);
+      if( !h2 ) continue;
+      h2->GetXaxis()->SetRangeUser(0,2048);
+      h2->SetLineColor(kRed);
+      h2->Draw("same");
     }
     c->Update();
   }

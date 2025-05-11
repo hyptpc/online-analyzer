@@ -1,8 +1,8 @@
-/**
- *  file: ThreeVector.hh
- *  date: 2017.04.10
- *
- */
+/*
+  ThreeVector.hh
+
+  2012/1/24
+*/
 
 #ifndef THREE_VECTOR_HH
 #define THREE_VECTOR_HH
@@ -10,6 +10,7 @@
 #include <ostream>
 
 #include <TVector3.h>
+
 typedef TVector3 ThreeVector;
 
 //______________________________________________________________________________

@@ -9,36 +9,39 @@ void dispBGO()
   Updater::setUpdating(true);
   // ----------------------------------
 
-  const int NumOfSegBGO = 48;
-  const int NumOfSlot = 4;
+  int n_seg = 12;
 
-  ////////// BGO TDC
+  // draw ADC  1-12
   {
-    for(int slot=0; slot<NumOfSlot; slot++){
-      TCanvas *c = (TCanvas*)gROOT->FindObject(Form("c%d", slot+1));
-      c->Clear();
-      c->Divide(3,4);
-      int base_id = HistMaker::getUniqueID(kBGO, 0, kTDC, 1);
-      for(int i=0; i<NumOfSegBGO/NumOfSlot; i++){
-	c->cd(i+1);
-	TH1 *h = (TH1*)GHist::get(base_id + i + slot*NumOfSegBGO/NumOfSlot);
-	h->Draw();
-      }
-      c->Update();
+    TCanvas *c = (TCanvas*)gROOT->FindObject("c1");
+    c->Clear();
+    c->Divide(4,3);
+    int fadc_id     = HistMaker::getUniqueID(kBGO, 0, kFADC);
+    for( int i=0; i<n_seg; ++i ){
+      c->cd(i+1);
+      gPad->SetLogy();
+      TH1 *h = (TH1*)GHist::get( fadc_id + i );
+      if( !h ) continue;
+      h->Draw();
     }
+    c->Update();
   }
 
-  ////////// BGO TDC 2D
+  // draw ADC 13-24
   {
-
-      TCanvas *c = (TCanvas*)gROOT->FindObject(Form("c%d", 5));
-      c->Clear();
-      int base_id = HistMaker::getUniqueID(kBGO, 0, kTDC2D, 1);
-      TH2 *h2 = (TH2*)GHist::get(base_id);
-      h2->Draw("colz");
-      c->Update();
+    TCanvas *c = (TCanvas*)gROOT->FindObject("c2");
+    c->Clear();
+    c->Divide(4,3);
+    int fadc_id     = HistMaker::getUniqueID(kBGO, 0, kFADC, 12);
+    for( int i=0; i<n_seg; ++i ){
+      c->cd(i+1);
+      gPad->SetLogy();
+      TH1 *h = (TH1*)GHist::get( fadc_id + i );
+      if( !h ) continue;
+      h->Draw();
+    }
+    c->Update();
   }
-
 
   // You must write these lines for the thread safe
   // ----------------------------------

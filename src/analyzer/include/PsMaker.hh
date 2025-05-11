@@ -1,75 +1,58 @@
-// -*- C++ -*-
+#ifndef H_PSMAKERIMPL
+#define H_PSMAKERIMPL
 
-#ifndef PS_MAKER_HH
-#define PS_MAKER_HH
-
-#include <vector>
-#include <TString.h>
+#include<vector>
+#include<string>
 
 class TCanvas;
 class TPostScript;
 
-//_____________________________________________________________________________
-class PsMaker
-{
-public:
-  static PsMaker& getInstance( void );
-  virtual ~PsMaker( void );
-
-private:
-  PsMaker( void );
-  PsMaker( const PsMaker& object );
-  PsMaker& operator=( const PsMaker& object );
-
-private:
-  enum EPSType {
-    kPortrait  = 111,
-    kLandscape = 112,
-    NPSType
+class PsMaker{
+  // Option list which are displayed in the Ps tab
+  enum OptionList{
+    kExpDataSheet, 
+    kFixXaxis,
+    kLogyADC, kLogyTDC,//, kLogyHitPat, kLogyMulti,
+    sizeOptionList
   };
-  enum ParameterList {
-    kXdiv,
-    kYdiv,
-    kXrange_min,
-    kXrange_max,
+  std::vector<std::string> name_option_;
+
+  // Parameter list controlling the histogram drawing
+  enum ParameterList{
+    kXdiv, kYdiv, kXrange_min, kXrange_max,
     sizeParameterList
   };
 
-  std::vector<TString> m_name_option;
-  TCanvas*             m_canvas;
-  TPostScript*         m_ps;
+  // The instance to make the ps file
+  TCanvas     *cps_;
+  TPostScript *ps_;
 
 public:
-  enum OptionList {
-    kExpDataSheet,
-    kFixXaxis,
-    kLogyADC,
-    kLogyTDC,
-    // kLogyHitPat,
-    // kLogyMulti,
-    // kAutoSaveAtRunChange,
-    sizeOptionList
-  };
-  void getListOfOption( std::vector<TString>& vec );
-  void makePs( void );
+  virtual ~PsMaker();
+  static PsMaker& getInstance();
+  
+  void getListOfOption(std::vector<std::string>& vec);
+  void makePs();
 
 private:
-  void drawRunNumber( void );
-  void create( TString& name );
-  void drawOneCanvas( std::vector<Int_t>& id_list,
-                      std::vector<Int_t>& par_list,
-                      Bool_t flag_xaxis, Bool_t flag_log,
-                      const Option_t* optDraw = "" );
+  void drawRunNumber();
+  void create(std::string& name);
+  void drawOneCanvas(std::vector<int>& id_list, std::vector<int>& par_list,
+		     bool flag_xaxis, bool flag_log,
+		     const char* optDraw = ""
+		     );
   void drawDCEff( void );
-  void clearOneCanvas( Int_t npad );
+  void clearOneCanvas(int npad);  
+
+  PsMaker();
+  PsMaker(const PsMaker& object);
+  PsMaker& operator=(const PsMaker& object);
 };
 
-//_____________________________________________________________________________
-inline PsMaker&
-PsMaker::getInstance( void )
+inline PsMaker& PsMaker::getInstance()
 {
-  static PsMaker s_instance;
-  return s_instance;
+  static PsMaker object;
+  return object;
 }
 
 #endif

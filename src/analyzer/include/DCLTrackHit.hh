@@ -35,23 +35,21 @@ private:
   bool    m_honeycomb;
 
 public:
-  void   SetLocalHitPos( double xl )                 { m_local_hit_pos = xl; }
-  void   SetCalPosition( double x, double y )        { m_xcal = x; m_ycal = y; }
-  void   SetCalUV( double u, double v )              { m_ucal = u; m_vcal = v; }
-  void   SetHoneycomb( bool flag=true )              { m_honeycomb = flag;     }
-  bool   IsHoneycomb( void )                   const { return m_honeycomb; }
-  int    GetLayer( void )                      const { return m_hit->GetLayer(); }
-  int    GetMeanSeg( void )                    const { return m_hit->GetMeanSeg(); }
-  int    GetMaxSeg( void )                    const { return m_hit->GetMaxSeg(); }
-  double GetWire( void )                       const { return m_hit->GetWire(); }
-  int    GetTdcVal( void )                     const { return m_hit->GetTdcVal(m_nth_hit); }
-  int    GetTdcSize( void )                    const { return m_hit->GetTdcSize(); }
-  double GetDriftTime( void )                  const { return m_hit->GetDriftTime(m_nth_hit); }
-  void   SetDriftTime( int ith, double dt )          { m_hit->SetDriftTime(ith, dt); }
-  double GetDriftLength( void )                const { return m_hit->GetDriftLength(m_nth_hit); }
-  void   SetDriftLength( int ith, double dl )        { m_hit->SetDriftLength(ith, dl); }
-  double GetTrailingTime( void )               const { return m_hit->GetTrailingTime(m_nth_hit); }
-  double GetTot( void )                        const { return m_hit->GetTot(m_nth_hit); }
+  void   SetLocalHitPos( double xl )          { m_local_hit_pos = xl; }
+  void   SetCalPosition( double x, double y ) { m_xcal = x; m_ycal = y; }
+  void   SetCalUV( double u, double v )       { m_ucal = u; m_vcal = v; }
+  void   SetHoneycomb( bool flag=true )       { m_honeycomb = flag;     }
+  bool   IsHoneycomb( void )       const { return m_honeycomb; }
+  int    GetLayer( void )          const { return m_hit->GetLayer(); }
+  double GetWire( void )           const { return m_hit->GetWire(); }
+  int    GetTdcVal( void )         const { return m_hit->GetTdcVal(m_nth_hit); }
+  int    GetTdcSize( void )        const { return m_hit->GetTdcSize(); }
+  double GetDriftTime( void )      const { return m_hit->GetDriftTime(m_nth_hit); }
+  void   ClearDriftTime( void )          { return m_hit->ClearDriftTime(); }
+  void   SetDriftTime( double dt )       { return m_hit->SetDriftTime(dt); }
+  double GetDriftLength( void )    const { return m_hit->GetDriftLength(m_nth_hit); }
+  void   ClearDriftLength( void )        { return m_hit->ClearDriftLength(); }
+  void   SetDriftLength( double dl )     { return m_hit->SetDriftLength(dl); }
 
   DCHit* GetHit( void ) const { return m_hit; }
 
@@ -71,27 +69,21 @@ public:
   void   SetLocalCalPosVXU( double xcl ) { m_cal_pos=xcl; }
   double GetLocalCalPosVXU( void ) const { return m_cal_pos; }
   double GetResidualVXU( void )    const { return m_local_hit_pos-m_cal_pos; }
-
+  ///// for SSD
+  bool   IsSsd( void )            const { return m_hit->IsSsd(); }
+  double GetAdcPeakHeight( void ) const { return m_hit->GetAdcPeakHeight(); }
+  double GetAmplitude( void ) const { return m_hit->GetAmplitude(); }
+  double GetDe( void )        const { return m_hit->GetDe();        }
+  double GetChisquare( void ) const { return m_hit->GetChisquare(); }
+  void   JoinKaonTrack( void ) { m_hit->JoinKaonTrack(); }
+  void   QuitKaonTrack( void ) { m_hit->QuitKaonTrack(); }
+  bool   BelongToKaonTrack( void ) const { return m_hit->BelongToKaonTrack(); }
   ///// for TOF
   double GetZ( void ) const { return m_hit->GetZ(); }
-
-  ///// for CFT
-  double GetPositionR( void )   const { return m_hit->GetPositionR();  }
-  double GetPositionPhi( void ) const { return m_hit->GetPositionPhi();}
-  double GetAdcLow( void )   const { return m_hit->GetAdcLow();  }
-  double GetMIPLow( void )   const { return m_hit->GetMIPLow();  }
-  double GetdELow( void )    const { return m_hit->GetdELow();  }
-  double GetMaxAdcLow( void ) const { return m_hit->GetMaxAdcLow();}
-  double GetMaxMIPLow( void ) const { return m_hit->GetMaxMIPLow();  }
-  double GetMaxdELow ( void ) const { return m_hit->GetMaxdELow();  }
 
   void JoinTrack( void ) { m_hit->JoinTrack(m_nth_hit); }
   void QuitTrack( void ) { m_hit->QuitTrack(m_nth_hit); }
   bool BelongToTrack( void ) const { return m_hit->BelongToTrack(m_nth_hit); }
-
-  void JoinTrackCFT( void ) { m_hit->JoinTrackCFT(m_nth_hit); }
-  void QuitTrackCFT( void ) { m_hit->QuitTrackCFT(m_nth_hit); }
-  bool BelongToTrackCFT( void ) const { return m_hit->BelongToTrackCFT(m_nth_hit); }
 
   void Print( const std::string& arg="" ) const;
 

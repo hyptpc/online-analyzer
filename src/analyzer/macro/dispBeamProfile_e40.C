@@ -16,10 +16,10 @@ void dispBeamProfile_e40()
   tex.SetTextSize(0.14);
   double xpos = 0.15, ypos = 0.75;
 
-  bool flag_line[2][n_hist] =
+  bool flag_line[2][n_hist] = 
     {
       {true, true, true, true, true, true, false, true, false, false},
-      {true, true, true, true, true, true, false, true, false, true}
+      {true, true, true, true, true, true, false, true, false, true}   
     };
 
   double pos_line_x[n_hist][2] =
@@ -48,9 +48,9 @@ void dispBeamProfile_e40()
     TCanvas *c = (TCanvas*)gROOT->FindObject("c5");
     c->cd();
   }
-
+      
   gROOT->SetStyle("Plain");
-  // TPDF *pdf = new TPDF("/home/sks/PSFile/e40_2017/beamprofile_e40.pdf", 112);
+  TPDF *pdf = new TPDF("/home/sks/PSFile/e40_2017/beamprofile_e40.pdf", 112);
 
   // Title
   {
@@ -296,7 +296,7 @@ void dispBeamProfile_e40()
       double ymin_mean = *std::min_element(mean[1], mean[1] + n_hist-1);
       double ymin_gaus = *std::min_element(gaus_mean[1], gaus_mean[1] + n_hist-1);
       double ymin = ymin_mean < ymin_gaus? ymin_mean : ymin_gaus;
-
+      
 
       TGraph *gm = new TGraph(n_hist, ff, mean[1] );
       gm->SetTitle("BeamProfile Y (Mean=Red, Gaus Mean=Blue)");
@@ -326,7 +326,7 @@ void dispBeamProfile_e40()
     //    c->Print("~/PSFile/pro/beamprofile_e40.ps)");
   }
 
-  // pdf->Close();
+  pdf->Close();
 
   gROOT->SetStyle("Classic");
 

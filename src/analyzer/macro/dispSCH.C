@@ -1,48 +1,94 @@
-// -*- C++ -*-
+// Updater belongs to the namespace hddaq::gui
+using namespace hddaq::gui;
 
-using hddaq::gui::Updater;
-
-//_____________________________________________________________________________
-void
-dispSCH( void )
+void dispSCH()
 {
-  if( Updater::isUpdating() )
-    return;
-  Updater::setUpdating( true );
+  // You must write these lines for the thread safe
+  // ----------------------------------
+  if(Updater::isUpdating()){return;}
+  Updater::setUpdating(true);
+  // ----------------------------------
 
-  const auto& gUser = UserParamMan::GetInstance();
-  const Double_t TotRef = gUser.GetParameter( "TotRefSCH" );
+  const int n_seg     = 64;
 
-  std::vector<Int_t> hid_c1 = {
-    HistMaker::getUniqueID( kSCH, 0, kTDC, NumOfSegSCH+1 ),
-    HistMaker::getUniqueID( kSCH, 0, kADC, NumOfSegSCH+1 ),
-    HistMaker::getUniqueID( kSCH, 0, kHitPat, 1 ),
-    HistMaker::getUniqueID( kSCH, 0, kTDC2D, 1 ),
-    HistMaker::getUniqueID( kSCH, 0, kADC2D, 1 ),
-    HistMaker::getUniqueID( kSCH, 0, kMulti, 1 )
+  int sch_id_c1[] = {
+    HistMaker::getUniqueID(kSCH, 0, kTDC,    1),
+    HistMaker::getUniqueID(kSCH, 0, kADC,    1),
+    HistMaker::getUniqueID(kSCH, 0, kTDC,    n_seg +1),
+    HistMaker::getUniqueID(kSCH, 0, kADC,    n_seg +1),
+    HistMaker::getUniqueID(kSCH, 0, kHitPat, 1),
+    HistMaker::getUniqueID(kSCH, 0, kTDC2D,  1),
+    HistMaker::getUniqueID(kSCH, 0, kADC2D,  1),
+    HistMaker::getUniqueID(kSCH, 0, kMulti,  1)
   };
+
+  // // Draw TDC 01-32
+  // {
+  //   TCanvas *c = (TCanvas*)gROOT->FindObject("c1");
+  //   c->Clear();
+  //   c->Divide(8,4);
+  //   for( int i=0; i<n_seg/2; ++i ){
+  //     c->cd(i+1)->SetGrid();
+  //     TH1 *h = (TH1*)GHist::get( sch_id_c1[0]+i );
+  //     h->Draw();
+  //   }
+  //   c->Update();
+  // }
+
+  // // Draw TDC 33-64
+  // {
+  //   TCanvas *c = (TCanvas*)gROOT->FindObject("c2");
+  //   c->Clear();
+  //   c->Divide(8,4);
+  //   for( int i=0; i<n_seg/2; ++i ){
+  //     c->cd(i+1)->SetGrid();
+  //     TH1 *h = (TH1*)GHist::get( sch_id_c1[0]+i+n_seg/2 );
+  //     h->Draw();
+  //   }
+  //   c->Update();
+  // }
+
+  // // Draw TOT 01-32
+  // {
+  //   TCanvas *c = (TCanvas*)gROOT->FindObject("c3");
+  //   c->Clear();
+  //   c->Divide(8,4);
+  //   for( int i=0; i<n_seg/2; ++i ){
+  //     c->cd(i+1)->SetGrid();
+  //     TH1 *h = (TH1*)GHist::get( sch_id_c1[1]+i );
+  //     h->Draw();
+  //   }
+  //   c->Update();
+  // }
+
+  // // Draw TOT 33-64
+  // {
+  //   TCanvas *c = (TCanvas*)gROOT->FindObject("c4");
+  //   c->Clear();
+  //   c->Divide(8,4);
+  //   for( int i=0; i<n_seg/2; ++i ){
+  //     c->cd(i+1)->SetGrid();
+  //     TH1 *h = (TH1*)GHist::get( sch_id_c1[1]+i+n_seg/2 );
+  //     h->Draw();
+  //   }
+  //   c->Update();
+  // }
 
   // draw TDC/TOT
   {
-    auto c = dynamic_cast<TCanvas*>( gROOT->FindObject("c1") );
+    TCanvas *c = (TCanvas*)gROOT->FindObject("c5");
     c->Clear();
-    c->Divide( 3, 2 );
-    for( Int_t i=0, n=hid_c1.size(); i<n; ++i ){
-      c->cd( i+1 ); //->SetGrid();
-      auto h = GHist::get( hid_c1.at(i) );
-      if( TString( h->GetTitle() ).Contains("TOT") )
-	h->GetXaxis()->SetRangeUser(0., 100.);
+    c->Divide(3,2);
+    for(int i=0; i<6; i++){
+      c->cd(i+1);//->SetGrid();
+      TH1 *h = (TH1*)GHist::get( sch_id_c1[2+i] );
       h->Draw("colz");
-      if( TString( h->GetTitle() ).Contains("TOT") &&
-	  TString( h->GetTitle() ).Contains("ALL")) {
-	Double_t peak = h->GetMaximum();
-	auto l = new TLine( TotRef, 0, TotRef, peak );
-	l->SetLineColor( kRed );
-	l->Draw( "same" );
-      }
     }
     c->Update();
   }
 
-  Updater::setUpdating( false );
+  // You must write these lines for the thread safe
+  // ----------------------------------
+  Updater::setUpdating(false);
+  // ----------------------------------
 }

@@ -10,7 +10,6 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <TObject.h>
 
 #include <std_ostream.hh>
 
@@ -21,7 +20,7 @@ namespace debug
   {
   public:
     static ObjectCounter& GetInstance( void );
-    virtual ~ObjectCounter( void );
+    ~ObjectCounter( void );
 
   private:
     ObjectCounter( void );
@@ -40,8 +39,6 @@ namespace debug
   public:
     static void decrease( const std::string& key );
     static void increase( const std::string& key );
-
-    ClassDef(ObjectCounter,0);
   };
 
   //_____________________________________________________________________

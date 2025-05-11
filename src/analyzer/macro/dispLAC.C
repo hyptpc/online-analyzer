@@ -10,7 +10,7 @@ void dispLAC()
   // ----------------------------------
 
   int n_seg = 30;
-#if 0
+
   // draw ADC U
   TCanvas *c = (TCanvas*)gROOT->FindObject("c1");
   c->Clear();
@@ -25,11 +25,9 @@ void dispLAC()
   }
 
   c->Update();
-#endif
 
   // draw TDC U
-  //  c = (TCanvas*)gROOT->FindObject("c2");
-  TCanvas *c = (TCanvas*)gROOT->FindObject("c1");
+  c = (TCanvas*)gROOT->FindObject("c2");
   c->Clear();
   c->Divide(5,6);
   int base_id = HistMaker::getUniqueID(kLAC, 0, kTDC, 1);

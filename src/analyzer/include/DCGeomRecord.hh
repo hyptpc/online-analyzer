@@ -1,133 +1,98 @@
-/**
- *  file: DCGeomRecord.hh
- *  date: 2017.04.10
- *
- */
+// -*- C++ -*-
 
 #ifndef DC_GEOM_RECORD_HH
 #define DC_GEOM_RECORD_HH
 
-#include "ThreeVector.hh"
-
+#include <iostream>
 #include <string>
 #include <functional>
 
-#include <std_ostream.hh>
-
+#include "ThreeVector.hh"
+#include "TString.h"
 //______________________________________________________________________________
-class DCGeomRecord
+class DCGeomRecord : public TObject
 {
 public:
-  DCGeomRecord( int id, const std::string &name,
-                double x, double y, double z, double ta,
-                double ra1, double ra2, double length, double resol,
-		double w0, double dd, double ofs );
-  DCGeomRecord( int id, const std::string &name,
-		const ThreeVector pos, double ta,
-		double ra1, double ra2, double length, double resol,
-		double w0, double dd, double ofs );
+  DCGeomRecord( Int_t id, const TString &name,
+                Double_t x, Double_t y, Double_t z, Double_t ta,
+                Double_t ra1, Double_t ra2, Double_t length, Double_t resol,
+		Double_t w0, Double_t dd, Double_t ofs );
+  DCGeomRecord( Int_t id, const TString &name,
+                const ThreeVector pos, Double_t ta,
+                Double_t ra1, Double_t ra2, Double_t length, Double_t resol,
+		Double_t w0, Double_t dd, Double_t ofs );
   ~DCGeomRecord( void );
+
   DCGeomRecord( const DCGeomRecord& );
-  DCGeomRecord& operator =( const DCGeomRecord );
+  DCGeomRecord& operator=( const DCGeomRecord& );
 
 private:
-  int         m_id;
-  std::string m_name;
-  ThreeVector m_pos;
-  double      m_tilt_angle;
-  double      m_rot_angle1;
-  double      m_rot_angle2;
-  double      m_length;
-  double      m_resolution;
-  double      m_w0;
-  double      m_dd;
-  double      m_offset;
+  Int_t       id_;
+  TString     name_;
+  ThreeVector pos_;
+  Double_t    tiltAngle_;
+  Double_t    rotAngle1_;
+  Double_t    rotAngle2_;
+  Double_t    length_;
+  Double_t    resol_;
+  Double_t    w0_;
+  Double_t    dd_;
+  Double_t    ofs_;
 
-  double m_dxds, m_dxdt, m_dxdu;
-  double m_dyds, m_dydt, m_dydu;
-  double m_dzds, m_dzdt, m_dzdu;
+  Double_t dxds_, dxdt_, dxdu_;
+  Double_t dyds_, dydt_, dydu_;
+  Double_t dzds_, dzdt_, dzdu_;
 
-  double m_dsdx, m_dsdy, m_dsdz;
-  double m_dtdx, m_dtdy, m_dtdz;
-  double m_dudx, m_dudy, m_dudz;
+  Double_t dsdx_, dsdy_, dsdz_;
+  Double_t dtdx_, dtdy_, dtdz_;
+  Double_t dudx_, dudy_, dudz_;
 
 public:
-  const ThreeVector& Position( void )     const { return m_pos; }
-  ThreeVector        NormalVector( void ) const;
-  ThreeVector        UnitVector( void )   const;
-  int                Id( void )             const { return m_id;         }
-  std::string        Name( void )           const { return m_name;       }
-  const ThreeVector& Pos( void )            const { return m_pos;        }
-  double             TiltAngle( void )      const { return m_tilt_angle; }
-  double             RotationAngle1( void ) const { return m_rot_angle1; }
-  double             RotationAngle2( void ) const { return m_rot_angle2; }
-  double             Length( void )         const { return m_length;     }
-  double             Resolution( void )     const { return m_resolution; }
-  void               SetResolution( double res )  { m_resolution = res;  }
+  const ThreeVector & Position( void ) const { return pos_; }
+  ThreeVector NormalVector( void ) const
+  { return ThreeVector( dxdu_, dydu_, dzdu_ ); }
+  ThreeVector UnitVector( void ) const
+  { return ThreeVector( dxds_, dyds_, dzds_ ); }
 
-  double dsdx( void ) const { return m_dsdx; }
-  double dsdy( void ) const { return m_dsdy; }
-  double dsdz( void ) const { return m_dsdz; }
-  double dtdx( void ) const { return m_dtdx; }
-  double dtdy( void ) const { return m_dtdy; }
-  double dtdz( void ) const { return m_dtdz; }
-  double dudx( void ) const { return m_dudx; }
-  double dudy( void ) const { return m_dudy; }
-  double dudz( void ) const { return m_dudz; }
+  Double_t dsdx( void ) const { return dsdx_; }
+  Double_t dsdy( void ) const { return dsdy_; }
+  Double_t dsdz( void ) const { return dsdz_; }
+  Double_t dtdx( void ) const { return dtdx_; }
+  Double_t dtdy( void ) const { return dtdy_; }
+  Double_t dtdz( void ) const { return dtdz_; }
+  Double_t dudx( void ) const { return dudx_; }
+  Double_t dudy( void ) const { return dudy_; }
+  Double_t dudz( void ) const { return dudz_; }
 
-  double dxds( void ) const { return m_dxds; }
-  double dxdt( void ) const { return m_dxdt; }
-  double dxdu( void ) const { return m_dxdu; }
-  double dyds( void ) const { return m_dyds; }
-  double dydt( void ) const { return m_dydt; }
-  double dydu( void ) const { return m_dydu; }
-  double dzds( void ) const { return m_dzds; }
-  double dzdt( void ) const { return m_dzdt; }
-  double dzdu( void ) const { return m_dzdu; }
+  Double_t dxds( void ) const { return dxds_; }
+  Double_t dxdt( void ) const { return dxdt_; }
+  Double_t dxdu( void ) const { return dxdu_; }
+  Double_t dyds( void ) const { return dyds_; }
+  Double_t dydt( void ) const { return dydt_; }
+  Double_t dydu( void ) const { return dydu_; }
+  Double_t dzds( void ) const { return dzds_; }
+  Double_t dzdt( void ) const { return dzdt_; }
+  Double_t dzdu( void ) const { return dzdu_; }
 
-  double WirePos( double wire )   const;
-  int    WireNumber( double pos ) const;
-  void   Print( const std::string& arg="", std::ostream& ost=hddaq::cout ) const;
-
-  //CFT Pos
-  double FiberPosR( int seg ) const
-  {
-    if(((int)seg%2) == 0){
-      return m_pos[0];//R1(innner)
-    }else if(((int)seg%2) == 1){
-      return m_pos[1];//R2(outer)
-    }else{
-      return m_pos[1];//R2(outer)
-    }
-  }
-  double FiberPosPhi( int seg ) const //  phi
-  {
-    // look from upstream to downstream
-    double phi = 90.; // 90 degree
-    if( (int)m_id==301 || (int)m_id==305 ){  // U->opposite direction (301&305)
-      phi += -1.*(double)seg * 360./m_offset; // 360[deg]/(N of Fibers)
-    }else{ // V & PHI
-      phi += (double)seg * 360./m_offset; // 360[deg]/(N of Fibers)
-    }
-    if(phi<0){phi+=360.;}
-    else if(phi>360.){phi-=360.;}
-
-    return phi;
-  }
-
+  Double_t WirePos( Double_t wire ) const { return dd_*(wire - w0_)+ofs_; }
+  Int_t    WireNumber( Double_t pos ) const;
 
 private:
-  void CalcVectors( void );
+  void calcVectors( void );
 
+  friend class DCGeomMan;
+  friend struct DCGeomRecordComp;
+
+  ClassDef(DCGeomRecord,0);
 };
 
 //______________________________________________________________________________
 struct DCGeomRecordComp
-  : public std::binary_function <DCGeomRecord*, DCGeomRecord*, bool>
+  : public std::binary_function <DCGeomRecord *, DCGeomRecord *, Bool_t>
 {
-  bool operator()( const DCGeomRecord* const p1,
-		   const DCGeomRecord* const p2 ) const
-  { return p1->Id() < p2->Id(); }
+  Bool_t operator()( const DCGeomRecord * const p1,
+		   const DCGeomRecord * const p2 ) const
+  { return p1->id_ < p2->id_; }
 };
 
 #endif

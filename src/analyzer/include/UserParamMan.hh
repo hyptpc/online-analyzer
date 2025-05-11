@@ -38,6 +38,7 @@ public:
   bool    IsReady( void ) const { return m_is_ready; }
   int     GetSize( const std::string& key ) const;
   double  GetParameter( const std::string& key, std::size_t i=0 ) const;
+  void    SetFileName( std::string& name ) { m_file_name=name; }
   void    Print( const std::string& arg="" ) const;
 };
 

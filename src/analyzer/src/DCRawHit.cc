@@ -21,8 +21,7 @@ namespace
 //______________________________________________________________________________
 DCRawHit::DCRawHit( int plane_id, int wire_id )
   : m_plane_id(plane_id),
-    m_wire_id(wire_id),
-    m_oftdc( false )
+    m_wire_id(wire_id)
 {
   m_tdc.clear();
   m_trailing.clear();

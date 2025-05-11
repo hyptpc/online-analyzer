@@ -1,0 +1,12 @@
+*~
+dict/*
+*.d
+*.o
+backup
+src.backup
+include.backup
+\#*
+*.org
+*.201*
+tmp*
+*.cc.*

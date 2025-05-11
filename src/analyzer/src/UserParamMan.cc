@@ -5,6 +5,7 @@
  */
 
 #include "UserParamMan.hh"
+#include "ConfMan.hh"
 
 #include <cstdlib>
 #include <fstream>
@@ -36,6 +37,21 @@ UserParamMan::UserParamMan( void )
 //______________________________________________________________________________
 UserParamMan::~UserParamMan( void )
 {
+}
+//______________________________________________________________________________
+void
+ConfMan::initializeUserParamMan()
+{
+  if(name_file_["USER:"] != ""){
+    UserParamMan& gUserParam = UserParamMan::GetInstance();
+    gUserParam.SetFileName(name_file_["USER:"]);
+    flag_[kIsGood] = gUserParam.Initialize();
+  }else{
+    std::cout << "#E ConfMan::"
+	      << " File path does not exist in " << name_file_["USER:"] 
+	      << std::endl;
+    flag_.reset(kIsGood);
+  }
 }
 
 //______________________________________________________________________________

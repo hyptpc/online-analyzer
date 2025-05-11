@@ -1,6 +1,6 @@
 /**
  *  file: PrintHelper.hh
- *  date: 2017.04.10
+ *  date: 2017.03.14
  *
  */
 
@@ -25,12 +25,12 @@ public:
       m_flags(ost.flags())
   {
     m_ostream.precision(precision);
-    m_ostream.setf(flags);
+    m_ostream.flags(flags);
   }
   ~PrintHelper( void )
   {
     m_ostream.precision(m_precision);
-    m_ostream.setf(m_flags);
+    m_ostream.flags(m_flags);
   }
 
 private:

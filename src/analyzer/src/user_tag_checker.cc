@@ -13,13 +13,14 @@ namespace analyzer
 {
   using namespace hddaq::unpacker;
   using namespace hddaq;
-
+  static UnpackerManager& gUnpacker = GUnpacker::get_instance();
 //____________________________________________________________________________
 int
 process_begin(const std::vector<std::string>& argv)
 {
-  ConfMan& gConfMan = ConfMan::GetInstance();
-  gConfMan.Initialize(argv);
+  // ConfMan& gConfMan = ConfMan::GetInstance();
+  // gConfMan.Initialize(argv);
+  ConfMan::getInstance().initialize(argv);
   GUnpacker::get_instance().set_decode_mode(false);
 
   return 0;
@@ -37,8 +38,10 @@ int
 process_event()
 {
   static int event_count = 0;
-  if(event_count%1000 == 0){
+  if(event_count%10000 == 0){
     std::cout << "#D Tag checker is running" << std::endl;
+    //gUnpacker.print_tag();
+    gUnpacker.show_summary();
   }
 
   ++event_count;
