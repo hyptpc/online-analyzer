@@ -1,13 +1,13 @@
 #!/bin/sh
 
-session_name="rawhist"
+session_name="scaler"
 
 if tmux has-session -t $session_name 2>/dev/null; then
     echo "The tmux session $session_name is already running."
     tmux attach-session -t $session_name
 else
-    bin=$HOME/share/online-analyzer/dev/bin/e72
-    conf=$HOME/share/param/conf/analyzer_e72_20250506.conf
+    bin=$HOME/share/online-analyzer/dev/bin/scaler
+    conf=$HOME/share/param/conf/scaler_e72_20250506.conf
     host=kazan:8901
     command="while true; do $bin $conf $host; sleep 1; done"
     tmux new-session -s $session_name -d "$command"

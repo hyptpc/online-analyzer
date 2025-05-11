@@ -1,163 +1,390 @@
 // -*- C++ -*-
 
-// Author: Tomonori Takahashi
+// Author: Shuhei Hayakawa
 
-#include <iomanip>
-#include <iostream>
-#include <cstdio>
+#include <chrono>
 #include <fstream>
-#include <string>
+#include <iostream>
 #include <sstream>
+#include <string>
 #include <vector>
 
-#include <TSystem.h>
+#include <TAxis.h>
+#include <TCanvas.h>
+#include <TF1.h>
+#include <TGFileBrowser.h>
+#include <TH1.h>
+#include <TH2.h>
+#include <TGraph.h>
+#include <TLegend.h>
+#include <TMath.h>
+#include <TPaveText.h>
+#include <TStyle.h>
+#include <TString.h>
 
-#include "DAQNode.hh"
-#include "UnpackerManager.hh"
-#include "Unpacker.hh"
+#include <THttpServer.h>
+#include <TKey.h>
+#include <TSystem.h>
+#include <TTimeStamp.h>
+
+#include <DAQNode.hh>
+#include <filesystem_util.hh>
+#include <Unpacker.hh>
+#include <UnpackerConfig.hh>
+#include <UnpackerManager.hh>
+#include <std_ostream.hh>
+
+#include "user_analyzer.hh"
 
 #include "ConfMan.hh"
 #include "DetectorID.hh"
-#include "PrintHelper.hh"
+#include "HttpServer.hh"
 #include "ScalerAnalyzer.hh"
-#include "user_analyzer.hh"
+
+#define CFT 0
 
 namespace analyzer
 {
-  using namespace hddaq::unpacker;
-  using namespace hddaq;
+using namespace hddaq::unpacker;
+using namespace hddaq;
 
-  namespace
+namespace
+{
+HttpServer& gHttp = HttpServer::GetInstance();
+ScalerAnalyzer scaler_on;
+ScalerAnalyzer scaler_off;
+const std::chrono::milliseconds flush_interval(100);
+}
+
+//____________________________________________________________________________
+Int_t
+process_begin(const std::vector<std::string>& argv)
+{
+  ConfMan& gConfMan = ConfMan::getInstance();
+  gConfMan.initialize(argv);
+  if(!gConfMan.isGood()) return -1;
+
+  gHttp.SetPort(9092);
+  gHttp.Open();
+  gHttp.SetItemField("/", "_monitoring", "100");
+  gHttp.SetItemField("/", "_layout", "vert3");
+  gHttp.SetItemField("/", "_drawitem", "[ScalerOn,ScalerOff,Tag]");
+  gHttp.CreateItem("/ScalerOn", "DAQ Scaler On");
+  gHttp.SetItemField("/ScalerOn", "_kind", "Text");
+  gHttp.CreateItem("/ScalerOff", "DAQ Scaler Off");
+  gHttp.SetItemField("/ScalerOff", "_kind", "Text");
+  gHttp.CreateItem("/Tag", "Tag Check");
+  gHttp.SetItemField("/Tag", "_kind", "Text");
+  std::stringstream ss;
+  ss << "<div style='color: white; background-color: black;"
+     << "width: 100%; height: 100%;'>"
+     << "Tag cheker is running" << "</div>";
+  gHttp.SetItemField("/Tag", "value", ss.str().c_str());
+  gHttp.Hide("/Reset");
+
+  scaler_on.SetFlag(ScalerAnalyzer::kSeparateComma);
+  scaler_on.SetFlag(ScalerAnalyzer::kSpillBySpill);
+  scaler_on.SetFlag(ScalerAnalyzer::kSpillOn);
+
+  scaler_off.SetFlag(ScalerAnalyzer::kSeparateComma);
+  scaler_off.SetFlag(ScalerAnalyzer::kSpillBySpill);
+  scaler_off.SetFlag(ScalerAnalyzer::kSpillOff);
+
+  //////////////////// Set Channels
+  // ScalerAnalylzer::Set(Int_t column,
+  //                       Int_t raw,
+  //                       ScalerInfo(name, module, channel));
+  // scaler information is defined from here.
+  // please do not use a white space character.
   {
-    UnpackerManager& gUnpacker = GUnpacker::get_instance();
-    ScalerAnalyzer&  gScaler   = ScalerAnalyzer::GetInstance();
-    ///// Number of spill for Scaler Sheet
-    Scaler nspill_scaler_sheet  = 1;
-    const std::string filename = Form("%s/k18br_analyzer/e72/param/CMAP/scaler_e72_20250223.param",std::getenv("HOME"));
+    Int_t c = ScalerAnalyzer::kLeft;
+    Int_t r = 0;
+    scaler_on.Set(c, r++, ScalerInfo("BHT",        0,  6));
+    scaler_on.Set(c, r++, ScalerInfo("T0",         0, 13));
+    scaler_on.Set(c, r++, ScalerInfo("BH2",        0,  7));
+    scaler_on.Set(c, r++, ScalerInfo("BAC",        0,  8));
+    scaler_on.Set(c, r++, ScalerInfo("HTOF",       0,  9));
+    scaler_on.Set(c, r++, ScalerInfo("HTOF-Mp2",     0, 48));
+    scaler_on.Set(c, r++, ScalerInfo("HTOF-Mp3",     0, 49));
+    scaler_on.Set(c, r++, ScalerInfo("BEAM-A",       0, 19));
+    scaler_on.Set(c, r++, ScalerInfo("BEAM-B",       0, 20));
+    scaler_on.Set(c, r++, ScalerInfo("BEAM-C",       0, 21));
+    scaler_on.Set(c, r++, ScalerInfo("BEAM-D",       0, 22));
+    scaler_on.Set(c, r++, ScalerInfo("BEAM-E",       0, 23));
+    scaler_on.Set(c, r++, ScalerInfo("BEAM-F",       0, 24));
+    // scaler_on.Set(c, r++, ScalerInfo("T1",         0, 14));
+    // scaler_on.Set(c, r++, ScalerInfo("T2",         0, 15));
+    scaler_on.Set(c, r++, ScalerInfo("SAC",        0, 10));
+    scaler_on.Set(c, r++, ScalerInfo("BVH",         0, 14));
   }
 
-//____________________________________________________________________________
-Int_t
-process_begin( const std::vector<std::string>& argv )
-{
-  ConfMan::getInstance().initialize(argv);
-
-  // flags
-  gScaler.SetNRows(13);
-  gScaler.SetFlag( ScalerAnalyzer::kSeparateComma );
-  gScaler.SetFlag( ScalerAnalyzer::kSemiOnline );
-  for( Int_t i=0, n=argv.size(); i<n; ++i ){
-    TString v = argv[i];
-    if( v.Contains("--print") ){
-      gScaler.SetFlag( ScalerAnalyzer::kScalerSheet );
-    }
-    if( v.Contains("--spill=") ){
-      nspill_scaler_sheet = v.ReplaceAll("--spill=","").Atoi();
-    }
-    if( v.Contains(":") ){
-      gScaler.SetFlag( ScalerAnalyzer::kSemiOnline, false );
-    }
-    if( v.Contains("--spill-by-spill") ){
-      gScaler.SetFlag( ScalerAnalyzer::kSpillBySpill );
-    }
+  {
+    Int_t c = ScalerAnalyzer::kCenter;
+    Int_t r = 0;
+    scaler_on.Set(c, r++, ScalerInfo("10M-Clock",    0,  0));
+    scaler_on.Set(c, r++, ScalerInfo("TM",           0,  15));
+    // scaler_on.Set(c, r++, ScalerInfo("SY",           0, 10));
+    scaler_on.Set(c, r++, ScalerInfo("K-Beam",       0, 35));
+    scaler_on.Set(c, r++, ScalerInfo("Pi-Beam",      0, 39));
+    scaler_on.Set(c, r++, ScalerInfo("Beam",         0, 36));
+    scaler_on.Set(c, r++, ScalerInfo("KVC1",       0, 11));
+    scaler_on.Set(c, r++, ScalerInfo("KVC2",       0, 12));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-A",        0, 25));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-B",        0, 26));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-C",        0, 27));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-D",        0, 28));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-E",        0, 29));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-F",        0, 30));
+    scaler_on.Set(c, r++, ScalerInfo("Clock-PS",      0, 40));
+    scaler_on.Set(c, r++, ScalerInfo("Reserve2-PS",   0, 41));
   }
 
-  std::cout<<filename<<std::endl;
-  std::ifstream ifs(filename);
-  if(!ifs){
-    std::cout<<"#E "<<filename<<" cannot be opend"<<std::endl;
-    exit(0);
+  {
+    Int_t c = ScalerAnalyzer::kRight;
+    Int_t r = 0;
+    scaler_on.Set(c, r++, ScalerInfo("Spill",        -1, -1));
+    scaler_on.Set(c, r++, ScalerInfo("Real-Time",     0,  1));
+    scaler_on.Set(c, r++, ScalerInfo("Live-Time",     0,  2));
+    scaler_on.Set(c, r++, ScalerInfo("L1-Req",        0,  3));
+    scaler_on.Set(c, r++, ScalerInfo("L1-Acc",        0,  4));
+    // scaler_on.Set(c, r++, ScalerInfo("L2-Req",        0,  5));
+    scaler_on.Set(c, r++, ScalerInfo("L2-Acc",        0,  5));
+    scaler_on.Set(c, r++, ScalerInfo("Level1-PS",     0, 42));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-A-PS",     0, 32));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-B-PS",     0, 33));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-C-PS",     0, 34));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-D-PS",     0, 35));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-E-PS",     0, 36));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-F-PS",     0, 37));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-PSOR-A",   0, 38));
+    scaler_on.Set(c, r++, ScalerInfo("TRIG-PSOR-B",   0, 39));
   }
-  std::cout<<filename<<" opened"<<std::endl;
-  std::string name;
-  int plane,channel;
-  int column,row;
-  while(ifs>>name>>plane>>channel>>column>>row){
-#if 1
-    std::cout<<std::setw(20)<<name
-             <<std::setw(5)<<plane
-             <<std::setw(5)<<channel
-             <<std::setw(5)<<column
-             <<std::setw(5)<<row
-             <<std::endl;
-#endif
-    if(column<0||row<0) continue;
-    gScaler.Set( column, row, ScalerInfo(name,plane,channel) );
+
+  for(Int_t i=0; i<ScalerAnalyzer::MaxColumn; ++i){
+    for(Int_t j=0; j<ScalerAnalyzer::MaxRow; ++j){
+      scaler_off.Set(i, j, scaler_on.GetScalerInfo(i, j));
+    }
   }
-  std::cout<<""<<__func__<<" finished"<<std::endl;
-  ifs.close();
+
+  scaler_on.PrintFlags();
+  scaler_off.PrintFlags();
+
   return 0;
 }
 
 //____________________________________________________________________________
 Int_t
-process_end( void )
+process_end()
 {
-  if( gScaler.GetFlag( ScalerAnalyzer::kScalerSheet ) )
-    return 0;
-
-  gScaler.Print();
-
   return 0;
-
 }
 
 //____________________________________________________________________________
 Int_t
-process_event( void )
+process_event()
 {
-  static Int_t  event_count = 0;
-  static Bool_t en_disp     = false;
+  static auto& gUnpacker = GUnpacker::get_instance();
+  static auto* root = gUnpacker.get_root();
+  static auto& gConfig = GConfig::get_instance();
+  static const TString tout = gConfig.get_control_param("tout");
 
-  //  std::cout<<gUnpacker.get_root()->get_run_number()<<std::endl;
-  if( gScaler.GetFlag( ScalerAnalyzer::kScalerSheet ) && event_count==0 )
-    std::cout << "waiting spill end " << std::flush;
+  Int_t run_number = root->get_run_number();
+  Int_t event_number = gUnpacker.get_event_number();
 
-  ++event_count;
+  std::stringstream ss;
 
-  gScaler.Decode();
-
-  if( gScaler.GetFlag( ScalerAnalyzer::kSemiOnline ) ){
-    if( event_count%300 == 0 ) en_disp = true;
-  } else {
-    if( event_count%10 == 0 ) en_disp = true;
-  }
-
-  if( gScaler.IsSpillEnd() )
-    en_disp = true;
-
-  if( gScaler.GetFlag( ScalerAnalyzer::kScalerSheet ) &&
-      !gScaler.IsSpillEnd() ){
-    if( event_count%100==0 )
-      std::cout << "." << std::flush;
-    return 0;
-  }
-
-  if( en_disp ){
-    gScaler.Print();
-    en_disp = false;
-  }
-
-  if( gScaler.IsSpillEnd() &&
-      gScaler.GetFlag( ScalerAnalyzer::kScalerSheet ) ){
-    std::cout << "found spill end "
-    	      << gScaler.Get("Spill") << "/" << nspill_scaler_sheet
-	      << std::endl;
-
-    if( gScaler.Get("Spill") == nspill_scaler_sheet ){
-      gScaler.PrintScalerSheet();
-      return -1;
+  // Tag
+  ss.str("");
+  ss << "<div style='color: white; background-color: black;"
+     << "width: 100%; height: 100%;'>";
+  ss << "RUN " << run_number << "   Event " << event_number
+     << "<br>";
+  if(!gUnpacker.is_good()){
+    std::ifstream ifs(tout);
+    if(ifs.good()){
+      TString buf;
+      while(!ifs.eof()){
+	buf.ReadLine(ifs, false);
+	if(buf.Contains("!") && !buf.Contains("............!"))
+	  buf = "<font color='yellow'>" + buf + "</font>";
+	// if(buf.Contains("bUuSELselthdg"))
+	//   ss << TString(' ', 24);
+	ss << buf << "<br>";
+      }
+      ifs.close();
+      tag_summary.seekp(0, std::ios_base::beg);
+    } else {
+      ss << Form("Failed to read %s", tout.Data());
     }
-
-    if( gScaler.Get("Spill") > nspill_scaler_sheet ){
-      std::cout << "something is wrong!" << std::endl;
-      return -1;
-    }
-
-    std::cout << "waiting spill end " << std::flush;
+    ss << "</div>";
+    gHttp.SetItemField("/Tag", "value", ss.str().c_str());
   }
 
+  const Int_t MaxDispRow = 20;
+
+  // Scaler Spill On
+  auto now = std::chrono::duration_cast<std::chrono::milliseconds>
+    (std::chrono::system_clock::now().time_since_epoch());
+  static auto prev_flush = now;
+  Bool_t flush_flag = (now - prev_flush) > flush_interval;
+  prev_flush = now;
+
+  if(scaler_on.Decode()){
+    if(flush_flag && !scaler_on.IsSpillEnd())
+      // if(!scaler_on.IsSpillEnd())
+      return 0;
+
+    ss.str("");
+    ss << "<div style='color: white; background-color: black;"
+       << "width: 100%; height: 100%;'>";
+    ss << "<table border=\"0\" width=\"700\" cellpadding=\"0\">";
+    TString end_mark = scaler_on.IsSpillEnd() ? "Spill End" : "";
+    ss << "<tr><td width=\"100\">RUN</td><td align=\"right\" width=\"100\">"
+       << scaler_on.SeparateComma(run_number) << "</td><td width=\"100\">"
+       << " : Event Number" << "</td><td align=\"right\">"
+       << scaler_on.SeparateComma(event_number) << "</td>"
+       << "<td width=\"100\">" << " : " << "</td>"
+       << "<td align=\"right\" width=\"100\">" << end_mark << "</td>"
+       << "<tr><td></td><td></td><td></td></tr>";
+    for(Int_t j=0; j<MaxDispRow; ++j){
+      ss << "<tr>";
+      for(Int_t i=0; i<ScalerAnalyzer::MaxColumn; ++i){
+	// for(Int_t i=0; i<ScalerAnalyzer::MaxColumn; ++i){
+        TString n = scaler_on.GetScalerName(i, j);
+        if(n.Contains("n/a"))
+          continue;
+	ss << "<td>";
+	if(i != 0)
+	  ss << " : ";
+	ss << n << "</td>"
+	   << "<td align=\"right\">"
+           << scaler_on.SeparateComma(scaler_on.Get(i, j)) << "</td>";
+      }
+      ss << "</tr>";
+    }
+    ss << "<tr><td></td><td></td><td></td></tr>"
+       << "<tr><td>K-Beam/TM</td>"
+       << "<td align=\"right\">"
+       << Form("%.6f", scaler_on.Fraction("K-Beam", "TM"))
+       << "</td>"
+       << "<td> : Live/Real</td>"
+       << "<td align=\"right\">"
+       << Form("%.6f", scaler_on.Fraction("Live-Time", "Real-Time"))
+       << "</td>"
+       << "<td> : DAQ-Eff</td>"
+       << "<td align=\"right\">"
+       << Form("%.6f", scaler_on.Fraction("L1-Acc", "L1-Req"))
+       << "</td>"
+       << "</tr></tr>"
+       << "<td>L1Req/K-Beam</td>"
+       << "<td align=\"right\">"
+       << Form("%.6f", scaler_on.Fraction("L1-Req", "K-Beam"))
+       << "</td>"
+       << "<td> : L2-Eff</td>"
+       << "<td align=\"right\">"
+       << Form("%.6f", scaler_on.Fraction("L2-Acc", "L1-Acc"))
+       << "</td>"
+       << "<td> : Duty-Factor</td>"
+       << "<td align=\"right\">"
+       << Form("%.6f", scaler_on.Duty())
+       << "</td>"
+       << "</tr>";
+    ss << "</table>";
+    ss << "</div>";
+    gHttp.SetItemField("/ScalerOn", "value", ss.str().c_str());
+  }
+
+  // Scaler Spill Off
+  if(scaler_off.Decode()){
+    if(flush_flag && !scaler_off.IsSpillEnd())
+      // if(!scaler_off.IsSpillEnd())
+      return 0;
+
+    ss.str("");
+    ss << "<div style='color: white; background-color: black;"
+       << "width: 100%; height: 100%;'>";
+    ss << "<table border=\"0\" width=\"700\" cellpadding=\"0\">";
+    TString end_mark = scaler_off.IsSpillEnd() ? "Spill End" : "";
+    ss << "<tr><td width=\"100\">RUN</td><td align=\"right\" width=\"100\">"
+       << scaler_off.SeparateComma(run_number) << "</td><td width=\"100\">"
+       << " : Event Number" << "</td><td align=\"right\">"
+       << scaler_off.SeparateComma(event_number) << "</td>"
+       << "<td width=\"100\">" << " : " << "</td>"
+       << "<td align=\"right\" width=\"100\">" << end_mark << "</td>"
+       << "<tr><td></td><td></td><td></td></tr>";
+    for(Int_t j=0; j<MaxDispRow; ++j){
+      // for(Int_t j=0; j<ScalerAnalyzer::MaxRow; ++j){
+      ss << "<tr>";
+      for(Int_t i=0; i<ScalerAnalyzer::MaxColumn; ++i){
+        TString n = scaler_off.GetScalerName(i, j);
+        if(n.Contains("n/a"))
+          continue;
+	ss << "<td>";
+	if(i != 0)
+	  ss << " : ";
+	ss << n << "</td>"
+	   << "<td align=\"right\">"
+           << scaler_off.SeparateComma(scaler_off.Get(i, j)) << "</td>";
+      }
+      ss << "</tr>";
+    }
+    ss << "<tr><td></td><td></td><td></td></tr>"
+       << "<tr><td>K-Beam/TM</td>"
+       << "<td align=\"right\">"
+       << Form("%.6f", scaler_off.Fraction("K-Beam", "TM"))
+       << "</td>"
+       << "<td> : Live/Real</td>"
+       << "<td align=\"right\">"
+       << Form("%.6f", scaler_off.Fraction("Live-Time", "Real-Time"))
+       << "</td>"
+       << "<td> : DAQ-Eff</td>"
+       << "<td align=\"right\">"
+       << Form("%.6f", scaler_off.Fraction("L1-Acc", "L1-Req"))
+       << "</td>"
+       << "</tr></tr>"
+       << "<td>L1Req/K-Beam</td>"
+       << "<td align=\"right\">"
+       << Form("%.6f", scaler_off.Fraction("L1-Req", "K-Beam"))
+       << "</td>"
+       << "<td> : L2-Eff</td>"
+       << "<td align=\"right\">"
+       << Form("%.6f", scaler_off.Fraction("L2-Acc", "L1-Acc"))
+       << "</td>"
+       << "<td> : Duty-Factor</td>"
+       << "<td align=\"right\">"
+       << Form("%.6f", scaler_off.Duty())
+       << "</td>"
+       << "</tr>";
+    ss << "</table>";
+    ss << "</div>";
+    gHttp.SetItemField("/ScalerOff", "value", ss.str().c_str());
+  }
+
+  if (gUnpacker.is_good()){
+    ss.str("");
+    ss << "<div style='color: white; background-color: black;"
+       << "width: 100%; height: 100%;'>"
+       << "Tag cheker is running" << "</div>";
+    gHttp.SetItemField("/Tag", "value", ss.str().c_str());
+  }
+
+  if(scaler_on.IsSpillEnd() || scaler_off.IsSpillEnd()){
+    gSystem->Sleep(150);
+    gSystem->ProcessEvents();
+  }
+
+  if (!gUnpacker.is_good()){
+    static const TString host(gSystem->Getenv("HOSTNAME"));
+    static auto prev_spill = scaler_on.Get("Spill");
+    auto        curr_spill = scaler_on.Get("Spill");
+    if(host.Contains("k18term4") &&
+       event_number > 1 && prev_spill != curr_spill){
+      std::cout << "exec tagslip sound!" << std::endl;
+      gSystem->Exec("ssh k18epics.monitor.k18net \"aplay ~/sound/tagslip.wav\" &");
+    }
+    prev_spill = curr_spill;
+  }
+  gSystem->ProcessEvents();
   return 0;
 }
-
 }

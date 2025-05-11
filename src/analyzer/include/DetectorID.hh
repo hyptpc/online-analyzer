@@ -1,13 +1,10 @@
-/**
- *  file: DetectorID.hh
- *  date: 2017.04.10
- *
- */
-
+// -*- C++ -*-
+ 
 #ifndef DETECTOR_ID_HH
 #define DETECTOR_ID_HH
 
 #include <iostream>
+#include <TString.h>
 
 // Counters ___________________________________________________________
 const int DetIdCDH    =  0;
@@ -59,8 +56,14 @@ const int DetIdBLC2= 112;
 const int DetIdVmeRm=91;
 const int NumOfPlaneVmeRm=3;
 
-enum eTriggerFlag
+namespace trigger
+{
+enum ETriggerFlag
   {
+    kL1SpillOn,
+    kL1SpillOff,
+    kSpillOnEnd,
+    kSpillOffEnd,
     kSpillStart =  1,
     kSpillEnd   =  2,
     kBeam1      =  3,
@@ -75,8 +78,12 @@ enum eTriggerFlag
     kKaon2_f       = 12,
     kKaonStart     = 13,
     kKaonStartStop = 14,
-    kStartStop     = 15
+    kStartStop     = 15,
     //    kMisc          = 16
+    NTriggerFlag,
   };
+
+const Int_t NumOfSegTFlag = trigger::NTriggerFlag;
+}
 
 #endif

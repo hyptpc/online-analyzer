@@ -24,6 +24,20 @@ HttpServer::~HttpServer( void )
 {
 }
 
+//_____________________________________________________________________________
+void
+HttpServer::CreateItem( TString name, TString desc )
+{
+  m_server->CreateItem( name, desc );
+}
+
+//_____________________________________________________________________________
+void
+HttpServer::Hide( TString dir )
+{
+  m_server->Hide( dir );
+}
+
 //______________________________________________________________________________
 void
 HttpServer::Open( void )
@@ -115,4 +129,11 @@ HttpServer::ResetAll( void )
   std::cout << "#D HttpServer::ResetAll()" << std::endl;
   for( auto&& h : m_th1_list )
     h->Reset();
+}
+
+//_____________________________________________________________________________
+void
+HttpServer::SetItemField( TString dir, TString key, TString val )
+{
+  m_server->SetItemField( dir, key, val );
 }
