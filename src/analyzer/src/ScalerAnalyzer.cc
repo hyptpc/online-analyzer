@@ -43,7 +43,8 @@ ScalerAnalyzer::ScalerAnalyzer()
     m_is_spill_end(false),
     m_is_spill_on_end(false),
     m_run_number(-1),
-    m_canvas()
+    m_canvas(),
+    m_trigger_flag()
 {
   for (Int_t i=0; i<MaxColumn; ++i){
     for (Int_t j=0; j<MaxRow; ++j){
@@ -100,27 +101,35 @@ ScalerAnalyzer::Decode()
 	}
       }
     }
+    std::stringstream ss;
+    for (Int_t i=trigger_flag.size() - 1; i>=0; --i){
+      ss << (trigger_flag[i] ? '!' : '.');
+    }
+    m_trigger_flag = ss.str();
+    // std::cout << m_trigger_flag << std::endl;
   }
-  // if (trigger_flag[trigger::kSpillOnEnd]){
-  //   m_is_spill_on_end = true;
-  //   m_is_spill_end = true;
-  // }
-  // if (trigger_flag[trigger::kSpillOffEnd]){
-  //   m_is_spill_end = true;
-  // }
-  // if (m_flag[kSpillOn]){
-  //   if (!trigger_flag[trigger::kSpillOnEnd] &&
-  //      !trigger_flag[trigger::kL1SpillOn]){
-  //     return false;
-  //   }
-  // }
-  // auto spill_off_end = trigger_flag[trigger::kSpillOffEnd];
-  // if (m_flag[kSpillOff]){
-  //   if (!spill_off_end &&
-  //      !trigger_flag[trigger::kL1SpillOff]){
-  //     return false;
-  //   }
-  // }
+  if (trigger_flag[trigger::kSpillOnEnd]){
+    std::cout << TTimeStamp() << "\tSpillOnEnd" << std::endl;
+    m_is_spill_on_end = true;
+    m_is_spill_end = true;
+  }
+  if (trigger_flag[trigger::kSpillOffEnd]){
+    std::cout << TTimeStamp() << "\tSpillOffEnd" << std::endl;
+    m_is_spill_end = true;
+  }
+  if (m_flag[kSpillOn]){
+    if (!trigger_flag[trigger::kSpillOnEnd] &&
+       !trigger_flag[trigger::kL1SpillOn]){
+      return false;
+    }
+  }
+  auto spill_off_end = trigger_flag[trigger::kSpillOffEnd];
+  if (m_flag[kSpillOff]){
+    if (!spill_off_end &&
+       !trigger_flag[trigger::kL1SpillOff]){
+      return false;
+    }
+  }
 
   if (m_flag[kScalerSheet] && !m_is_spill_end){
     for (Int_t i=0; i<MaxColumn; ++i){

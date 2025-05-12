@@ -108,6 +108,7 @@ private:
   Bool_t              m_is_spill_on_end;
   Int_t               m_run_number;
   TCanvas*            m_canvas;
+  TString             m_trigger_flag;
 
 public:
   void       Clear( Option_t* option="" );
@@ -125,6 +126,7 @@ public:
     { return m_info.at(i).at(j); }
   TString    GetScalerName( Int_t i, Int_t j ) const
     { return m_info.at(i).at(j).name; }
+  TString    GetTriggerFlag() const { return m_trigger_flag; }
   Bool_t     Has( const TString& key ) const;
   Bool_t     IsSpillEnd( void ) const { return m_is_spill_end; }
   Bool_t     MakeScalerText( void ) const;

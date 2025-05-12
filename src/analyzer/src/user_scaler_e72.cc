@@ -41,8 +41,6 @@
 #include "HttpServer.hh"
 #include "ScalerAnalyzer.hh"
 
-#define CFT 0
-
 namespace analyzer
 {
 using namespace hddaq::unpacker;
@@ -64,7 +62,7 @@ process_begin(const std::vector<std::string>& argv)
   gConfMan.initialize(argv);
   if(!gConfMan.isGood()) return -1;
 
-  gHttp.SetPort(9092);
+  gHttp.SetPort(8082);
   gHttp.Open();
   gHttp.SetItemField("/", "_monitoring", "100");
   gHttp.SetItemField("/", "_layout", "vert3");
@@ -239,6 +237,7 @@ process_event()
        << "width: 100%; height: 100%;'>";
     ss << "<table border=\"0\" width=\"700\" cellpadding=\"0\">";
     TString end_mark = scaler_on.IsSpillEnd() ? "Spill End" : "";
+    // end_mark = scaler_on.GetTriggerFlag();
     ss << "<tr><td width=\"100\">RUN</td><td align=\"right\" width=\"100\">"
        << scaler_on.SeparateComma(run_number) << "</td><td width=\"100\">"
        << " : Event Number" << "</td><td align=\"right\">"

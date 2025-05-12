@@ -120,7 +120,6 @@ process_begin( const std::vector<std::string>& argv )
     port=std::strtoull(argv.at(4).c_str(), nullptr, 10);
   }
   
-  std::cout << "aa" <<std::endl;
   gHttp.SetPort(port);
   gHttp.Open();
 

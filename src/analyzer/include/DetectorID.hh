@@ -60,12 +60,10 @@ namespace trigger
 {
 enum ETriggerFlag
   {
-    kL1SpillOn,
-    kL1SpillOff,
     kSpillOnEnd,
     kSpillOffEnd,
-    kSpillStart =  1,
-    kSpillEnd   =  2,
+    kL1SpillOn,
+    kL1SpillOff,
     kBeam1      =  3,
     kBeam2      =  4,
     kBeam_f     =  5,
