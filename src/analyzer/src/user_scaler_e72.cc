@@ -368,8 +368,8 @@ process_event()
   }
 
   if(scaler_on.IsSpillEnd() || scaler_off.IsSpillEnd()){
-    gSystem->Sleep(150);
     gSystem->ProcessEvents();
+    gSystem->Sleep(150);
   }
 
   if (!gUnpacker.is_good()){

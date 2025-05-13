@@ -79,6 +79,13 @@ enum ETriggerFlag
     kTrigD,
     kTrigE,
     kTrigF,
+    kTrigAPS,
+    kTrigBPS,
+    kTrigCPS,
+    kTrigDPS,
+    kTrigEPS,
+    kTrigFPS,
+    kClockPS,
     NTriggerFlag,
   };
 
@@ -103,6 +110,13 @@ const std::vector<TString> STriggerFlag =
     "TrigD",
     "TrigE",
     "TrigF",
+    "TrigA-PS",
+    "TrigB-PS",
+    "TrigC-PS",
+    "TrigD-PS",
+    "TrigE-PS",
+    "TrigF-PS",
+    "Clock-PS",
   };
 }
 
