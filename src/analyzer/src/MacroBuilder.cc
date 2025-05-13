@@ -297,6 +297,56 @@ HTOFTDC2()
   return c1;
 }
 
+//_____________________________________________________________________________
+TCanvas*
+BVHTDCTOT()
+{
+  auto c1 = new TCanvas(__func__, __func__);
+  c1->Divide(4, 2);
+  for (Int_t seg=0; seg<NumOfSegBVH; ++seg) {
+    c1->cd(seg+1); // ->SetLogy();
+    auto h1 = GHist::get(HistMaker::getUniqueID(kBVH, 0, kTDC, seg+1));
+    if(!h1) continue;
+    h1->Draw();
+    c1->cd(seg+1+NumOfSegBVH); // ->SetLogy();
+    auto h2 = GHist::get(HistMaker::getUniqueID(kBVH, 0, kADC, seg+1));
+    if(!h2) continue;
+    h2->Draw();
+  }
+  return c1;
+}
+
+//_____________________________________________________________________________
+TCanvas*
+T1T2()
+{
+  auto c1 = new TCanvas(__func__, __func__);
+  c1->Divide(4, 2);
+  const Int_t n_ch = 2;
+  std::vector<Int_t> device_id = { kT1, kT2 };
+  for (Int_t i=0, n=device_id.size(); i<n; ++i) {
+    for (Int_t ch=0; ch<n_ch; ++ch) {
+      c1->cd(i*n_ch+ch+1)->SetLogy();
+      auto h1 = GHist::get(HistMaker::getUniqueID(device_id[i], 0, kADC, ch+1));
+      if(!h1) continue;
+      h1->Draw();
+      auto h2 = GHist::get(HistMaker::getUniqueID(device_id[i], 0, kADCwTDC, ch+1));
+      if(!h2) continue;
+      h2->SetLineColor(kRed+1);
+      h2->Draw("same");
+    }
+  }
+  for (Int_t i=0, n=device_id.size(); i<n; ++i) {
+    for (Int_t ch=0; ch<n_ch; ++ch) {
+      c1->cd(i*n_ch+ch+5)->SetLogy();
+      auto h1 = GHist::get(HistMaker::getUniqueID(device_id[i], 0, kTDC, ch+1));
+      if(!h1) continue;
+      h1->Draw();
+    }
+  }
+  return c1;
+}
+
 //____________________________________________________________________________
 TCanvas*
 Multiplicity()
@@ -311,6 +361,7 @@ Multiplicity()
     HistMaker::getUniqueID(kSAC, 0, kMulti, 0),
     HistMaker::getUniqueID(kKVC1, 0, kMulti, 0),
     HistMaker::getUniqueID(kKVC2, 0, kMulti, 0),
+    HistMaker::getUniqueID(kBVH, 0, kMulti),
   };
   c1->Divide(3, 3);
   for(Int_t i=0, n=hid_list.size(); i<n; ++i){
@@ -335,6 +386,7 @@ HitPat()
     HistMaker::getUniqueID(kSAC, 0, kHitPat, 0),
     HistMaker::getUniqueID(kKVC1, 0, kHitPat, 0),
     HistMaker::getUniqueID(kKVC2, 0, kHitPat, 0),
+    HistMaker::getUniqueID(kBVH, 0, kHitPat),
   };
   c1->Divide(3, 3);
   for(Int_t i=0, n=hid_list.size(); i<n; ++i){
@@ -1095,7 +1147,7 @@ UpdateCounterEfficiency()
   std::vector<TString> ch_name = {
     "BHT_Multi_0", "T0_Multi_0", "BH2_Multi_0",
     "BAC_Multi_0", "HTOF_Multi_0", "SAC_Multi_0",
-    "KVC1_Multi_0", "KVC2_Multi_0"
+    "KVC1_Multi_0", "KVC2_Multi_0", "BVH_Multi"
   };
   static std::vector<TText*> tex(ch_name.size());
   static auto c1 = (TCanvas*)gROOT->FindObject("Multiplicity");

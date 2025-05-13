@@ -16,13 +16,14 @@ enum DetectorType {
   kCDC2,
 #endif
   kCDC, kCDH, //3
-  kBHD, kBHT=kBHD, kT0, kT0new, kT1=kT0new, kAC, kDEF, kE0, //9
+  kBHD, kBHT=kBHD, kT0, kT0new, kAC, kDEF, kE0, //9
   kBLC1a, kBLC1b, kBLC2a, kBLC2b, kBPCmini, kBPC1=kBPCmini, kBPC, kBPC2=kBPC,  //15
   kPbG, kPbF2, kVeto, kFinger,kBTC,kLeak,kRC, kCNCtest,kT98PMT,kT98MPPC,//25
   kSDD, kSDDGate, kSDDReset, //28
   kCVC, kNC, kVFT, //31
   kBAC, kKVC1, kKVC2, kSAC, kBH2, //34 for E72
   kHTOF,
+  kBVH, kBVH2, kT1, kT2,
   kQDC, kQDC1, kQDC2, //37
   kTriggerFlag, kDAQ, kCorrelation, kMisc,
   kTimeStamp, kDCEff,kAna, 
@@ -130,6 +131,9 @@ public:
   		 );
   
   TList* createTriggerFlag(bool flag_ps=true);
+  TList* createBVH(bool flag_ps=true);
+  TList* createT1(bool flag_ps=true);
+  TList* createT2(bool flag_ps=true);
 
   TList* createTimeStamp(bool flag_ps=true);
   TList* createPbF2(DetectorType kDET, std::string strDet, int nsegments, bool flag_ps=true); 

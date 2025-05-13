@@ -52,7 +52,6 @@ void HistMaker::getListOfDetectors(std::vector<std::string>& vec)
 	    g.name_created_detectors_.end(),
 	    back_inserter(vec)
 	    );
-
 }
 
 // -------------------------------------------------------------------------
@@ -238,6 +237,229 @@ HistMaker::createTriggerFlag(Bool_t flag_ps)
     }
     h->SetStats(0);
     top_dir->Add(h);
+  }
+  return top_dir;
+}
+
+//_____________________________________________________________________________
+TList*
+HistMaker::createBVH(Bool_t flag_ps)
+{
+  const std::string strDet("BVH");
+  name_created_detectors_.push_back(strDet);
+  if(flag_ps) name_ps_files_.push_back(strDet);
+  const char* nameDetector = strDet.c_str();
+  TList *top_dir = new TList;
+  top_dir->SetName(nameDetector);
+  { // TDC
+    Int_t target_id = getUniqueID(kBVH, 0, kTDC, 0);
+    for(Int_t i=0; i<NumOfSegBVH; ++i){
+      TString title = Form("%s_TDC_%d", nameDetector, i);
+      top_dir->Add(createTH1(++target_id, title,
+			     1000, 0, 1000,
+			     "TDC [ch]", ""));
+    }
+  }
+  { // TOT
+    Int_t target_id = getUniqueID(kBVH, 0, kADC, 0);
+    for(Int_t i=0; i<NumOfSegBVH; ++i){
+      TString title = Form("%s_TOT_%d", nameDetector, i);
+      top_dir->Add(createTH1(++target_id, title,
+			     200, 0, 200,
+			     "TOT [ch]", ""));
+    }
+  }
+  { // HitPat
+    auto h = createTH1(getUniqueID(kBVH, 0, kHitPat),
+		       "BVH_HitPat",
+		       NumOfSegBVH, -0.5, NumOfSegBVH+0.5,
+		       "", "");
+    top_dir->Add(h);
+  }
+  { // Multiplicity
+    auto h = createTH1(getUniqueID(kBVH, 0, kMulti),
+		       "BVH_Multi",
+		       NumOfSegBVH+1, -0.5, NumOfSegBVH+0.5,
+		       "", "");
+    top_dir->Add(h);
+  }
+  return top_dir;
+}
+
+//_____________________________________________________________________________
+TList*
+HistMaker::createT1(Bool_t flag_ps)
+{
+  const std::string strDet = "T1";
+  name_created_detectors_.push_back(strDet);
+  if(flag_ps) name_ps_files_.push_back(strDet);
+  const char* nameDetector = strDet.c_str();
+  TList *top_dir = new TList;
+  top_dir->SetName(nameDetector);
+  { ///// ADC
+    TString strSubDir  = "ADC";
+    const char* nameSubDir = strSubDir.Data();
+    TList *sub_dir = new TList;
+    sub_dir->SetName(nameSubDir);
+    Int_t target_id = getUniqueID(kT1, 0, kADC, 0);
+    for(Int_t i = 0; i<NumOfSegT1*2; ++i){
+      const char* title = NULL;
+      if(i < NumOfSegT1){
+	Int_t seg = i+1; // 1 origin
+	title = Form("%s_%s_%dU", nameDetector, nameSubDir, seg);
+      }else{
+	Int_t seg = i+1-NumOfSegT1; // 1 origin
+	title = Form("%s_%s_%dD", nameDetector, nameSubDir, seg);
+      }
+      sub_dir->Add(createTH1(target_id + i+1, title, // 1 origin
+			     0x1000, 0, 0x1000,
+			     "ADC [ch]", ""));
+    }
+    top_dir->Add(sub_dir);
+  }
+  { ///// ADC w/TDC
+    TString strSubDir  = CONV_STRING(kADCwTDC);
+    const char* nameSubDir = strSubDir.Data();
+    TList *sub_dir = new TList;
+    sub_dir->SetName(nameSubDir);
+    Int_t target_id = getUniqueID(kT1, 0, kADCwTDC, 0);
+    for( Int_t i=0; i<NumOfSegT1*2; ++i ){
+      const char* title = NULL;
+      if( i<NumOfSegT1 ){
+	Int_t seg = i+1; // 1 origin
+	title = Form("%s_%s_%dU", nameDetector, nameSubDir, seg);
+      }else{
+	Int_t seg = i+1-NumOfSegT1; // 1 origin
+	title = Form("%s_%s_%dD", nameDetector, nameSubDir, seg);
+      }
+      sub_dir->Add(createTH1(target_id + i+1, title, // 1 origin
+			     0x1000, 0, 0x1000,
+			     "ADC [ch]", ""));
+    }
+    top_dir->Add(sub_dir);
+  }
+  { ///// TDC
+    TString strSubDir  = CONV_STRING(kTDC);
+    const char* nameSubDir = strSubDir.Data();
+    TList *sub_dir = new TList;
+    sub_dir->SetName(nameSubDir);
+    Int_t target_id = getUniqueID(kT1, 0, kTDC, 0);
+    for(Int_t i = 0; i<NumOfSegT1*2; ++i){
+      const char* title = NULL;
+      if(i < NumOfSegT1){
+	Int_t seg = i+1; // 1 origin
+	title = Form("%s_%s_%dU", nameDetector, nameSubDir, seg);
+      }else{
+	Int_t seg = i+1-NumOfSegT1; // 1 origin
+	title = Form("%s_%s_%dD", nameDetector, nameSubDir, seg);
+      }
+      sub_dir->Add(createTH1(target_id + i+1, title, // 1 origin
+			     //			     10000, 0, 400000,
+     			     2000, 0, 3000000,
+			     "TDC [ch]", ""));
+    }
+    top_dir->Add(sub_dir);
+  }
+  { ///// Hit parttern
+    Int_t target_id = getUniqueID(kT1, 0, kHitPat, 0);
+    top_dir->Add(createTH1(++target_id, "T1_HitPat", // 1 origin
+			   NumOfSegT1, -0.5, NumOfSegT1+0.5,
+			   "Segment", ""));
+  }
+  { ///// Multiplicity
+    Int_t target_id = getUniqueID(kT1, 0, kMulti, 0);
+    top_dir->Add(createTH1(++target_id, "T1_Multi", // 1 origin
+			   NumOfSegT1+1, -0.5, NumOfSegT1+1.5,
+			   "Multiplicity", ""));
+  }
+  return top_dir;
+}
+
+//_____________________________________________________________________________
+TList*
+HistMaker::createT2(Bool_t flag_ps)
+{
+  const std::string strDet = "T2";
+  name_created_detectors_.push_back(strDet);
+  if(flag_ps) name_ps_files_.push_back(strDet);
+  const char* nameDetector = strDet.c_str();
+  TList *top_dir = new TList;
+  top_dir->SetName(nameDetector);
+  { ///// ADC
+    TString strSubDir  = "ADC";
+    const char* nameSubDir = strSubDir.Data();
+    TList *sub_dir = new TList;
+    sub_dir->SetName(nameSubDir);
+    Int_t target_id = getUniqueID(kT2, 0, kADC, 0);
+    for(Int_t i = 0; i<NumOfSegT2*2; ++i){
+      const char* title = NULL;
+      if(i < NumOfSegT2){
+	Int_t seg = i+1; // 1 origin
+	title = Form("%s_%s_%dU", nameDetector, nameSubDir, seg);
+      }else{
+	Int_t seg = i+1-NumOfSegT2; // 1 origin
+	title = Form("%s_%s_%dD", nameDetector, nameSubDir, seg);
+      }
+      sub_dir->Add(createTH1(target_id + i+1, title, // 1 origin
+			     0x1000, 0, 0x1000,
+			     "ADC [ch]", ""));
+    }
+    top_dir->Add(sub_dir);
+  }
+  { ///// ADC w/TDC
+    TString strSubDir  = CONV_STRING(kADCwTDC);
+    const char* nameSubDir = strSubDir.Data();
+    TList *sub_dir = new TList;
+    sub_dir->SetName(nameSubDir);
+    Int_t target_id = getUniqueID(kT2, 0, kADCwTDC, 0);
+    for( Int_t i=0; i<NumOfSegT2*2; ++i ){
+      const char* title = NULL;
+      if( i<NumOfSegT2 ){
+	Int_t seg = i+1; // 1 origin
+	title = Form("%s_%s_%dU", nameDetector, nameSubDir, seg);
+      }else{
+	Int_t seg = i+1-NumOfSegT2; // 1 origin
+	title = Form("%s_%s_%dD", nameDetector, nameSubDir, seg);
+      }
+      sub_dir->Add(createTH1(target_id + i+1, title, // 1 origin
+			     0x1000, 0, 0x1000,
+			     "ADC [ch]", ""));
+    }
+    top_dir->Add(sub_dir);
+  }
+  { ///// TDC
+    TString strSubDir  = CONV_STRING(kTDC);
+    const char* nameSubDir = strSubDir.Data();
+    TList *sub_dir = new TList;
+    sub_dir->SetName(nameSubDir);
+    Int_t target_id = getUniqueID(kT2, 0, kTDC, 0);
+    for(Int_t i = 0; i<NumOfSegT2*2; ++i){
+      const char* title = NULL;
+      if(i < NumOfSegT2){
+	Int_t seg = i+1; // 1 origin
+	title = Form("%s_%s_%dU", nameDetector, nameSubDir, seg);
+      }else{
+	Int_t seg = i+1-NumOfSegT2; // 1 origin
+	title = Form("%s_%s_%dD", nameDetector, nameSubDir, seg);
+      }
+      sub_dir->Add(createTH1(target_id + i+1, title, // 1 origin
+			     //			     10000, 0, 400000,
+     			     2000, 0, 3000000,
+			     "TDC [ch]", ""));
+    }
+    top_dir->Add(sub_dir);
+  }
+  { ///// Hit parttern
+    Int_t target_id = getUniqueID(kT2, 0, kHitPat, 0);
+    top_dir->Add(createTH1(++target_id, "T2_HitPat", // 1 origin
+			   NumOfSegT2, -0.5, NumOfSegT2+0.5,
+			   "Segment", ""));
+  }
+  { ///// Multiplicity
+    Int_t target_id = getUniqueID(kT2, 0, kMulti, 0);
+    top_dir->Add(createTH1(++target_id, "T2_Multi", // 1 origin
+			   NumOfSegT2+1, -0.5, NumOfSegT2+1.5,
+			   "Multiplicity", ""));
   }
   return top_dir;
 }

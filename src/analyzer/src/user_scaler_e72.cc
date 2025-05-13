@@ -110,18 +110,17 @@ process_begin(const std::vector<std::string>& argv)
     scaler_on.Set(c, r++, ScalerInfo("BEAM-D",       0, 22));
     scaler_on.Set(c, r++, ScalerInfo("BEAM-E",       0, 23));
     scaler_on.Set(c, r++, ScalerInfo("BEAM-F",       0, 24));
-    // scaler_on.Set(c, r++, ScalerInfo("T1",         0, 14));
-    // scaler_on.Set(c, r++, ScalerInfo("T2",         0, 15));
     scaler_on.Set(c, r++, ScalerInfo("SAC",        0, 10));
-    scaler_on.Set(c, r++, ScalerInfo("BVH",         0, 14));
+    scaler_on.Set(c, r++, ScalerInfo("T1",         0, 14));
+    scaler_on.Set(c, r++, ScalerInfo("T2",         0, 15));
   }
 
   {
     Int_t c = ScalerAnalyzer::kCenter;
     Int_t r = 0;
     scaler_on.Set(c, r++, ScalerInfo("10M-Clock",    0,  0));
-    scaler_on.Set(c, r++, ScalerInfo("TM",           0,  15));
-    // scaler_on.Set(c, r++, ScalerInfo("SY",           0, 10));
+    scaler_on.Set(c, r++, ScalerInfo("TM",           0,  51));
+    scaler_on.Set(c, r++, ScalerInfo("SY",          -1, -1));
     scaler_on.Set(c, r++, ScalerInfo("K-Beam",       0, 35));
     scaler_on.Set(c, r++, ScalerInfo("Pi-Beam",      0, 39));
     scaler_on.Set(c, r++, ScalerInfo("Beam",         0, 36));
@@ -133,8 +132,8 @@ process_begin(const std::vector<std::string>& argv)
     scaler_on.Set(c, r++, ScalerInfo("TRIG-D",        0, 28));
     scaler_on.Set(c, r++, ScalerInfo("TRIG-E",        0, 29));
     scaler_on.Set(c, r++, ScalerInfo("TRIG-F",        0, 30));
+    scaler_on.Set(c, r++, ScalerInfo("BVH",         0, 50));
     scaler_on.Set(c, r++, ScalerInfo("Clock-PS",      0, 40));
-    scaler_on.Set(c, r++, ScalerInfo("Reserve2-PS",   0, 41));
   }
 
   {
@@ -156,6 +155,7 @@ process_begin(const std::vector<std::string>& argv)
     scaler_on.Set(c, r++, ScalerInfo("TRIG-F-PS",     0, 37));
     scaler_on.Set(c, r++, ScalerInfo("TRIG-PSOR-A",   0, 38));
     scaler_on.Set(c, r++, ScalerInfo("TRIG-PSOR-B",   0, 39));
+    scaler_on.Set(c, r++, ScalerInfo("Reserve2-PS",   0, 41));
   }
 
   for(Int_t i=0; i<ScalerAnalyzer::MaxColumn; ++i){

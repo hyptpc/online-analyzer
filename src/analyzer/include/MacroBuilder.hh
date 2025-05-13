@@ -36,6 +36,8 @@ TCanvas*  BH2TDCMT();
 TCanvas*  HTOFADC();
 TCanvas*  HTOFTDCMT();
 TCanvas*  HTOFTDC2();
+TCanvas*  BVHTDCTOT(); 
+TCanvas*  T1T2(); 
 TCanvas*  Multiplicity();
 TCanvas*  HitPat(); 
 TCanvas*  BLDCTDC( DetectorType det, std::string strDet, int nlayers, int init=0, int nx=4, int ny=2 );
