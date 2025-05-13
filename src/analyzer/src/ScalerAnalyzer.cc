@@ -88,11 +88,11 @@ ScalerAnalyzer::Decode()
   }
 
   //////////////////// Trigger Flag
-  std::bitset<trigger::NumOfSegTFlag> trigger_flag;
+  std::bitset<NumOfSegTFlag> trigger_flag;
   {
     static const auto k_device = gUnpacker.get_device_id("TriggerFlag");
     static const auto k_tdc    = gUnpacker.get_data_id("TriggerFlag", "leading");
-    for (Int_t seg=0; seg<trigger::NumOfSegTFlag; ++seg){
+    for (Int_t seg=0; seg<NumOfSegTFlag; ++seg){
       for (Int_t i=0, n=gUnpacker.get_entries(k_device, 0, seg, 0, k_tdc);
 	  i<n; ++i){
 	auto tdc = gUnpacker.get(k_device, 0, seg, 0, k_tdc, i);
@@ -109,12 +109,12 @@ ScalerAnalyzer::Decode()
     // std::cout << m_trigger_flag << std::endl;
   }
   if (trigger_flag[trigger::kSpillOnEnd]){
-    std::cout << TTimeStamp() << "\tSpillOnEnd" << std::endl;
+    // std::cout << TTimeStamp() << "\tSpillOnEnd" << std::endl;
     m_is_spill_on_end = true;
     m_is_spill_end = true;
   }
   if (trigger_flag[trigger::kSpillOffEnd]){
-    std::cout << TTimeStamp() << "\tSpillOffEnd" << std::endl;
+    // std::cout << TTimeStamp() << "\tSpillOffEnd" << std::endl;
     m_is_spill_end = true;
   }
   if (m_flag[kSpillOn]){

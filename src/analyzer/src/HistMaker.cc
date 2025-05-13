@@ -208,6 +208,40 @@ HistMaker::createTimeStamp( bool flag_ps )
   return top_dir;
 }
 
+//_____________________________________________________________________________
+TList*
+HistMaker::createTriggerFlag(Bool_t flag_ps)
+{
+  std::string strDet = "TriggerFlag";
+  name_created_detectors_.push_back(strDet);
+  if(flag_ps) name_ps_files_.push_back(strDet);
+  const char* nameDetector = strDet.c_str();
+  TList *top_dir = new TList;
+  top_dir->SetName(nameDetector);
+  { // TDC
+    Int_t target_id = getUniqueID(kTriggerFlag, 0, kTDC, 0);
+    for(Int_t i = 0; i<NumOfSegTFlag; ++i){
+      TString title = Form("%s #%d", trigger::STriggerFlag[i].Data(), i);
+      top_dir->Add(createTH1(++target_id, title,
+			     1000, 0, 2000000,
+			     "TDC [ch]", ""));
+    }
+  }
+  { // HitPat
+    const char* title = "TriggerFlag_HitPat";
+    Int_t target_id = getUniqueID(kTriggerFlag, 0, kHitPat);
+    auto h = createTH1(target_id, title,
+		       NumOfSegTFlag, 0., NumOfSegTFlag,
+		       "", "");
+    for(Int_t i=0, n=trigger::STriggerFlag.size(); i<n; ++i){
+      h->GetXaxis()->SetBinLabel(i+1, trigger::STriggerFlag.at(i));
+    }
+    h->SetStats(0);
+    top_dir->Add(h);
+  }
+  return top_dir;
+}
+
 // -------------------------------------------------------------------------
 // createT98Hist
 // -------------------------------------------------------------------------

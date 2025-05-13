@@ -129,6 +129,8 @@ public:
   		 const char* xtitle="", const char* ytitle=""
   		 );
   
+  TList* createTriggerFlag(bool flag_ps=true);
+
   TList* createTimeStamp(bool flag_ps=true);
   TList* createPbF2(DetectorType kDET, std::string strDet, int nsegments, bool flag_ps=true); 
   TList* createHodo(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins, double xmin, double xmax, int nbins2, double xmin2, double xmax2, bool flag_ps=true); 

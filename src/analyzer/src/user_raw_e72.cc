@@ -139,10 +139,7 @@ process_begin( const std::vector<std::string>& argv )
 				  nbinshrtdc, hrtdcmin, hrtdcmax));
   gHttp.Register(gHist.createHodo(kSAC, "SAC", 9, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   
-  // gHttp.Register(gHist.createHodo(kBTC	,"BTC"  , 2, 2, nbinsqdc/4,-0.5,511.5,nbinshrtdc,hrtdcmin,hrtdcmax));
-  // gHttp.Register(gHist.createHodo(kT98PMT	,"T98PMT"  ,  1, 1, nbinsqdc/4,-0.5,511.5,nbinshrtdc,hrtdcmin,hrtdcmax));
-  // gHttp.Register(gHist.createHodo(kT98MPPC	,"T98MPPC"  , 4, 1, nbinsqdc/4,-0.5,511.5,nbinshrtdc,hrtdcmin,hrtdcmax));
-  gHttp.Register(gHist.createMHTDC(kTriggerFlag ,"TriggerFlag",32,2000));
+  gHttp.Register(gHist.createTriggerFlag());
   // Chambers
   gHttp.Register(gHist.createBLDC(kBLC1a,"BLC1a",8,32,true));
   gHttp.Register(gHist.createBLDC(kBLC1b,"BLC1b",8,32,true));
@@ -215,6 +212,7 @@ process_begin( const std::vector<std::string>& argv )
       gHttp.Register(http::BLDCWIRE(chm[i],tmpstr,l,nwires[i],8,4), chm_name[i]);
     }
   }
+
   // // TriggerFlag
   // gHttp.Register(http::MHTDCTDC(kTriggerFlag,"_TriggerFlag",0,32,8,4),"TriggerFlag");
   // gHttp.Register(http::MHTDCHitPatMulti(kTriggerFlag,"_TriggerFlag"),"TriggerFlag");
@@ -296,43 +294,33 @@ process_event( void )
   int hid;
   bool COSMIC=false;
   bool CLOCK=false;
-  // TriggerFlag
-  {
-    // data type
-    hid=-1;
-    const int nmhtdc=1;
-    DetectorType mhtdc[nmhtdc]={kTriggerFlag};
-    TString mhtdc_name[nmhtdc]={"TriggerFlag"};
-    const int nsegs[nmhtdc]={32};
-    const int k_leading=0;
-    const int k_trailing=1;
-    const int ndata=2;
-    const int data[ndata]={k_leading,k_trailing};
-    const int type[ndata]={kTDC,kTDC2D};
-    const int ud=0;
-    for(int i=0;i<nmhtdc;i++){
-      DetectorType kDET=mhtdc[i];
-      const int k_device = gUnpacker.get_device_id(mhtdc_name[i].Data());
-      int multiplicity=0;
-      for(int seg = 0; seg<nsegs[i]; ++seg){
-	int ntdc[2]={0,0};
-	for(int idata=0; idata<ndata; ++idata){
-	  int nhit = gUnpacker.get_entries(k_device, 0, seg, 0, data[idata]);
-	  if(data[idata]==k_leading&&nhit>0){
-	    hid  = gHist.getSequentialID(kDET, 0, kHitPat, 1);
-	    hptr_array[hid]->Fill(seg);	    
-            if(seg==14) COSMIC=true;
-            if(seg==15) CLOCK=true;
-	  }
-	  for( int m=0; m<nhit; ++m ){
-	    int tdc = gUnpacker.get(k_device, 0, seg, ud, data[idata] , m);
-	    hid  = gHist.getSequentialID(kDET, ud, type[idata], seg+1);
-	    hptr_array[hid]->Fill(tdc);	    
-	  } // nhit
-	} // data
-      }// seg
-    } // triggerflag
+  
+  std::bitset<NumOfSegTFlag> trigger_flag;
+  { // TriggerFlag
+    const Int_t k_device = gUnpacker.get_device_id("TriggerFlag");
+    const Int_t k_tdc = gUnpacker.get_data_id("TriggerFlag", "leading");
+    for(Int_t seg=0; seg<NumOfSegTFlag; ++seg){
+      Bool_t has_hit = false;
+      { // TDC
+	Int_t n = gUnpacker.get_entries(k_device, 0, seg, 0, k_tdc);
+	for(Int_t m=0; m<n; ++m){
+	  UInt_t tdc = gUnpacker.get(k_device, 0, seg, 0, k_tdc, m);
+	  hid = gHist.getSequentialID(kTriggerFlag, 0, kTDC, seg+1);
+	  hptr_array[hid]->Fill(tdc);
+	  has_hit = true;
+	}
+      }
+      if(has_hit){
+	hid = gHist.getSequentialID(kTriggerFlag, 0, kHitPat);
+	hptr_array[hid]->Fill(seg);
+	trigger_flag.set(seg);
+      }
+    }
   }
+
+  if(trigger_flag[trigger::kSpillOnEnd] || trigger_flag[trigger::kSpillOffEnd])
+    return 0;
+
   //if(COSMIC&&!CLOCK) return 0;
   // BHT ------------------------------------------------------------
   {

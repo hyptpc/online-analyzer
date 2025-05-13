@@ -64,24 +64,48 @@ enum ETriggerFlag
     kSpillOffEnd,
     kL1SpillOn,
     kL1SpillOff,
-    kBeam1      =  3,
-    kBeam2      =  4,
-    kBeam_f     =  5,
-    kPion       =  6,
-    kPion_f     =  7,
-    kKaon1      =  8,
-    kKaon2      =  9,
-    kKaon3      =  10,
-    kKaon1_f       = 11,
-    kKaon2_f       = 12,
-    kKaonStart     = 13,
-    kKaonStartStop = 14,
-    kStartStop     = 15,
-    //    kMisc          = 16
+    kBHT, // kMtx2D1,
+    kMtx2D2,
+    kMtx3D,
+    kBeamA,
+    kBeamB,
+    kBeamC,
+    kBeamD,
+    kBeamE,
+    kBeamF,
+    kTrigA,
+    kTrigB,
+    kTrigC,
+    kTrigD,
+    kTrigE,
+    kTrigF,
     NTriggerFlag,
   };
 
-const Int_t NumOfSegTFlag = trigger::NTriggerFlag;
+const std::vector<TString> STriggerFlag =
+  {
+    "SpillOnEnd",
+    "SpillOffEnd",
+    "L1SpillOn",
+    "L1SpillOff",
+    "BHT", // "Mtx2D1",
+    "Mtx2D2",
+    "Mtx3D",
+    "BeamA",
+    "BeamB",
+    "BeamC",
+    "BeamD",
+    "BeamE",
+    "BeamF",
+    "TrigA",
+    "TrigB",
+    "TrigC",
+    "TrigD",
+    "TrigE",
+    "TrigF",
+  };
 }
+
+const Int_t NumOfSegTFlag = trigger::NTriggerFlag;
 
 #endif
