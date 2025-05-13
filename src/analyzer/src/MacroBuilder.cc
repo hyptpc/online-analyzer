@@ -1092,16 +1092,15 @@ UpdateBLDCEfficiency()
 void
 UpdateCounterEfficiency()
 {
-  const int ch=4;
-  static TCanvas *c1;
-  static std::vector<TText*> tex(ch);
-  c1 = (TCanvas*)gROOT->FindObject("mul");
-  if(!c1){
-    std::cout<<"no canvas for Multiplicity"<<std::endl;
-    return;
-  }
-  TString ch_name[ch]={"BAC_Multi_0","SAC_Multi_0","KVC_Multi_0","BH2_Multi_0"};
-  for(int i=0; i<ch; ++i){
+  std::vector<TString> ch_name = {
+    "BHT_Multi_0", "T0_Multi_0", "BH2_Multi_0",
+    "BAC_Multi_0", "HTOF_Multi_0", "SAC_Multi_0",
+    "KVC1_Multi_0", "KVC2_Multi_0"
+  };
+  static std::vector<TText*> tex(ch_name.size());
+  static auto c1 = (TCanvas*)gROOT->FindObject("Multiplicity");
+  if(!c1) return;
+  for(int i=0, n=ch_name.size(); i<n; ++i){
     c1->cd(i+1);
     TH1 *h = (TH1*)gPad->FindObject(ch_name[i]);
     if(!h) continue;
