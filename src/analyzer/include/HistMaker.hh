@@ -29,6 +29,7 @@ enum DetectorType {
   kTimeStamp, kDCEff,kAna, 
   kHRTDC1,kHRTDC2,kHRTDC3, kHRTDC4,kHRTDC5,kHRTDC6, 
   kMHTDC,
+  kBcOutTracking,
   sizeDetectorType,
   factorDetectorType = 10000000
 };
@@ -134,6 +135,8 @@ public:
   TList* createBVH(bool flag_ps=true);
   TList* createT1(bool flag_ps=true);
   TList* createT2(bool flag_ps=true);
+
+  TList* createBcOutTracking(bool flag_ps=true);  
 
   TList* createTimeStamp(bool flag_ps=true);
   TList* createPbF2(DetectorType kDET, std::string strDet, int nsegments, bool flag_ps=true); 

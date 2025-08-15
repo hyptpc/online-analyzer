@@ -602,3 +602,11 @@ ScalerAnalyzer::Set(Int_t i, Int_t j, const ScalerInfo& info)
     m_info[i][j] = info;
   }
 }
+
+//______________________________________________________________________________
+void
+ScalerAnalyzer::SaveScalerText(const TString& path)
+{
+  std::ofstream ofs(path);
+
+}

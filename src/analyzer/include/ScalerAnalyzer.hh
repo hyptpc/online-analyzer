@@ -143,6 +143,7 @@ public:
   Bool_t     SpillIncrement( void ) const { return m_spill_increment; }
 
 private:
+  void SaveScalerText(const TString& path="/home/oper/share/monitor-tmp/scaler-spillon.txt");
   void DrawOneBox( Double_t x, Double_t y,
                    const TString& title1, const TString& val1 );
   void DrawOneLine( const TString& title1, const TString& val1,

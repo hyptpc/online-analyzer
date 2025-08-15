@@ -47,11 +47,14 @@ namespace analyzer
 {
 using namespace hddaq;
 using namespace hddaq::unpacker;
+
 namespace
 {
 std::vector<TH1*> hptr_array;
 HistMaker&   gHist = HistMaker::getInstance();
 HttpServer&    gHttp = HttpServer::GetInstance();
+const auto& gUser     = UserParamMan::GetInstance();
+
 TText text;
 TText end;
 TString outputname="tmp.root";
@@ -77,7 +80,7 @@ const int data[ndata]={k_leading,k_trailing,k_adc};
 const int type[ndata]={kTDC,kTDC2D,kADC};
 
 //    int nbinsqdc=512;
-int nbinsqdc=1024;
+int nbinsqdc=4098;
 int nbinshrtdc=int(2e3);
 double hrtdcmin=0.0e6;
 double hrtdcmax=3.0e6;    
@@ -99,6 +102,7 @@ int
 process_begin( const std::vector<std::string>& argv )
 {
   ConfMan::getInstance().initialize(argv);
+  ConfMan::getInstance().initializeUserParamMan();
   // gROOT->SetBatch(kTRUE);
   gStyle->SetOptStat(1110);
   gStyle->SetTitleW(.4);
@@ -247,27 +251,27 @@ process_begin( const std::vector<std::string>& argv )
 int
 process_end( void )
 {
-  TFile *root_file=new TFile(outputname,"recreate");
-  for(int i=0;i<hptr_array.size();i++)
-    if(hptr_array[i]) hptr_array[i]->Write();
+  // TFile *root_file=new TFile(outputname,"recreate");
+  // for(int i=0;i<hptr_array.size();i++)
+  //   if(hptr_array[i]) hptr_array[i]->Write();
 
-  TString pdfname=outputname.ReplaceAll(".root",".pdf");
-  bool INIT=false;
-  TIter next(gROOT->GetListOfCanvases());
-  TCanvas* c=0;
-  while((c=(TCanvas*)next()) ){
-    std::cout<<c->GetName()<<std::endl;
-    c->Write();
-    if(!INIT){
-      c->Print(pdfname+"[");
-      INIT=true;
-    }
-    c->Print(pdfname);
-  }
-  c=new TCanvas();
-  c->Print(pdfname+"]");
-  delete c;
-  root_file->Close();    
+  // TString pdfname=outputname.ReplaceAll(".root",".pdf");
+  // bool INIT=false;
+  // TIter next(gROOT->GetListOfCanvases());
+  // TCanvas* c=0;
+  // while((c=(TCanvas*)next()) ){
+  //   std::cout<<c->GetName()<<std::endl;
+  //   c->Write();
+  //   if(!INIT){
+  //     c->Print(pdfname+"[");
+  //     INIT=true;
+  //   }
+  //   c->Print(pdfname);
+  // }
+  // c=new TCanvas();
+  // c->Print(pdfname+"]");
+  // delete c;
+  // root_file->Close();    
     
   hptr_array.clear();
   return 0;
@@ -296,9 +300,9 @@ process_event( void )
   auto event_number = gUnpacker.get_event_number();
   //  std::cout << "Start-2 " <<std::endl;
 
-  // for (auto& h : hptr_array){
-  //   h->SetTitle(h->GetName() + TString(Form(" run%05d", run_number)));
-  // }
+  for (auto& h : hptr_array){
+    h->SetTitle(h->GetName() + TString(Form(" run%05d", run_number)));
+  }
 
 
   Int_t hid;
@@ -339,6 +343,8 @@ process_event( void )
     const int k_l=0;
     const int k_t=1;
     const int k_device = gUnpacker.get_device_id("BHT");
+    const UInt_t tdc_min = gUser.GetParameter("BHT_TDC", 0);
+    const UInt_t tdc_max = gUser.GetParameter("BHT_TDC", 1);
     int multiplicity=0;
     int mul[2]={0,0};
     int segud[2]={};
@@ -351,7 +357,7 @@ process_event( void )
 	// This wire fired at least one times.
 	++multiplicity;
 	mul[ud]++;
-	ntdc[ud]=nhit;	  
+	ntdc[ud] = 0;
 	std::vector< int > leading_array;
 	int leading_size = nhit;
 	for( int m=0; m<nhit; ++m ){
@@ -360,9 +366,11 @@ process_event( void )
 	  //	  if(ud==0&&seg==0) std::cout<<seg<<"  "<<m<<"  "<<tdc<<"  "<<hid<<std::endl;
 	  hptr_array[hid]->Fill(tdc);
 	  leading_array.push_back(tdc);
-          //          if(tdc>1.15e6&&tdc<1.2e6){
-          hid=gHist.getSequentialID(kDET,0,kHitPat,ud+1);
-          hptr_array[hid]->Fill(seg);
+	  if (tdc_min < tdc && tdc < tdc_max) {
+	    hid = gHist.getSequentialID(kDET,0,kHitPat,ud+1);
+	    hptr_array[hid]->Fill(seg);
+	    ntdc[ud]++;
+	  }
           //          }
 	}	
 	// traling
@@ -407,6 +415,8 @@ process_event( void )
     int i=0;
     DetectorType kDET=hodo[i];
     const int k_device = gUnpacker.get_device_id(hodo_name[i].Data());
+    const UInt_t tdc_min = gUser.GetParameter("T0_TDC", 0);
+    const UInt_t tdc_max = gUser.GetParameter("T0_TDC", 1);
     int multiplicity=0;
     int mul[2]={0,0};
     int segud[2]={-1,-1};
@@ -458,6 +468,8 @@ process_event( void )
     int i=1;
     DetectorType kDET=hodo[i];
     const int k_device = gUnpacker.get_device_id(hodo_name[i].Data());
+    const UInt_t tdc_min = gUser.GetParameter("BAC_TDC", 0);
+    const UInt_t tdc_max = gUser.GetParameter("BAC_TDC", 1);
     int mul=0;
     for(int seg = 0; seg<nsegs[i]; ++seg){
       int ntdc=0;	  
@@ -499,6 +511,8 @@ process_event( void )
       int ntdc=0;	  
       for(int idata=0; idata<ndata; ++idata){
 	int nhit = gUnpacker.get_entries(k_device, 0, seg, 0, data[idata]);
+	// if(data[idata] == k_leading)
+	//   std::cout << nhit << std::endl;
 	if( data[idata]==k_leading && nhit>0){
 	  //hid = gHist.getSequentialID(kDET, 0, kHitPat, 1);
 	  //hptr_array[hid]->Fill(seg);
@@ -626,6 +640,8 @@ process_event( void )
     int i=4;
     DetectorType kDET=hodo[i];
     const int k_device = gUnpacker.get_device_id(hodo_name[i].Data());
+    const UInt_t tdc_min = gUser.GetParameter("BH2_TDC", 0);
+    const UInt_t tdc_max = gUser.GetParameter("BH2_TDC", 1);
     int mul=0;
     for(int seg = 0; seg<nsegs[i]; ++seg){
       int ntdc[2]={0,0};
@@ -635,8 +651,7 @@ process_event( void )
           if( ud==2 && data[idata]==k_leading && nhit>0){
             //hid = gHist.getSequentialID(kDET, 0, kHitPat, ud+1);
             //hptr_array[hid]->Fill(seg);
-            mul=1;
-            ntdc[ud]=nhit;	  
+            // mul=1;
           }
           for( int m=0; m<nhit; ++m ){
             int val = gUnpacker.get(k_device, 0, seg, ud, data[idata] , m);
@@ -647,6 +662,13 @@ process_event( void )
               hid = gHist.getSequentialID(kDET, ud, kADCwTDC, seg+1);
               hptr_array[hid]->Fill(val);
             } 
+            if (ud==2 && data[idata]==k_leading) {
+	      if (tdc_min < val && val < tdc_max) {
+		hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
+		hptr_array[hid]->Fill(seg);
+		mul++;
+	      }
+	    }
           } // nhit
         } // data
       }//ud
@@ -659,6 +681,8 @@ process_event( void )
     const int k_device = gUnpacker.get_device_id("HTOF");
     const int k_adc = gUnpacker.get_data_id("HTOF", "adc");
     const int k_tdc = gUnpacker.get_data_id("HTOF", "leading");
+    const UInt_t tdc_min = gUser.GetParameter("HTOF_TDC", 0);
+    const UInt_t tdc_max = gUser.GetParameter("HTOF_TDC", 1);
     const Int_t n_seg = 34;
     const Int_t n_ch = 5;
     Int_t multiplicity = 0;
@@ -671,7 +695,8 @@ process_event( void )
             UInt_t tdc = gUnpacker.get(k_device, 0, seg, ch, k_tdc, m);
             hid = gHist.getSequentialID(kHTOF, ch, kTDC, seg+1);
             hptr_array[hid]->Fill(tdc);
-	    has_hit = true;
+	    if (tdc_min < tdc && tdc < tdc_max)
+	      has_hit = true;
 	  }
 	}
 	{ // ADC
@@ -697,33 +722,7 @@ process_event( void )
     hptr_array[hid]->Fill(multiplicity);
   } //hodo
 
-  { ///// BVH
-    static const auto k_device = gUnpacker.get_device_id("BVH");
-    static const auto k_leading = gUnpacker.get_data_id("BVH", "leading");
-    static const auto k_trailing = gUnpacker.get_data_id("BVH", "trailing");
-    static const auto tdc_hid = gHist.getSequentialID(kBVH, 0, kTDC);
-    static const auto tot_hid = gHist.getSequentialID(kBVH, 0, kADC);
-    static const auto hit_hid = gHist.getSequentialID(kBVH, 0, kHitPat);
-    static const auto mul_hid = gHist.getSequentialID(kBVH, 0, kMulti);
-    Int_t multi = 0;
-    for (Int_t seg=0; seg<NumOfSegBVH; ++seg) {
-      Bool_t is_in_range = false;
-      for (Int_t i=0, n=gUnpacker.get_entries(k_device, 0, seg, 0, k_leading); i<n; ++i) {
-	auto tdc = gUnpacker.get(k_device, 0, seg, 0, k_leading, i);
-	auto tdc_t = gUnpacker.get(k_device, 0, seg, 0, k_trailing, i);
-	auto tot = tdc - tdc_t;
-	hptr_array[tdc_hid + seg]->Fill(tdc);
-	hptr_array[tot_hid + seg]->Fill(tot);
-	is_in_range = true;
-      }
-      if (is_in_range) {
-	++multi;
-	hptr_array[hit_hid]->Fill(seg);
-      }
-    }
-    hptr_array[mul_hid]->Fill(multi);
-  }
-
+  Bool_t t1_hit = false;
   { ///// T1
     const int k_device = gUnpacker.get_device_id("T1");
     const int k_adc = gUnpacker.get_data_id("T1", "adc");
@@ -759,12 +758,14 @@ process_event( void )
 	hid = gHist.getSequentialID(kT1, 0, kHitPat);
 	hptr_array[hid]->Fill(seg);
 	multi++;
+	t1_hit = true;
       }
     }
     hid = gHist.getSequentialID(kT1, 0, kMulti);
     hptr_array[hid]->Fill(multi);
   }
 
+  Bool_t t2_hit = false;
   { ///// T2
     const int k_device = gUnpacker.get_device_id("T2");
     const int k_adc = gUnpacker.get_data_id("T2", "adc");
@@ -800,11 +801,40 @@ process_event( void )
 	hid = gHist.getSequentialID(kT2, 0, kHitPat);
 	hptr_array[hid]->Fill(seg);
 	multi++;
+	t2_hit = true;
       }
     }
     hid = gHist.getSequentialID(kT2, 0, kMulti);
     hptr_array[hid]->Fill(multi);
   }
+
+  { ///// BVH
+    static const auto k_device = gUnpacker.get_device_id("BVH");
+    static const auto k_leading = gUnpacker.get_data_id("BVH", "leading");
+    static const auto k_trailing = gUnpacker.get_data_id("BVH", "trailing");
+    static const auto tdc_hid = gHist.getSequentialID(kBVH, 0, kTDC);
+    static const auto tot_hid = gHist.getSequentialID(kBVH, 0, kADC);
+    static const auto hit_hid = gHist.getSequentialID(kBVH, 0, kHitPat);
+    static const auto mul_hid = gHist.getSequentialID(kBVH, 0, kMulti);
+    Int_t multi = 0;
+    for (Int_t seg=0; seg<NumOfSegBVH; ++seg) {
+      Bool_t is_in_range = false;
+      for (Int_t i=0, n=gUnpacker.get_entries(k_device, 0, seg, 0, k_leading); i<n; ++i) {
+	auto tdc = gUnpacker.get(k_device, 0, seg, 0, k_leading, i);
+	auto tdc_t = gUnpacker.get(k_device, 0, seg, 0, k_trailing, i);
+	auto tot = tdc - tdc_t;
+	hptr_array[tdc_hid + seg]->Fill(tdc);
+	hptr_array[tot_hid + seg]->Fill(tot);
+	is_in_range = true;
+      }
+      if (is_in_range && t1_hit && t2_hit) {
+	++multi;
+	hptr_array[hit_hid]->Fill(seg);
+      }
+    }
+    hptr_array[mul_hid]->Fill(multi);
+  }
+
 
   // Aerogel 
   {

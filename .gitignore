@@ -7,6 +7,8 @@
 \#*
 .\#*
 *.sw[nop]
+*.pdf
+*.root
 backup/
 bin/*
 include/*

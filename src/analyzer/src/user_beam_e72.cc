@@ -124,79 +124,81 @@ process_begin( const std::vector<std::string>& argv )
   // gHttp.Register(gHist.createHodo(kT1,"T1",1,2,1024,0,1024,tdcnbins,tdcmin,tdcmax));
   // gHttp.Register(gHist.createHodo(kDEF,"DEF",5,2,4096,0,4096,tdcnbins,tdcmin,tdcmax));
   // gHttp.Register(gHist.createHodo(kBTC,"BTC",2,2,1024,0,1024,tdcnbins,tdcmin,tdcmax));
-  // gHttp.Register(gHist.createBLDC(kBPC1 ,"BPC1" ,8,15,false,true));
-  // gHttp.Register(gHist.createBLDC(kBPC2 ,"BPC2" ,8,32,false,true));
   gHttp.Register(gHist.createBLDC(kBLC1a,"BLC1a",8,32,false,true));
   gHttp.Register(gHist.createBLDC(kBLC1b,"BLC1b",8,32,false,true));
   gHttp.Register(gHist.createBLDC(kBLC2a,"BLC2a",8,32,false,true));
   gHttp.Register(gHist.createBLDC(kBLC2b,"BLC2b",8,32,false,true));
   gHttp.Register(gHist.createHodo(kBAC ,"BAC",5,1,1024,0,2048,2e3,0.9e6,1.4e6));
-  gHttp.Register(gHist.createMHTDC(kTriggerFlag ,"Triggerflag",32,2000));
-  gHttp.Register(gHist.createAnaTOF(1));
-  gHttp.Register(gHist.createAnaTrack(1));
+  gHttp.Register(gHist.createTriggerFlag());
+
+  // gHttp.Register(gHist.createMHTDC(kTriggerFlag ,"Triggerflag",32,2000));
+  // gHttp.Register(gHist.createAnaTOF(1));
+  // gHttp.Register(gHist.createAnaTrack(1));
+
+  gHttp.Register(gHist.createBcOutTracking());
 
   std::cout<<"histogram created"<<std::endl;
   if(0 != gHist.setHistPtr(hptr_array)){ return -1; }
   
-  // Macro for HttpServer
-  // gHttp.Register(http::Check(1,"QDC"),"Analysis");
-  gHttp.Register(http::Ana(1),"Analysis");
-  gHttp.Register(http::Ana(2),"Analysis");
-  // gHttp.Register(http::Ana(3),"Analysis");
-  // gHttp.Register(http::Ana(4),"Analysis");
-  gHttp.Register(http::Ana(10),"Analysis");
-  gHttp.Register(http::TOF(0,"BHT"),"Analysis");
-  // gHttp.Register(http::TOF(4,"BTC"),"Analysis");
-  gHttp.Register(http::TOF2(0,"BHT"),"Analysis");
-  // gHttp.Register(http::TOF2(4,"BTC"),"Analysis");
-  gHttp.Register(http::TOF_Btrg(0,"BHT"),"Analysis");
-  // gHttp.Register(http::TOF_Btrg(4,"BTC"),"Analysis");
-  // gHttp.Register(http::TOF2D(7,"VETO"),"Analysis");
-  // gHttp.Register(http::TOF2D(8,"BTC"),"Analysis");
-  // gHttp.Register(http::TOF2D(9,"VetodE"),"Analysis");
-  // gHttp.Register(http::TOF2D(10,"BTCdE"),"Analysis");
-  gHttp.Register(http::AC(10,"All"),"Analysis");
-  gHttp.Register(http::AC(11,"Beam"),"Analysis");
-  gHttp.Register(http::BLDCProf(kBLC1a,"BLC1a"),"Profile2");
-  gHttp.Register(http::BLDCProf(kBLC1b,"BLC1b"),"Profile2");
-  gHttp.Register(http::BLDCProf(kBLC2a,"BLC2a"),"Profile2");
-  gHttp.Register(http::BLDCProf(kBLC2b,"BLC2b"),"Profile2");
-  // gHttp.Register(http::BLDCProf(kBPC1,"BPC1"),"Profile2");
-  // gHttp.Register(http::BLDCProf(kBPC2,"BPC2"),"Profile2");
-  gHttp.Register(http::BLDCXYProf(kBLC1a,"BLC1a",0),"Profile");
-  gHttp.Register(http::BLDCXYProf(kBLC1b,"BLC1b",0),"Profile");
-  gHttp.Register(http::BLDCXYProf(kBLC2a,"BLC2a",0),"Profile");
-  gHttp.Register(http::BLDCXYProf(kBLC2a,"BLC2a_FF",10),"Profile");
-  gHttp.Register(http::BLDCXYProf(kBLC2b,"BLC2b",0),"Profile");
-  gHttp.Register(http::BLDCXYProf(kBLC2b,"BLC2b_FF",10),"Profile");
-  // gHttp.Register(http::BLDCXYProf(kBPC1,"BPC1",0),"Profile");
-  // gHttp.Register(http::BLDCXYProf(kBPC1,"BPC1_FF",10),"Profile");
-  // gHttp.Register(http::BLDCXYProf(kBPC2,"BPC2",0),"Profile");
-  // gHttp.Register(http::BLDCXYProf(kBPC2,"BPC2_FF",10),"Profile");
-  gHttp.Register(http::BeamAxis(),"Profile");
-  gHttp.Register(http::BLDCCorr(0,"BLC1"),"BLDCCorr");
-  gHttp.Register(http::BLDCCorr(1,"BLC2"),"BLDCCorr");
-  // gHttp.Register(http::BLDCCorr(2,"BPC"),"BLDCCorr");
+  // // Macro for HttpServer
+  // // gHttp.Register(http::Check(1,"QDC"),"Analysis");
+  // gHttp.Register(http::Ana(1),"Analysis");
+  // gHttp.Register(http::Ana(2),"Analysis");
+  // // gHttp.Register(http::Ana(3),"Analysis");
+  // // gHttp.Register(http::Ana(4),"Analysis");
+  // gHttp.Register(http::Ana(10),"Analysis");
+  // gHttp.Register(http::TOF(0,"BHT"),"Analysis");
+  // // gHttp.Register(http::TOF(4,"BTC"),"Analysis");
+  // gHttp.Register(http::TOF2(0,"BHT"),"Analysis");
+  // // gHttp.Register(http::TOF2(4,"BTC"),"Analysis");
+  // gHttp.Register(http::TOF_Btrg(0,"BHT"),"Analysis");
+  // // gHttp.Register(http::TOF_Btrg(4,"BTC"),"Analysis");
+  // // gHttp.Register(http::TOF2D(7,"VETO"),"Analysis");
+  // // gHttp.Register(http::TOF2D(8,"BTC"),"Analysis");
+  // // gHttp.Register(http::TOF2D(9,"VetodE"),"Analysis");
+  // // gHttp.Register(http::TOF2D(10,"BTCdE"),"Analysis");
+  // gHttp.Register(http::AC(10,"All"),"Analysis");
+  // gHttp.Register(http::AC(11,"Beam"),"Analysis");
+  // gHttp.Register(http::BLDCProf(kBLC1a,"BLC1a"),"Profile2");
+  // gHttp.Register(http::BLDCProf(kBLC1b,"BLC1b"),"Profile2");
+  // gHttp.Register(http::BLDCProf(kBLC2a,"BLC2a"),"Profile2");
+  // gHttp.Register(http::BLDCProf(kBLC2b,"BLC2b"),"Profile2");
+  // // gHttp.Register(http::BLDCProf(kBPC1,"BPC1"),"Profile2");
+  // // gHttp.Register(http::BLDCProf(kBPC2,"BPC2"),"Profile2");
+  // gHttp.Register(http::BLDCXYProf(kBLC1a,"BLC1a",0),"Profile");
+  // gHttp.Register(http::BLDCXYProf(kBLC1b,"BLC1b",0),"Profile");
+  // gHttp.Register(http::BLDCXYProf(kBLC2a,"BLC2a",0),"Profile");
+  // gHttp.Register(http::BLDCXYProf(kBLC2a,"BLC2a_FF",10),"Profile");
+  // gHttp.Register(http::BLDCXYProf(kBLC2b,"BLC2b",0),"Profile");
+  // gHttp.Register(http::BLDCXYProf(kBLC2b,"BLC2b_FF",10),"Profile");
+  // // gHttp.Register(http::BLDCXYProf(kBPC1,"BPC1",0),"Profile");
+  // // gHttp.Register(http::BLDCXYProf(kBPC1,"BPC1_FF",10),"Profile");
+  // // gHttp.Register(http::BLDCXYProf(kBPC2,"BPC2",0),"Profile");
+  // // gHttp.Register(http::BLDCXYProf(kBPC2,"BPC2_FF",10),"Profile");
+  // gHttp.Register(http::BeamAxis(),"Profile");
+  // gHttp.Register(http::BLDCCorr(0,"BLC1"),"BLDCCorr");
+  // gHttp.Register(http::BLDCCorr(1,"BLC2"),"BLDCCorr");
+  // // gHttp.Register(http::BLDCCorr(2,"BPC"),"BLDCCorr");
 
-  for(int i=0;i<nchm;i++){
-    const std::string tmpstr=Form("_%s",chm_name[i].Data());
-    gHttp.Register(http::BLDCResid(chm[i],tmpstr,8),"Residual"); 
-    gHttp.Register(http::BLDCMulti(chm[i],tmpstr,8),"Multiplicity");
-  }
-  gHttp.Register(http::MHTDCTDC(kTriggerFlag,"_TriggerFlag",0,32,8,4),"TriggerFlag");
-  gHttp.Register(http::MHTDCHitPatMulti(kTriggerFlag,"_TriggerFlag"),"TriggerFlag");
+  // for(int i=0;i<nchm;i++){
+  //   const std::string tmpstr=Form("_%s",chm_name[i].Data());
+  //   gHttp.Register(http::BLDCResid(chm[i],tmpstr,8),"Residual"); 
+  //   gHttp.Register(http::BLDCMulti(chm[i],tmpstr,8),"Multiplicity");
+  // }
+  // gHttp.Register(http::MHTDCTDC(kTriggerFlag,"_TriggerFlag",0,32,8,4),"TriggerFlag");
+  // gHttp.Register(http::MHTDCHitPatMulti(kTriggerFlag,"_TriggerFlag"),"TriggerFlag");
 
-  std::cout<<"canvas created"<<std::endl;
-  {
-    int hid1 = gHist.getSequentialID(kTriggerFlag, 0, kHitPat, 1);  
-    hptr_array[hid1]->GetXaxis()->SetTitle("");
-    for( Int_t i=0; i<32; ++i ){
-      int hid2 = gHist.getSequentialID(kTriggerFlag, 0, kTDC, i+1);
-      hptr_array[hid2]->SetTitle(Form("%s_%s",hptr_array[hid2]->GetTitle(),flagnames[i].Data()));
-      hptr_array[hid1]->GetXaxis()->SetBinLabel(i+1,flagnames[i]);
-    }
-  }
-  std::cout<<"set attributes for some histograms"<<std::endl;
+  // std::cout<<"canvas created"<<std::endl;
+  // {
+  //   int hid1 = gHist.getSequentialID(kTriggerFlag, 0, kHitPat, 1);  
+  //   hptr_array[hid1]->GetXaxis()->SetTitle("");
+  //   for( Int_t i=0; i<32; ++i ){
+  //     int hid2 = gHist.getSequentialID(kTriggerFlag, 0, kTDC, i+1);
+  //     hptr_array[hid2]->SetTitle(Form("%s_%s",hptr_array[hid2]->GetTitle(),flagnames[i].Data()));
+  //     hptr_array[hid1]->GetXaxis()->SetBinLabel(i+1,flagnames[i]);
+  //   }
+  // }
+  // std::cout<<"set attributes for some histograms"<<std::endl;
   for( Int_t i=0, n=hptr_array.size(); i<n; ++i ){
     hptr_array[i]->SetDirectory(0);
   }
@@ -227,283 +229,253 @@ process_event( void )
   static UnpackerManager& gUnpacker = GUnpacker::get_instance();
   static HistMaker&     gHist     = HistMaker::getInstance();
 
+  Int_t hid;
+
+  std::bitset<NumOfSegTFlag> trigger_flag;
+  { // TriggerFlag
+    const Int_t k_device = gUnpacker.get_device_id("TriggerFlag");
+    const Int_t k_tdc = gUnpacker.get_data_id("TriggerFlag", "leading");
+    for(Int_t seg=0; seg<NumOfSegTFlag; ++seg){
+      Bool_t has_hit = false;
+      { // TDC
+	Int_t n = gUnpacker.get_entries(k_device, 0, seg, 0, k_tdc);
+	for(Int_t m=0; m<n; ++m){
+	  UInt_t tdc = gUnpacker.get(k_device, 0, seg, 0, k_tdc, m);
+	  hid = gHist.getSequentialID(kTriggerFlag, 0, kTDC, seg+1);
+	  hptr_array[hid]->Fill(tdc);
+	  has_hit = true;
+	}
+      }
+      if(has_hit){
+	hid = gHist.getSequentialID(kTriggerFlag, 0, kHitPat);
+	hptr_array[hid]->Fill(seg);
+	trigger_flag.set(seg);
+      }
+    }
+  }
+
   RawData  *rawData=new RawData;
   rawData->DecodeHits();
   DCAna=new DCAnalyzer;
   hodoAna=new HodoAnalyzer;
-  hodoAna->DecodeRawHits( rawData);
+  hodoAna->DecodeRawHits(rawData);
 
+  // // Hodoscope ------------------------------------------------------------
+  // double time0=-9999;
+  // bool KAON=false;
+  // bool PION=false;
+  // bool PROTON=false;
+  // bool DEUTERON=false;
+  // bool ACHIT=false;  
+  // bool TOF=false;
+  // int t0segment=-1;
+  // int DEFsegment=-1;
 
-#if DEBUG
-  std::cout << __FILE__ << " " << __LINE__ << std::endl;
-#endif
-  // MHTDC only
-  bool TRIG[32]={0};
-  {
-    // data type
-    int hid=-1;
-    const int nmhtdc=1;
-    DetectorType mhtdc[nmhtdc]={kTriggerFlag};
-    TString mhtdc_name[nmhtdc]={"TriggerFlag"};
-    const int nsegs[nmhtdc]={32};
-    const int k_leading=0;
-    const int k_trailing=1;
-    const int ndata=2;
-    const int data[ndata]={k_leading,k_trailing};
-    const int type[ndata]={kTDC,kTDC2D};
-    const int ud=0;
-    for(int i=0;i<nmhtdc;i++){
-      DetectorType kDET=mhtdc[i];
-      const int k_device = gUnpacker.get_device_id(mhtdc_name[i].Data());
-      int multiplicity=0;
-      int mul[2]={0,0};
-      for(int seg = 0; seg<nsegs[i]; ++seg){
-	TRIG[seg]=false;
-	for(int idata=0; idata<ndata; ++idata){
-	  int nhit = gUnpacker.get_entries(k_device, 0, seg, 0, data[idata]);
-	  if(data[idata]==k_leading&&nhit>0){
-	    hid  = gHist.getSequentialID(kDET, 0, kHitPat, 1);
-	    hptr_array[hid]->Fill(seg);	    
-	    mul[ud]++;
-	  }
-	  for( int m=0; m<nhit; ++m ){
-	    int tdc = gUnpacker.get(k_device, 0, seg, ud, data[idata] , m);
-	    hid  = gHist.getSequentialID(kDET, ud, type[idata], seg+1);
-	    hptr_array[hid]->Fill(tdc);	    
-	    if(tdc>gUser.GetParameter("TRIGTDC",0)
-	       &&tdc<gUser.GetParameter("TRIGTDC",1)){
-              TRIG[seg]=true;
-	    }
-	  } // nhit
-	} // data	
-      }//seg
-      hid  = gHist.getSequentialID(kDET, 0, kMulti, 0);
-      hptr_array[hid]->Fill(multiplicity);	    
-      hid  = gHist.getSequentialID(kDET, 0, kMulti, 1);
-      hptr_array[hid]->Fill(mul[0]);	    
-      hid  = gHist.getSequentialID(kDET, 0, kMulti, 2);
-      hptr_array[hid]->Fill(mul[1]);	    
-    } //hodo
-  }
-  if(TRIG[14]&&!TRIG[15]) return 0;
-
-  // Hodoscope ------------------------------------------------------------
-  int hid;
-  double time0=-9999;
-  bool KAON=false;
-  bool PION=false;
-  bool PROTON=false;
-  bool DEUTERON=false;
-  bool ACHIT=false;  
-  bool TOF=false;
-  int t0segment=-1;
-  int DEFsegment=-1;
-
-  {
-    // data type
-    const int nhodo=2;
-    int Cid[nhodo]={DetIdT0, DetIdBHT}; 
-    DetectorType hodo[nhodo]={kT0, kBHT};
-    for(int ihodo=0;ihodo<nhodo;ihodo++){
-      DetectorType kDET=hodo[ihodo];
-      int detid=Cid[ihodo];
-      int mul=0,mulu=0,muld=0;
-      if(detid==DetIdBHT) continue;
-      const HodoRHitContainer &cont = rawData->GetHodoRawHC(detid);
-      int nh = cont.size();
-      int tdc_ll=gUser.GetParameter("HODOTDC",0);
-      int tdc_ul=gUser.GetParameter("HODOTDC",1);
-      for( int i=0; i<nh; ++i ){
-        HodoRawHit *raw = cont[i];
-        if(!raw) continue;
-	int seg = raw->SegmentId();
-        TString segstr=Form("_seg%d",seg);
-        double au  = 0;
-        double ad  = 0;
-        if(detid!=DetIdBHT){
-          au  = raw->GetAdcUp();
-          ad  = raw->GetAdcDown();
-          hid  = gHist.getSequentialID(kDET, 0, kADC, seg+1);
-          hptr_array[hid]->Fill(au);	    
-          hid  = gHist.getSequentialID(kDET, 1, kADC, seg+1);
-          hptr_array[hid]->Fill(ad);	    
-        }
-        int ngateu=0;
-        bool ngated=0;
-        int ntu=raw->GetSizeTdcUp();
-        for(int it=0;it<ntu;it++){
-          double tu  = raw->GetTdcUp(it);
-          hid  = gHist.getSequentialID(kDET, 0, kTDC, seg+1);     
-          hptr_array[hid]->Fill(tu);	    
-          if(tu>tdc_ll&&tu<tdc_ul){
-            ngateu++;
-          }
-        }
-        if(ngateu>0){
-          mulu++;
-	  hid  = gHist.getSequentialID(kDET, 0, kHitPat, 1);
-          hptr_array[hid]->Fill(seg);	  		
-          if(detid!=DetIdBHT){            
-            hid  = gHist.getSequentialID(kDET, 0, kADCwTDC, seg+1);
-            hptr_array[hid]->Fill(au);	  		
-          }
-        }
-        int ntd=raw->GetSizeTdcDown();
-        for(int it=0;it<ntd;it++){
-          double td  = raw->GetTdcDown(it);
-          hid  = gHist.getSequentialID(kDET, 1, kTDC, seg+1);     
-          hptr_array[hid]->Fill(td);	    
-        }
-        if(ngated>0){
-          muld++;
-	  hid  = gHist.getSequentialID(kDET, 0, kHitPat, 2);
-          hptr_array[hid]->Fill(seg);	  
-          if(detid!=DetIdBHT){            		
-            hid  = gHist.getSequentialID(kDET, 1, kADCwTDC, seg+1);
-            hptr_array[hid]->Fill(ad);	  
-          }		
-        }
-        if(ngateu>0 && ngated>0){
-          mul++;
-          hid  = gHist.getSequentialID(kDET, 0, kHitPat, 0);
-          hptr_array[hid]->Fill(seg);	  		
-        }
-      }
-      hid  = gHist.getSequentialID(kDET, 0, kMulti, 0);
-      hptr_array[hid]->Fill(mul);	    
-      hid  = gHist.getSequentialID(kDET, 0, kMulti, 1);
-      hptr_array[hid]->Fill(mulu);	    
-      hid  = gHist.getSequentialID(kDET, 0, kMulti, 2);
-      hptr_array[hid]->Fill(muld);	    
-    } //hodo
+  // {
+  //   // data type
+  //   const int nhodo=2;
+  //   int Cid[nhodo]={DetIdT0, DetIdBHT}; 
+  //   DetectorType hodo[nhodo]={kT0, kBHT};
+  //   for(int ihodo=0;ihodo<nhodo;ihodo++){
+  //     DetectorType kDET=hodo[ihodo];
+  //     int detid=Cid[ihodo];
+  //     int mul=0,mulu=0,muld=0;
+  //     if(detid==DetIdBHT) continue;
+  //     const HodoRHitContainer &cont = rawData->GetHodoRawHC(detid);
+  //     int nh = cont.size();
+  //     int tdc_ll=gUser.GetParameter("HODOTDC",0);
+  //     int tdc_ul=gUser.GetParameter("HODOTDC",1);
+  //     for( int i=0; i<nh; ++i ){
+  //       HodoRawHit *raw = cont[i];
+  //       if(!raw) continue;
+  // 	int seg = raw->SegmentId();
+  //       TString segstr=Form("_seg%d",seg);
+  //       double au  = 0;
+  //       double ad  = 0;
+  //       if(detid!=DetIdBHT){
+  //         au  = raw->GetAdcUp();
+  //         ad  = raw->GetAdcDown();
+  //         hid  = gHist.getSequentialID(kDET, 0, kADC, seg+1);
+  //         hptr_array[hid]->Fill(au);	    
+  //         hid  = gHist.getSequentialID(kDET, 1, kADC, seg+1);
+  //         hptr_array[hid]->Fill(ad);	    
+  //       }
+  //       int ngateu=0;
+  //       bool ngated=0;
+  //       int ntu=raw->GetSizeTdcUp();
+  //       for(int it=0;it<ntu;it++){
+  //         double tu  = raw->GetTdcUp(it);
+  //         hid  = gHist.getSequentialID(kDET, 0, kTDC, seg+1);     
+  //         hptr_array[hid]->Fill(tu);	    
+  //         if(tu>tdc_ll&&tu<tdc_ul){
+  //           ngateu++;
+  //         }
+  //       }
+  //       if(ngateu>0){
+  //         mulu++;
+  // 	  hid  = gHist.getSequentialID(kDET, 0, kHitPat, 1);
+  //         hptr_array[hid]->Fill(seg);	  		
+  //         if(detid!=DetIdBHT){            
+  //           hid  = gHist.getSequentialID(kDET, 0, kADCwTDC, seg+1);
+  //           hptr_array[hid]->Fill(au);	  		
+  //         }
+  //       }
+  //       int ntd=raw->GetSizeTdcDown();
+  //       for(int it=0;it<ntd;it++){
+  //         double td  = raw->GetTdcDown(it);
+  //         hid  = gHist.getSequentialID(kDET, 1, kTDC, seg+1);     
+  //         hptr_array[hid]->Fill(td);	    
+  //       }
+  //       if(ngated>0){
+  //         muld++;
+  // 	  hid  = gHist.getSequentialID(kDET, 0, kHitPat, 2);
+  //         hptr_array[hid]->Fill(seg);	  
+  //         if(detid!=DetIdBHT){            		
+  //           hid  = gHist.getSequentialID(kDET, 1, kADCwTDC, seg+1);
+  //           hptr_array[hid]->Fill(ad);	  
+  //         }		
+  //       }
+  //       if(ngateu>0 && ngated>0){
+  //         mul++;
+  //         hid  = gHist.getSequentialID(kDET, 0, kHitPat, 0);
+  //         hptr_array[hid]->Fill(seg);	  		
+  //       }
+  //     }
+  //     hid  = gHist.getSequentialID(kDET, 0, kMulti, 0);
+  //     hptr_array[hid]->Fill(mul);	    
+  //     hid  = gHist.getSequentialID(kDET, 0, kMulti, 1);
+  //     hptr_array[hid]->Fill(mulu);	    
+  //     hid  = gHist.getSequentialID(kDET, 0, kMulti, 2);
+  //     hptr_array[hid]->Fill(muld);	    
+  //   } //hodo
     
 
-    // AC Hit?
-    ACHIT=false;
-    {
-      DetectorType kDET=kBAC;
-      const int k_device = gUnpacker.get_device_id("BAC");
-      const int k_leading = 1; 
-      int nhit=gUnpacker.get_entries(k_device, 0, 4, 0, k_leading);
-      if(nhit>0){
-	for( int m=0; m<nhit; ++m ){
-	  int tdc = gUnpacker.get(k_device, 0, 4, 0, k_leading, m);
-	  hid = gHist.getSequentialID(kDET, 0, kTDC, 4+1);
-	  if(tdc> 1.1e6//gUser.GetParameter("ACTDC",0)
-	     &&tdc< 1.2e6//gUser.GetParameter("ACTDC",1)
-             ){
-	    ACHIT=true;
-	  }
-	  hptr_array[hid]->Fill(tdc);	    
-	  //	  std::cout<<hptr_array[hid]->GetTitle()<<"  "<<tdc<<std::endl;
-	}
-      }
-    }
+  //   // AC Hit?
+  //   ACHIT=false;
+  //   {
+  //     DetectorType kDET=kBAC;
+  //     const int k_device = gUnpacker.get_device_id("BAC");
+  //     const int k_leading = 1; 
+  //     int nhit=gUnpacker.get_entries(k_device, 0, 4, 0, k_leading);
+  //     if(nhit>0){
+  // 	for( int m=0; m<nhit; ++m ){
+  // 	  int tdc = gUnpacker.get(k_device, 0, 4, 0, k_leading, m);
+  // 	  hid = gHist.getSequentialID(kDET, 0, kTDC, 4+1);
+  // 	  if(tdc> 1.1e6//gUser.GetParameter("ACTDC",0)
+  // 	     &&tdc< 1.2e6//gUser.GetParameter("ACTDC",1)
+  //            ){
+  // 	    ACHIT=true;
+  // 	  }
+  // 	  hptr_array[hid]->Fill(tdc);	    
+  // 	  //	  std::cout<<hptr_array[hid]->GetTitle()<<"  "<<tdc<<std::endl;
+  // 	}
+  //     }
+  //   }
 
-    std::vector<double> tof_bht;
-    std::vector<double> tof_btc;
-    // hodo tof
+  //   std::vector<double> tof_bht;
+  //   std::vector<double> tof_btc;
+  //   // hodo tof
 
-    //    
-    for(int ihodo=0;ihodo<nhodo;++ihodo){
-      DetectorType kDET=hodo[ihodo];
-      int nh = hodoAna->GetNHits(Cid[ihodo]);
-      //    HF1( Hid[ihodo]+10, double(nh) );
-      for( int i=0; i<nh; ++i ){
-	Hodo2Hit *hit = hodoAna->GetHit(Cid[ihodo],i);
-	if(!hit) continue;
-	int seg = hit->SegmentId()+1;
-	for(int it=0;it<hit->GetIndex();it++){
-	  double mt  = hit->MeanTime(it); 
-	  if(kDET==kBHT){
-	    if(hit->GetAUp(it)  <8000) continue;
-	    if(hit->GetADown(it)<8000) continue;
-	  }
-	  hid = gHist.getSequentialID(kDET, 0, kCTime, seg);
-	  hptr_array[hid]->Fill(mt);
-	  // if(kDET==kT0&&mt>-20&&mt<20)
-	  if(kDET==kT0&&mt>-50&&mt<50){
-            time0=mt;
-	    t0segment=seg;	    
-	  }
-	  if(kDET==kDEF&&mt>-50&&mt<50){
-	    DEFsegment=seg;	    
-	  }
-	  if(ihodo!=0&&time0>-9000){
-	    double tof=mt-time0;
-	    if(kDET==kBHD){
-	      if(tof>gUser.GetParameter("TOFK",0)
-		 &&tof<gUser.GetParameter("TOFK",1)){
-		KAON=true;
-	      }
-	      if(tof>gUser.GetParameter("TOFPi",0)
-		 &&tof<gUser.GetParameter("TOFPi",1)){
-		PION=true;
-	      }
-	      if(tof>gUser.GetParameter("TOFP",0)
-		 &&tof<gUser.GetParameter("TOFP",1)){
-		PROTON=true;
-	      }
-	      if(tof>gUser.GetParameter("TOFD",0)
-		 &&tof<gUser.GetParameter("TOFD",1)){
-		DEUTERON=true;
-	      }
-	    }	    	   
-	    if(kDET==kBHT)  tof_bht.push_back(tof);
-	    if(kDET==kBTC)  tof_btc.push_back(tof);
-	    hid  = gHist.getSequentialID(kAna, 0, 1, 1)+(ihodo-1)*13; 
-	    hptr_array[hid]->Fill(tof);
-	    if(ACHIT)  hptr_array[hid+1]->Fill(tof);
-	    if(KAON)   hptr_array[hid+2]->Fill(tof);
-	    if(PION)   hptr_array[hid+3]->Fill(tof);
-	    if(PROTON)   hptr_array[hid+4]->Fill(tof);
-	    if(DEUTERON)   hptr_array[hid+5]->Fill(tof);
-	    if(TRIG[2]){//btrg
-	      hptr_array[hid+6]->Fill(tof); //all
-	      if(TRIG[4]) hptr_array[hid+10]->Fill(tof); //pion
-	      if(TRIG[3]) hptr_array[hid+11]->Fill(tof); //kaon
-	      //if(TRIG[24]) hptr_array[hid+12]->Fill(tof); //proton
-	    }
-	    if(TRIG[4])          hptr_array[hid+7]->Fill(tof); //pitrg
-	    if(TRIG[3]) hptr_array[hid+8]->Fill(tof); //ktrg
-	    //if(TRIG[15])         hptr_array[hid+9]->Fill(tof); //ptrg
-	    if(tof>-10&&tof<10) TOF=true;
-	  }
-	}
-      }//for(i)
-    } //hodo  
-  }
+  //   //    
+  //   for(int ihodo=0;ihodo<nhodo;++ihodo){
+  //     DetectorType kDET=hodo[ihodo];
+  //     int nh = hodoAna->GetNHits(Cid[ihodo]);
+  //     //    HF1( Hid[ihodo]+10, double(nh) );
+  //     for( int i=0; i<nh; ++i ){
+  // 	Hodo2Hit *hit = hodoAna->GetHit(Cid[ihodo],i);
+  // 	if(!hit) continue;
+  // 	int seg = hit->SegmentId()+1;
+  // 	for(int it=0;it<hit->GetIndex();it++){
+  // 	  double mt  = hit->MeanTime(it); 
+  // 	  if(kDET==kBHT){
+  // 	    if(hit->GetAUp(it)  <8000) continue;
+  // 	    if(hit->GetADown(it)<8000) continue;
+  // 	  }
+  // 	  hid = gHist.getSequentialID(kDET, 0, kCTime, seg);
+  // 	  hptr_array[hid]->Fill(mt);
+  // 	  // if(kDET==kT0&&mt>-20&&mt<20)
+  // 	  if(kDET==kT0&&mt>-50&&mt<50){
+  //           time0=mt;
+  // 	    t0segment=seg;	    
+  // 	  }
+  // 	  if(kDET==kDEF&&mt>-50&&mt<50){
+  // 	    DEFsegment=seg;	    
+  // 	  }
+  // 	  if(ihodo!=0&&time0>-9000){
+  // 	    double tof=mt-time0;
+  // 	    if(kDET==kBHD){
+  // 	      if(tof>gUser.GetParameter("TOFK",0)
+  // 		 &&tof<gUser.GetParameter("TOFK",1)){
+  // 		KAON=true;
+  // 	      }
+  // 	      if(tof>gUser.GetParameter("TOFPi",0)
+  // 		 &&tof<gUser.GetParameter("TOFPi",1)){
+  // 		PION=true;
+  // 	      }
+  // 	      if(tof>gUser.GetParameter("TOFP",0)
+  // 		 &&tof<gUser.GetParameter("TOFP",1)){
+  // 		PROTON=true;
+  // 	      }
+  // 	      if(tof>gUser.GetParameter("TOFD",0)
+  // 		 &&tof<gUser.GetParameter("TOFD",1)){
+  // 		DEUTERON=true;
+  // 	      }
+  // 	    }	    	   
+  // 	    if(kDET==kBHT)  tof_bht.push_back(tof);
+  // 	    if(kDET==kBTC)  tof_btc.push_back(tof);
+  // 	    hid  = gHist.getSequentialID(kAna, 0, 1, 1)+(ihodo-1)*13; 
+  // 	    hptr_array[hid]->Fill(tof);
+  // 	    if(ACHIT)  hptr_array[hid+1]->Fill(tof);
+  // 	    if(KAON)   hptr_array[hid+2]->Fill(tof);
+  // 	    if(PION)   hptr_array[hid+3]->Fill(tof);
+  // 	    if(PROTON)   hptr_array[hid+4]->Fill(tof);
+  // 	    if(DEUTERON)   hptr_array[hid+5]->Fill(tof);
+  // 	    if(TRIG[2]){//btrg
+  // 	      hptr_array[hid+6]->Fill(tof); //all
+  // 	      if(TRIG[4]) hptr_array[hid+10]->Fill(tof); //pion
+  // 	      if(TRIG[3]) hptr_array[hid+11]->Fill(tof); //kaon
+  // 	      //if(TRIG[24]) hptr_array[hid+12]->Fill(tof); //proton
+  // 	    }
+  // 	    if(TRIG[4])          hptr_array[hid+7]->Fill(tof); //pitrg
+  // 	    if(TRIG[3]) hptr_array[hid+8]->Fill(tof); //ktrg
+  // 	    //if(TRIG[15])         hptr_array[hid+9]->Fill(tof); //ptrg
+  // 	    if(tof>-10&&tof<10) TOF=true;
+  // 	  }
+  // 	}
+  //     }//for(i)
+  //   } //hodo  
+  // }
 
-  // Aerogel 
-  {
-    double ac_sum=0;
-    int nch=4;
-    DetectorType kDET=kBAC;
-    const int k_device = gUnpacker.get_device_id("BAC");
-    int nhit = gUnpacker.get_entries(k_device, 0, 4, 0, 0);
-    for(int m=0; m<nhit; ++m){
-      int adc = gUnpacker.get(k_device, 0, 4, 0, 0, m);
-      ac_sum = adc;
-      hid  = gHist.getSequentialID(kDET, 0, kADC, 4+1);
-      hptr_array[hid]->Fill(adc);
-      if(ACHIT){	   
-        hid  = gHist.getSequentialID(kDET, 0, kADCwTDC, 4+1);
-        hptr_array[hid]->Fill(adc);
-      } 
-    }
-    hid = gHist.getSequentialID(kAna, 0, 10, 1);
-    hptr_array[hid]->Fill(ac_sum);	    
-    if(ACHIT) hptr_array[hid+1]->Fill(ac_sum);	    
-    if(KAON&&!PION)  hptr_array[hid+2]->Fill(ac_sum);	        
-    if(PION&&!KAON)  hptr_array[hid+3]->Fill(ac_sum);	        
-    if(TRIG[2]){ // beam trigger
-      hid  = gHist.getSequentialID(kAna, 0, 11, 1);
-      hptr_array[hid]->Fill(ac_sum);	    
-      if(ACHIT) hptr_array[hid+1]->Fill(ac_sum);	    
-      if(KAON&&!PION)  hptr_array[hid+2]->Fill(ac_sum);	        
-      if(PION&&!KAON)  hptr_array[hid+3]->Fill(ac_sum);	        
-    }
-  }
+  // // Aerogel 
+  // {
+  //   double ac_sum=0;
+  //   int nch=4;
+  //   DetectorType kDET=kBAC;
+  //   const int k_device = gUnpacker.get_device_id("BAC");
+  //   int nhit = gUnpacker.get_entries(k_device, 0, 4, 0, 0);
+  //   for(int m=0; m<nhit; ++m){
+  //     int adc = gUnpacker.get(k_device, 0, 4, 0, 0, m);
+  //     ac_sum = adc;
+  //     hid  = gHist.getSequentialID(kDET, 0, kADC, 4+1);
+  //     hptr_array[hid]->Fill(adc);
+  //     if(ACHIT){	   
+  //       hid  = gHist.getSequentialID(kDET, 0, kADCwTDC, 4+1);
+  //       hptr_array[hid]->Fill(adc);
+  //     } 
+  //   }
+  //   hid = gHist.getSequentialID(kAna, 0, 10, 1);
+  //   hptr_array[hid]->Fill(ac_sum);	    
+  //   if(ACHIT) hptr_array[hid+1]->Fill(ac_sum);	    
+  //   if(KAON&&!PION)  hptr_array[hid+2]->Fill(ac_sum);	        
+  //   if(PION&&!KAON)  hptr_array[hid+3]->Fill(ac_sum);	        
+  //   if(TRIG[2]){ // beam trigger
+  //     hid  = gHist.getSequentialID(kAna, 0, 11, 1);
+  //     hptr_array[hid]->Fill(ac_sum);	    
+  //     if(ACHIT) hptr_array[hid+1]->Fill(ac_sum);	    
+  //     if(KAON&&!PION)  hptr_array[hid+2]->Fill(ac_sum);	        
+  //     if(PION&&!KAON)  hptr_array[hid+3]->Fill(ac_sum);	        
+  //   }
+  // }
 
   gSystem->ProcessEvents(); return 0;
 
@@ -561,6 +533,9 @@ process_event( void )
       }
     }
 
+  Bool_t KAON = true;
+  Bool_t PION = true;
+
   // if(TOF)
     {    
       double xpos[6];
@@ -568,7 +543,7 @@ process_event( void )
       double xdir[6];
       double ydir[6];
       DCAna->DecodeRawHits(rawData);
-      for(int ichm=0;ichm<6;ichm++){
+      for(int ichm=0;ichm<4;ichm++){
         xpos[ichm]=-999999;
 	DetectorType kDET=chm[ichm];
 	int cid=ChmCid[ichm];
@@ -593,6 +568,7 @@ process_event( void )
           int mul=0;
           for(int ihit=0;ihit<tmpmul;ihit++){
             DCHit* hit=cont[ihit];
+	    hit->Print();
             for(int itdc=0; itdc<hit->GetTdcSize();itdc++){
               if(hit->IsWithinRange(itdc)){
                 mul++;
@@ -650,40 +626,30 @@ process_event( void )
 	  hid=gHist.getSequentialID(kDET,0,kProf,32);	hptr_array[hid]->Fill(x,dxdz);
 	  hid=gHist.getSequentialID(kDET,0,kProf,33);	hptr_array[hid]->Fill(y,dydz);
 	  if(kDET==kBLC2a){
-	    if(t0segment>0){
-	      hid=gHist.getSequentialID(kAna,0,2,t0segment);	    hptr_array[hid]->Fill(x,y);
-	    }
+	    // if(t0segment>0){
+	    // hid=gHist.getSequentialID(kAna,0,2,t0segment);
+	    // hptr_array[hid]->Fill(x,y);
+	    // }
 	  }else if(kDET==kBLC2b){
-	    if(t0segment>0){
-	      hid=gHist.getSequentialID(kAna,0,3,t0segment);	    hptr_array[hid]->Fill(x,y);
-	    }
-	  }else if(kDET==kBPC1){
-	    if(DEFsegment>0){
-              double tmpx,tmpy;
-              track->XYPosatZ(180.,tmpx,tmpy);
-	      hid=gHist.getSequentialID(kAna,0,4,DEFsegment);	    hptr_array[hid]->Fill(tmpx,tmpy);
-	    }
-	  }else if(kDET==kBPC2){
-	    if(DEFsegment>0){
-              double tmpx,tmpy;
-              track->XYPosatZ(50.,tmpx,tmpy);
-	      hid=gHist.getSequentialID(kAna,0,5,DEFsegment);	    hptr_array[hid]->Fill(tmpx,tmpy);
-	    }
+	    // if(t0segment>0){
+	    // hid=gHist.getSequentialID(kAna,0,3,t0segment);
+	    // hptr_array[hid]->Fill(x,y);
+	    // }
 	  }
-	  if(KAON){
-	    hid=gHist.getSequentialID(kDET,0,kProf,4);	  hptr_array[hid]->Fill(x,y);
-	    hid=gHist.getSequentialID(kDET,0,kProf,5);	  hptr_array[hid]->Fill(x);
-	    hid=gHist.getSequentialID(kDET,0,kProf,6);	  hptr_array[hid]->Fill(y);
-	    if(DEFsegment>0){
-	      hid=gHist.getSequentialID(kDET,0,kProf,21);	    hptr_array[hid]->Fill(x,y);
-	      hid=gHist.getSequentialID(kDET,0,kProf,22);	    hptr_array[hid]->Fill(x);
-	      hid=gHist.getSequentialID(kDET,0,kProf,23);	    hptr_array[hid]->Fill(y);
-	    }
-	  }else if(PION){
-	    hid=gHist.getSequentialID(kDET,0,kProf,7);	  hptr_array[hid]->Fill(x,y);
-	    hid=gHist.getSequentialID(kDET,0,kProf,8);	  hptr_array[hid]->Fill(x);
-	    hid=gHist.getSequentialID(kDET,0,kProf,9);	  hptr_array[hid]->Fill(y);
-	  }
+	  // if(KAON){
+	  //   hid=gHist.getSequentialID(kDET,0,kProf,4);	  hptr_array[hid]->Fill(x,y);
+	  //   hid=gHist.getSequentialID(kDET,0,kProf,5);	  hptr_array[hid]->Fill(x);
+	  //   hid=gHist.getSequentialID(kDET,0,kProf,6);	  hptr_array[hid]->Fill(y);
+	  //   if(DEFsegment>0){
+	  //     hid=gHist.getSequentialID(kDET,0,kProf,21);	    hptr_array[hid]->Fill(x,y);
+	  //     hid=gHist.getSequentialID(kDET,0,kProf,22);	    hptr_array[hid]->Fill(x);
+	  //     hid=gHist.getSequentialID(kDET,0,kProf,23);	    hptr_array[hid]->Fill(y);
+	  //   }
+	  // }else if(PION){
+	  //   hid=gHist.getSequentialID(kDET,0,kProf,7);	  hptr_array[hid]->Fill(x,y);
+	  //   hid=gHist.getSequentialID(kDET,0,kProf,8);	  hptr_array[hid]->Fill(x);
+	  //   hid=gHist.getSequentialID(kDET,0,kProf,9);	  hptr_array[hid]->Fill(y);
+	  // }
 	  track->XYPosatZ(ffz[ichm]*10,x,y);
 	  hid=gHist.getSequentialID(kDET,0,kProf,11);	hptr_array[hid]->Fill(x,y);
 	  hid=gHist.getSequentialID(kDET,0,kProf,12);	hptr_array[hid]->Fill(x);

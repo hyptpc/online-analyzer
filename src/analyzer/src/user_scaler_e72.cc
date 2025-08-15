@@ -121,9 +121,9 @@ process_begin(const std::vector<std::string>& argv)
     scaler_on.Set(c, r++, ScalerInfo("10M-Clock",    0,  0));
     scaler_on.Set(c, r++, ScalerInfo("TM",           0,  51));
     scaler_on.Set(c, r++, ScalerInfo("SY",          -1, -1));
-    scaler_on.Set(c, r++, ScalerInfo("K-Beam",       0, 35));
-    scaler_on.Set(c, r++, ScalerInfo("Pi-Beam",      0, 39));
-    scaler_on.Set(c, r++, ScalerInfo("Beam",         0, 36));
+    scaler_on.Set(c, r++, ScalerInfo("K-Beam",       0, 25));
+    scaler_on.Set(c, r++, ScalerInfo("Pi-Beam",      0, 30));
+    scaler_on.Set(c, r++, ScalerInfo("Beam",         0, 26));
     scaler_on.Set(c, r++, ScalerInfo("KVC1",       0, 11));
     scaler_on.Set(c, r++, ScalerInfo("KVC2",       0, 12));
     scaler_on.Set(c, r++, ScalerInfo("TRIG-A",        0, 25));
@@ -370,6 +370,7 @@ process_event()
   if(scaler_on.IsSpillEnd() || scaler_off.IsSpillEnd()){
     gSystem->ProcessEvents();
     gSystem->Sleep(150);
+    gSystem->ProcessEvents();
   }
 
   if (!gUnpacker.is_good()){

@@ -464,6 +464,26 @@ HistMaker::createT2(Bool_t flag_ps)
   return top_dir;
 }
 
+//_____________________________________________________________________________
+TList*
+HistMaker::createBcOutTracking(Bool_t flag_ps)
+{
+  const std::string strDet("BcOutTracking");
+  name_created_detectors_.push_back(strDet);
+  if(flag_ps) name_ps_files_.push_back(strDet);
+  const char* nameDetector = strDet.c_str();
+  TList *top_dir = new TList;
+  top_dir->SetName(nameDetector);
+  { // TDC
+    Int_t target_id = getUniqueID(kBcOutTracking, 0, 0, 0);
+    TString title = Form("%s_X", nameDetector);
+    top_dir->Add(createTH1(++target_id, title,
+			   1000, 0, 1000,
+			   "TDC [ch]", ""));
+  }
+  return top_dir;
+}
+
 // -------------------------------------------------------------------------
 // createT98Hist
 // -------------------------------------------------------------------------
@@ -915,7 +935,9 @@ TList* HistMaker::createBLDC(DetectorType kDET, std::string strDet, int nlayers,
   TList *top_dir = new TList;
   top_dir->SetName(nameDetector);
 
-  double nbins=2000;
+  // double nbins=2000;
+  double nbins=4096;
+  
   double xmax=2000;
   double ntot=500;
   // if(kDET==kVFT){

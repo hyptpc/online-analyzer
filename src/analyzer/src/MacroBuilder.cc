@@ -384,7 +384,7 @@ HitPat()
     HistMaker::getUniqueID(kBAC, 0, kHitPat, 0),
     HistMaker::getUniqueID(kHTOF, 0, kHitPat, 0),
     HistMaker::getUniqueID(kSAC, 0, kHitPat, 0),
-    HistMaker::getUniqueID(kKVC1, 0, kHitPat, 0),
+    HistMaker::getUniqueID(kKVC1, 0, kHitPat, 2),
     HistMaker::getUniqueID(kKVC2, 0, kHitPat, 0),
     HistMaker::getUniqueID(kBVH, 0, kHitPat),
   };
