@@ -93,6 +93,7 @@ all::	$(my_tgt_raw) \
 	$(my_tgt_e72) \
 	$(my_tgt_tag) \
 	$(my_tgt_scaler) \
+	$(my_tgt_udebug) \
 	$(core_dict_lib)
 #       $(my_tgt_http_server_sdd) \
 #	$(my_tgt_sdd) \
@@ -140,6 +141,12 @@ my_obj_tag	:= $(addprefix $(my_dir)/src/,$(my_obj_tag))
 my_lib_tag	:= libmytag.so
 $(eval $(call make-lib,$(my_lib_tag),$(my_obj_tag)))
 $(eval $(call make-nogui-target,$(my_tgt_tag),$(my_lib_tag)))
+
+#_______________________________________________________________________________
+my_obj_udebug	:= $(addprefix $(my_dir)/src/,$(my_obj_udebug))
+my_lib_udebug	:= libmyudebug.so
+$(eval $(call make-lib,$(my_lib_udebug),$(my_obj_udebug)))
+$(eval $(call make-nogui-target,$(my_tgt_udebug),$(my_lib_udebug)))
 
 #_______________________________________________________________________________
 my_obj_http_server	:= $(addprefix $(my_dir)/src/,$(my_obj_http_server))

@@ -21,9 +21,9 @@ enum DetectorType {
   kPbG, kPbF2, kVeto, kFinger,kBTC,kLeak,kRC, kCNCtest,kT98PMT,kT98MPPC,//25
   kSDD, kSDDGate, kSDDReset, //28
   kCVC, kNC, kVFT, //31
-  kBAC, kKVC1, kKVC2, kSAC, kBH2, //34 for E72
-  kHTOF,
-  kBVH, kBVH2, kT1, kT2,
+  kBAC, kKVC1, kKVC2, kSAC, kBH2, kCOBO, //34 for E72
+  kHTOF, kSAC3, kKVC,
+  kBVH, kBVH2, kT1, kT2, kSFV,
   kQDC, kQDC1, kQDC2, //37
   kTriggerFlag, kDAQ, kCorrelation, kMisc,
   kTimeStamp, kDCEff,kAna, 

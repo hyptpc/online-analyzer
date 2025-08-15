@@ -670,7 +670,7 @@ TList* HistMaker::createHodo(DetectorType kDET, std::string strDet, const int ns
   list.push_back( HistMakerInfo(kTDC,    "TDC",       "TDC [ch]", nbins2, xmin2, xmax2) );
   list.push_back( HistMakerInfo(kTDC2D,  "Trailing",  "Trainling [ch]", nbins2, xmin2, xmax2) );
   list.push_back( HistMakerInfo(kTOT,    "TOT",      "TOT [ch]", 1024,0.,1024.) );
-  list.push_back( HistMakerInfo(kCTime,    "MeanTime",       "time [ns]", 5000,-1000,1000) );
+  list.push_back( HistMakerInfo(kCTime,  "MeanTime",       "time [ns]", 5000,-1000,1000) );
   list.push_back( HistMakerInfo(kHitPat, "HitPat",  "Segment", nsegments+1 ,-0.5,nsegments+0.5) );
   list.push_back( HistMakerInfo(kMulti,  "Multi",   "Multiplicity", nsegments+1 ,-0.5,nsegments+0.5) );
 
@@ -736,6 +736,7 @@ TList* HistMaker::createHodo(DetectorType kDET, std::string strDet, const int ns
   // Return the TList pointer which is added into TGFileBrowser
   return top_dir;
 }
+
 // -------------------------------------------------------------------------
 // createBHT
 // -------------------------------------------------------------------------
