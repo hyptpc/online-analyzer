@@ -57,7 +57,9 @@ const int DetIdBLC1= 111;
 const int DetIdBLC2= 112;
 
 // HypTPC
+const Int_t DetIdTPC       = 70;
 const Int_t NumOfLayersTPC = 32;
+const Int_t NumOfTimeBucket = 170;
 
 // 
 const int DetIdVmeRm=91;

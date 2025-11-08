@@ -24,6 +24,7 @@ enum DetectorType {
   kBAC, kKVC1, kKVC2, kSAC, kBH2, kCOBO, //34 for E72
   kHTOF, kSAC3, kKVC,
   kBVH, kBVH2, kT1, kT2, kSFV,
+  kTPC, kPede,
   kQDC, kQDC1, kQDC2, //37
   kTriggerFlag, kDAQ, kCorrelation, kMisc,
   kTimeStamp, kDCEff,kAna, 
@@ -130,11 +131,15 @@ public:
   		 int nbiny, double ymin, double ymax,
   		 const char* xtitle="", const char* ytitle=""
   		 );
+  TH2*   createTH2Poly( Int_t unique_id, const TString& title,
+                        Double_t xmin, Double_t xmax,
+                        Double_t ymin, Double_t ymax );
   
   TList* createTriggerFlag(bool flag_ps=true);
   TList* createBVH(bool flag_ps=true);
   TList* createT1(bool flag_ps=true);
   TList* createT2(bool flag_ps=true);
+  TList* createTPC( Bool_t flag_ps=true );
 
   TList* createBcOutTracking(bool flag_ps=true);  
 

@@ -15,6 +15,9 @@
 #include <TList.h>
 #include <TDirectory.h>
 #include <TString.h>
+#include <TH2Poly.h>
+
+#include "TpcPadHelper.hh"
 
 ClassImp(HistMaker)
 
@@ -172,6 +175,38 @@ TH2* HistMaker::createTH2(int unique_id, const char* title,
 
   h->GetXaxis()->SetTitle(xtitle);
   h->GetYaxis()->SetTitle(ytitle);
+  return h;
+}
+
+//_____________________________________________________________________________
+TH2* HistMaker::createTH2Poly( Int_t unique_id, const TString& title,
+                               Double_t xmin, Double_t xmax,
+                               Double_t ymin, Double_t ymax )
+{
+
+  static const std::string MyFunc = "createTH2Poly ";
+  Int_t sequential_id = current_hist_id_++;
+  TypeRetInsert ret =
+    idmap_seq_from_unique_.insert( std::make_pair( unique_id, sequential_id ) );
+  idmap_seq_from_name_.insert( std::make_pair( title, sequential_id ) );
+  idmap_unique_from_seq_.insert( std::make_pair( sequential_id, unique_id ) );
+  if( !ret.second ){
+    std::cerr << "#E " << MyName << MyFunc
+	      << " The unique id overlaps with other id"
+	      << std::endl;
+    std::cerr << " " << unique_id << " " << title << std::endl;
+    std::exit(-1);
+  }
+
+  TH2 *h = GHist::P2( unique_id, title, xmin, xmax, ymin, ymax );
+  if( !h ){
+    std::cerr << "#E " << MyName << " Fail to create TH2" << std::endl
+	      << " " << unique_id << " " << title << std::endl;
+    std::exit(-1);
+    //    return h;
+  } else {
+    gDirectory->GetList()->Add( h );
+  }
   return h;
 }
 
@@ -483,6 +518,134 @@ HistMaker::createBcOutTracking(Bool_t flag_ps)
   }
   return top_dir;
 }
+
+//_____________________________________________________________________________
+TList*
+HistMaker::createTPC(Bool_t flag_ps)
+{
+
+  const std::string strDet = "TPC";
+  name_created_detectors_.push_back(strDet);
+  if( flag_ps ) name_ps_files_.push_back(strDet);
+  const char* nameDetector = strDet.c_str();
+  TList *top_dir = new TList;
+  top_dir->SetName(nameDetector);
+  {
+    Int_t target_id = getUniqueID( kTPC, 0, kADC2D );
+    auto title = Form( "%s_ADC2D", nameDetector );
+    auto h_adc = dynamic_cast<TH2Poly*>
+      ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
+    title = Form( "%s_RMS2D", nameDetector );
+    auto h_rms = dynamic_cast<TH2Poly*>
+      ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
+    title = Form( "%s_TDC2D", nameDetector );
+    auto h_loc = dynamic_cast<TH2Poly*>
+      ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
+    title = Form( "%s_Hit2D", nameDetector );
+    auto h_hit = dynamic_cast<TH2Poly*>
+      ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
+    Double_t X[5];
+    Double_t Y[5];
+    for( Int_t i=0; i<32; i++ ){
+      Double_t pLength = TpcPadHelper::PadParameter[i][5];
+      Double_t st      = ( 180. -
+                           360./TpcPadHelper::PadParameter[i][3] *
+                           TpcPadHelper::PadParameter[i][1]/2. );
+      Double_t sTheta  = (-1+st/180.)*TMath::Pi();
+      Double_t dTheta  = ( (360./TpcPadHelper::PadParameter[i][3]) /
+                           180.*TMath::Pi() );
+      Double_t cRad    = TpcPadHelper::PadParameter[i][2];
+      Int_t    nPad    = TpcPadHelper::PadParameter[i][1];
+      for( Int_t j=0; j<nPad; j++ ){
+        X[1] = (cRad+(pLength/2.))*TMath::Cos(j*dTheta+sTheta);
+        X[2] = (cRad+(pLength/2.))*TMath::Cos((j+1)*dTheta+sTheta);
+        X[3] = (cRad-(pLength/2.))*TMath::Cos((j+1)*dTheta+sTheta);
+        X[4] = (cRad-(pLength/2.))*TMath::Cos(j*dTheta+sTheta);
+        X[0] = X[4];
+        Y[1] = (cRad+(pLength/2.))*TMath::Sin(j*dTheta+sTheta);
+        Y[2] = (cRad+(pLength/2.))*TMath::Sin((j+1)*dTheta+sTheta);
+        Y[3] = (cRad-(pLength/2.))*TMath::Sin((j+1)*dTheta+sTheta);
+        Y[4] = (cRad-(pLength/2.))*TMath::Sin(j*dTheta+sTheta);
+        Y[0] = Y[4];
+        for( Int_t ii=0; ii<5; ii++ ) X[ii] -=143;
+        h_adc->AddBin( 5, X, Y );
+        h_rms->AddBin( 5, X, Y );
+        h_loc->AddBin( 5, X, Y );
+        h_hit->AddBin( 5, X, Y );
+      }
+    }
+    h_adc->SetStats( 0 );
+    h_adc->SetMinimum(    0. );
+    h_adc->SetMaximum( 4000. );
+    h_rms->SetStats( 0 );
+    h_rms->SetMinimum(    0. );
+    h_rms->SetMaximum(  200. );
+    h_loc->SetStats( 0 );
+    h_loc->SetMinimum(    0. );
+    h_loc->SetMaximum(  NumOfTimeBucket );
+    top_dir->Add( h_adc );
+    top_dir->Add( h_rms );
+    top_dir->Add( h_loc );
+    top_dir->Add( h_hit );
+  }
+  // ADC
+  top_dir->Add( createTH1( getUniqueID( kTPC, 0, kADC ),
+                           "TPC_ADC", 4000, 0, 4000 ) );
+  top_dir->Add( createTH1( getUniqueID( kTPC, 0, kPede ),
+                           "TPC_RMS", 1000, 0, 1000 ) );
+  // TDC
+  top_dir->Add( createTH1( getUniqueID( kTPC, 0, kTDC ),
+                           "TPC_TDC", NumOfTimeBucket, 0, NumOfTimeBucket ) );
+  top_dir->Add( createTH2( getUniqueID( kTPC, 0, kTDC2D ),
+                           "TPC_Hit_ZY", 100, -300, 300,
+			   NumOfTimeBucket, 0, NumOfTimeBucket,
+			   "z [mm]", "tb" ) );
+  top_dir->Add( createTH2( getUniqueID( kTPC, 1, kTDC2D ),
+                           "TPC_Hit_XY", 100, -300, 300,
+			   NumOfTimeBucket, 0, NumOfTimeBucket,
+			   "x [mm]", "tb" ) );
+  top_dir->Add( createTH2( getUniqueID( kTPC, 2, kTDC2D ),
+                           "TPC_ZY", 100, -300, 300,
+			   NumOfTimeBucket, 0, NumOfTimeBucket,
+			   "z [mm]", "tb" ) );
+  top_dir->Add( createTH2( getUniqueID( kTPC, 3, kTDC2D ),
+                           "TPC_XY", 100, -300, 300,
+			   NumOfTimeBucket, 0, NumOfTimeBucket,
+			   "x [mm]", "tb" ) );
+  // FADC
+  top_dir->Add( createTH2( getUniqueID( kTPC, 0, kFADC ),
+                           "TPC_FADC",
+                           NumOfTimeBucket, 0, NumOfTimeBucket,
+			   200, 0, 0x1000,
+                           "Time bucket", "ADC" ) );
+  // Multiplicity
+  top_dir->Add( createTH1( getUniqueID( kTPC, 0, kMulti ),
+                           "TPC_multiplicity", 600, 0, 6000 ) );
+  top_dir->Add( createTH1( getUniqueID( kTPC, 3, kMulti ),
+                           "TPC_AGET_multiplicity", 124, 0, 124,
+			   "AsAdID#times4+AGETID", "Multiplicity/AGET/Event" ) );
+  top_dir->Add( createTH1( getUniqueID( kTPC, 4, kMulti ),
+                           "TPC_AGET_multiplicity_Max", 64, 0, 64 ) );
+  // ClusterSize
+  top_dir->Add( createTH2( getUniqueID( kTPC, 2, kMulti ),
+                           "TPC_ClusterSize", 42, -10, 32, 10, 0, 10,
+			   "Layer ID", "Cluster size") );
+  // TPC-CLOCK
+  top_dir->Add( createTH1( getUniqueID( kTPC, 1, kTDC ),
+			   "TPC_CLOCK", 50000, 0, 2000000,
+			   "TDC", "") );
+  top_dir->Add( createTH1( getUniqueID( kTPC, 1, kMulti ),
+			  "TPC_CLOCK_multiplicity", 10, 0, 10) );
+  // TPC-BeamProfile
+//  top_dir->Add( createTH1( getUniqueID( kTPC, 2, kTDC ),
+//		 	  "TPC_BeamProfile", 34, 0, 34,
+//		 	  "Pad", "") );
+  top_dir->Add( createTH1( getUniqueID( kTPC, 2, kTDC ),
+			   "TPC_BeamProfile", 20, -100, 100,
+			   "x [mm]", "") );
+  return top_dir;
+}
+
 
 // -------------------------------------------------------------------------
 // createT98Hist
