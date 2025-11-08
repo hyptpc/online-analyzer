@@ -83,6 +83,15 @@ TCanvas*  TOF2(int type, std::string strTrig);
 TCanvas*  TOF2D(int type, std::string strTrig);
 TCanvas*  AC(int type, std::string strTrig);
 
+//TPC
+TCanvas* TPC( void );
+TCanvas* TPC2D( void );
+TCanvas* TPC3D( void );
+TCanvas* TPCADCPAD( void );
+TCanvas* TPCTDCPAD( void );
+TCanvas* TPCHTOFPAD( void );
+TCanvas* TPCFADC( void );
+
 void      UpdateBLDCEfficiency();
 void      UpdateCounterEfficiency();
 }
