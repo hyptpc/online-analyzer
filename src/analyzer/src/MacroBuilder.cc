@@ -274,7 +274,7 @@ BH2TDCMT()
 TCanvas*
 HTOFADC(Int_t ch)
 {
-  TString UorD = (ch == 0) ? "U" : "D";
+  TString UorD = (ch == 0) ? "U" : (ch == 1 ) ? "D" : "SUM";
   TCanvas *c1 = new TCanvas(__func__ + UorD, __func__ + UorD);
   c1->Divide(6, 6);
   const Int_t n_seg = 34;
@@ -320,6 +320,13 @@ TCanvas*
 HTOFADCD()
 {
   return HTOFADC(1);
+}
+
+//____________________________________________________________________________
+TCanvas*
+HTOFADCSUM()
+{
+  return HTOFADC(2);
 }
 
 //____________________________________________________________________________

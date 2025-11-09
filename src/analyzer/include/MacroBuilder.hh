@@ -37,6 +37,7 @@ TCanvas*  BH2TDCMT();
 TCanvas*  HTOFADC(Int_t ch);
 TCanvas*  HTOFADCU();
 TCanvas*  HTOFADCD();
+TCanvas*  HTOFADCSUM();
 TCanvas*  HTOFTDC(Int_t ch);
 TCanvas*  HTOFTDCU();
 TCanvas*  HTOFTDCD();
