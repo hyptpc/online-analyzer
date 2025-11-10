@@ -749,6 +749,43 @@ process_event( void )
     hptr_array[hid]->Fill(multiplicity);
   } //hodo
 
+  Bool_t has_hit_SFV = false;
+  { // SFV
+    DetectorType kDET=kSFV;
+    const int k_device = gUnpacker.get_device_id("SFV");
+    const int k_adc = gUnpacker.get_data_id("SFV", "adc");
+    const int k_tdc = gUnpacker.get_data_id("SFV", "leading");
+    const UInt_t tdc_min = gUser.GetParameter("SFV_TDC", 0);
+    const UInt_t tdc_max = gUser.GetParameter("SFV_TDC", 1);
+    const Int_t n_seg = 5;
+    const Int_t n_ch = 1;
+    Int_t multiplicity = 0;
+    for(int seg = 0; seg<n_seg; ++seg){
+      for(int ch=0; ch<n_ch; ++ch){
+	Bool_t has_hit = false;
+	{ // TDC
+	  Int_t n = gUnpacker.get_entries(k_device, 0, seg, ch, k_tdc);
+          for(Int_t m=0; m<n; ++m){
+            UInt_t tdc = gUnpacker.get(k_device, 0, seg, ch, k_tdc, m);
+            hid = gHist.getSequentialID(kDET, ch, kTDC, seg+1);
+            hptr_array[hid]->Fill(tdc);
+	    if (tdc_min < tdc && tdc < tdc_max) {
+	      has_hit = true;
+	      has_hit_SFV = true;
+	    }
+	  }
+	}
+	if(has_hit){
+	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
+	  hptr_array[hid]->Fill(seg);
+	  multiplicity++;
+	}
+      }
+    }//seg
+    hid = gHist.getSequentialID(kDET, 0, kMulti, 0);
+    hptr_array[hid]->Fill(multiplicity);
+  } //hodo
+
   { // SAC3
     DetectorType kDET=kSAC3;
     const int k_device = gUnpacker.get_device_id("SAC3");
@@ -758,7 +795,7 @@ process_event( void )
     const UInt_t tdc_max = gUser.GetParameter("SAC3_TDC", 1);
     const Int_t n_seg = 1;
     const Int_t n_ch = 1;
-    Int_t multiplicity = 0;
+    Int_t multiplicity[2] = {0, 0};
     for(int seg = 0; seg<n_seg; ++seg){
       for(int ch=0; ch<n_ch; ++ch){
 	Bool_t has_hit = false;
@@ -787,46 +824,18 @@ process_event( void )
 	if(has_hit){
 	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
 	  hptr_array[hid]->Fill(seg);
-	  multiplicity++;
+	  multiplicity[0]++;
+	  if (has_hit_SFV) multiplicity[1]++;
 	}
       }
     }//seg
     hid = gHist.getSequentialID(kDET, 0, kMulti, 0);
-    hptr_array[hid]->Fill(multiplicity);
-  } //hodo
+    hptr_array[hid]->Fill(multiplicity[0]);
 
-  { // SFV
-    DetectorType kDET=kSFV;
-    const int k_device = gUnpacker.get_device_id("SFV");
-    const int k_adc = gUnpacker.get_data_id("SFV", "adc");
-    const int k_tdc = gUnpacker.get_data_id("SFV", "leading");
-    const UInt_t tdc_min = gUser.GetParameter("SFV_TDC", 0);
-    const UInt_t tdc_max = gUser.GetParameter("SFV_TDC", 1);
-    const Int_t n_seg = 5;
-    const Int_t n_ch = 1;
-    Int_t multiplicity = 0;
-    for(int seg = 0; seg<n_seg; ++seg){
-      for(int ch=0; ch<n_ch; ++ch){
-	Bool_t has_hit = false;
-	{ // TDC
-	  Int_t n = gUnpacker.get_entries(k_device, 0, seg, ch, k_tdc);
-          for(Int_t m=0; m<n; ++m){
-            UInt_t tdc = gUnpacker.get(k_device, 0, seg, ch, k_tdc, m);
-            hid = gHist.getSequentialID(kDET, ch, kTDC, seg+1);
-            hptr_array[hid]->Fill(tdc);
-	    if (tdc_min < tdc && tdc < tdc_max)
-	      has_hit = true;
-	  }
-	}
-	if(has_hit){
-	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
-	  hptr_array[hid]->Fill(seg);
-	  multiplicity++;
-	}
-      }
-    }//seg
-    hid = gHist.getSequentialID(kDET, 0, kMulti, 0);
-    hptr_array[hid]->Fill(multiplicity);
+    if (has_hit_SFV) {
+      hid = gHist.getSequentialID(kDET, 0, kMulti, 1);
+      hptr_array[hid]->Fill(multiplicity[1]);
+    } 
   } //hodo
 
 

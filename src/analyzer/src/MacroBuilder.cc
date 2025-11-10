@@ -585,8 +585,9 @@ Multiplicity()
     HistMaker::getUniqueID(kKVC, 0, kMulti, 0),
     HistMaker::getUniqueID(kKVC, 0, kMulti, 1),
     HistMaker::getUniqueID(kCVC, 0, kMulti, 0),
+    HistMaker::getUniqueID(kSAC3, 0, kMulti, 1),
   };
-  c1->Divide(4, 2);
+  c1->Divide(3, 3);
   for(Int_t i=0, n=hid_list.size(); i<n; ++i){
     c1->cd(i+1);
     auto h1 = GHist::get(hid_list[i]);
@@ -1543,7 +1544,7 @@ UpdateCounterEfficiency()
   std::vector<TString> ch_name = {
     "BHT_Multi_0", "T0_Multi_0", "BH2_Multi_0",
     "BAC_Multi_0", "HTOF_Multi_0", "KVC_Multi_0",
-    "KVC_Multi_1", "CVC_Multi_0"
+    "KVC_Multi_1", "CVC_Multi_0", "SAC3_Multi_1"
   };
   static std::vector<TText*> tex(ch_name.size());
   static auto c1 = (TCanvas*)gROOT->FindObject("Multiplicity");
