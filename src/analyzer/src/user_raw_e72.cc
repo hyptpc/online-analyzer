@@ -924,7 +924,7 @@ process_event( void )
 
 
   // TPC -----------------------------------------------------------
-  /*
+
   //UInt_t cobo_data_size = 0;
   {
     //if(cobo_data_size > 0){
@@ -1004,6 +1004,7 @@ process_event( void )
       gUnpacker.dump_data_device(k_device);
 #endif
     }
+  /*
     { ///// TPC-CLOCK
       static const auto device_id = gUnpacker.get_device_id("HTOF");
       static const auto leading_id = gUnpacker.get_data_id("HTOF", "fpga_leading");
@@ -1020,9 +1021,12 @@ process_event( void )
 	}
       }
       hptr_array[mul_hid]->Fill(multiplicity);
-      //}
-  } // TPC
   */
+      //}
+
+  //} // TPC
+
+  
 
 #if DEBUG
   std::cout << __FILE__ << " " << __LINE__ << std::endl;
