@@ -697,8 +697,10 @@ process_event( void )
     }//seg
     hid = gHist.getSequentialID(kDET, 0, kMulti, 0);
     hptr_array[hid]->Fill(multiplicity[0]);
-    hid = gHist.getSequentialID(kDET, 0, kMulti, 1);
-    hptr_array[hid]->Fill(multiplicity[1]);
+    if(has_hit_T1){
+      hid = gHist.getSequentialID(kDET, 0, kMulti, 1);
+      hptr_array[hid]->Fill(multiplicity[1]);
+    }
   } //hodo
 
   { // CVC
