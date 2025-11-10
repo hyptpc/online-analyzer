@@ -140,7 +140,7 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(gHist.createHodo(kT0 ,"T0"   , 5, 2, nbinsqdc/4,-0.5,511.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kBH2, "BH2", 15, 3, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kBAC, "BAC",  5, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
-  gHttp.Register(gHist.createHodo(kHTOF, "HTOF", 34, 3,
+  gHttp.Register(gHist.createHTOF(kHTOF, "HTOF", 34, 3,
 				  nbinsqdc/2, -0.5, 2047.5,
 				  nbinshrtdc, hrtdcmin, hrtdcmax));
   gHttp.Register(gHist.createHodo(kKVC, "KVC", 8, 5,
@@ -150,7 +150,7 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(gHist.createHodo(kCVC, "CVC", 8, 3, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kSAC3, "SAC3", 1, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kSFV, "SFV", 5, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
-  gHttp.Register(gHist.createHodo(kCOBO, "COBO", 16, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
+  gHttp.Register(gHist.createHodo(kCOBO, "COBO", 8, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,16.75e6,16.8e6));
   
   gHttp.Register(gHist.createTriggerFlag());
   // Chambers
@@ -549,7 +549,7 @@ process_event( void )
     const Int_t n_ch = 3;
     Int_t multiplicity = 0;
     for(int seg = 0; seg<n_seg; ++seg){
-      Bool_t has_hit_ud[2] = {false, false};
+      Bool_t has_hit_ud[3] = {false, false, false};
       for(int ch=0; ch<n_ch; ++ch){
 	Bool_t has_hit = false;
 	{ // TDC
@@ -575,15 +575,13 @@ process_event( void )
           } // nhit
 	}
 	if(has_hit){	
-	  if (ch != 2) {
-	    has_hit_ud[ch] = true;
-	    hid = gHist.getSequentialID(kDET, 0, kHitPat, ch);
-	    hptr_array[hid]->Fill(seg);
-	  }
+	  has_hit_ud[ch] = true;
+	  hid = gHist.getSequentialID(kDET, 0, kHitPat, ch);
+	  hptr_array[hid]->Fill(seg);
 	}
       }
       if (has_hit_ud[0] && has_hit_ud[1]) {
-	hid = gHist.getSequentialID(kDET, 0, kHitPat, 2);
+	hid = gHist.getSequentialID(kDET, 0, kHitPat, 3);
 	hptr_array[hid]->Fill(seg);
 	multiplicity++;
       }
@@ -816,7 +814,7 @@ process_event( void )
     const int k_device = gUnpacker.get_device_id("COBO");
     const int k_adc = gUnpacker.get_data_id("COBO", "adc");
     const int k_tdc = gUnpacker.get_data_id("COBO", "leading");
-    const Int_t n_seg = 16;
+    const Int_t n_seg = 8;
     const Int_t n_ch = 1;
     Int_t multiplicity = 0;
     for(int seg = 0; seg<n_seg; ++seg){

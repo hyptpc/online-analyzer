@@ -147,6 +147,7 @@ public:
   TList* createPbF2(DetectorType kDET, std::string strDet, int nsegments, bool flag_ps=true); 
   TList* createHodo(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins, double xmin, double xmax, int nbins2, double xmin2, double xmax2, bool flag_ps=true); 
   TList* createBHT(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins2, double xmin2, double xmax2, bool flag_ps=true); 
+  TList* createHTOF(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins, double xmin, double xmax, int nbins2, double xmin2, double xmax2, bool flag_ps=true); 
   TList* createQDC(DetectorType kDET, std::string strDet, int nsegments, int nbins, double xmin, double xmax, bool flag_ps=true); 
   TList* createSDD(DetectorType kDET, std::string strDet, int nports, int nunits, bool flag_ps=true); 
   TList* createMHTDC(DetectorType kDET, std::string strDet, int nsegments, double xmax=1024., bool flag_ps=true);

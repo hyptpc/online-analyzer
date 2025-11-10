@@ -380,7 +380,7 @@ T1()
   TH1 *h = GHist::get( HistMaker::getUniqueID(kT1, 0, kADC, 1 ) );
   if( !h ) return c1;
   h->Draw();
-  h = GHist::get( HistMaker::getUniqueID(kCVC, 0, kADCwTDC, 1 ) );
+  h = GHist::get( HistMaker::getUniqueID(kT1, 0, kADCwTDC, 1 ) );
   if( !h ) return c1;
   h->SetLineColor(kRed+1);
   h->Draw("same");
@@ -491,8 +491,8 @@ TCanvas*
 COBO()
 {
   TCanvas *c1 = new TCanvas(__func__, __func__);
-  c1->Divide(4, 4);
-  for( Int_t i=0; i<16; ++i ){
+  c1->Divide(4, 2);
+  for( Int_t i=0; i<8; ++i ){
     c1->cd(i+1)->SetLogy();
     TH1 *h = GHist::get( HistMaker::getUniqueID(kCOBO, 0, kTDC, i + 1 ) );
     if( !h ) continue;
@@ -587,13 +587,14 @@ HitPat()
     HistMaker::getUniqueID(kHTOF, 0, kHitPat, 0),
     HistMaker::getUniqueID(kHTOF, 0, kHitPat, 1),
     HistMaker::getUniqueID(kHTOF, 0, kHitPat, 2),
+    HistMaker::getUniqueID(kHTOF, 0, kHitPat, 3),
     HistMaker::getUniqueID(kKVC, 0, kHitPat, 0),
     HistMaker::getUniqueID(kT1, 0, kHitPat, 0),
     HistMaker::getUniqueID(kCVC, 0, kHitPat, 0),
     HistMaker::getUniqueID(kSAC3, 0, kHitPat, 0),
     HistMaker::getUniqueID(kSFV, 0, kHitPat, 0),
   };
-  c1->Divide(4, 3);
+  c1->Divide(4, 4);
   for(Int_t i=0, n=hid_list.size(); i<n; ++i){
     c1->cd(i+1);
     auto h1 = GHist::get(hid_list[i]);

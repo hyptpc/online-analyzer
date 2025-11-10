@@ -47,7 +47,8 @@ HttpServer::Open( void )
   m_server->Restrict("/", "allow=all");
   m_server->SetReadOnly(kTRUE);
   //  m_server->SetReadOnly(kFALSE);
-  m_server->SetJSROOT("https://root.cern.ch/js/latest/");
+  // m_server->SetJSROOT("https://root.cern.ch/js/latest/");
+  m_server->SetJSROOT("https://root.cern.ch/js/7.9.2/");
   m_server->RegisterCommand("/Reset", "HttpServer::GetInstance().ResetAll()");
   m_server->RegisterCommand("/Restart", "gSystem->Exit(0)");
   std::cout << "#D HttpServer::Open()" << std::endl
