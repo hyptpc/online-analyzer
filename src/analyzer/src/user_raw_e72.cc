@@ -194,6 +194,7 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::HTOFTDCU());
   gHttp.Register(http::HTOFTDCD());
   gHttp.Register(http::HTOFTDCHT());
+  // gHttp.Register(http::HTOFThreshold());
   gHttp.Register(http::KVC());
   gHttp.Register(http::T1());
   gHttp.Register(http::CVCADC());
@@ -499,45 +500,52 @@ process_event( void )
     hptr_array[hid]->Fill(mul);	    	    
   } //hodo
 
-
-  {
-    // BAC    
-    int i=2;
-    DetectorType kDET=hodo[i];
-    const int k_device = gUnpacker.get_device_id(hodo_name[i].Data());
+  { // BAC
+    DetectorType kDET=kBAC;
+    const int k_device = gUnpacker.get_device_id("BAC");
+    const int k_adc = gUnpacker.get_data_id("BAC", "adc");
+    const int k_tdc = gUnpacker.get_data_id("BAC", "leading");
     const UInt_t tdc_min = gUser.GetParameter("BAC_TDC", 0);
     const UInt_t tdc_max = gUser.GetParameter("BAC_TDC", 1);
-    int mul=0;
-    for(int seg = 0; seg<nsegs[i]; ++seg){
-      int ntdc=0;	  
-      for(int idata=0; idata<ndata; ++idata){
-	int nhit = gUnpacker.get_entries(k_device, 0, seg, 0, data[idata]);
-	if( data[idata]==k_leading && nhit>0){
-	  //hid = gHist.getSequentialID(kDET, 0, kHitPat, 1);
-	  //hptr_array[hid]->Fill(seg);
-	  ntdc=nhit;	  
-	  mul=1;
+    const Int_t n_seg = 5;
+    const Int_t n_ch = 1;
+    Int_t multiplicity = 0;
+    for(int seg = 0; seg<n_seg; ++seg){
+      for(int ch=0; ch<n_ch; ++ch){
+	Bool_t has_hit = false;
+	{ // TDC
+	  Int_t n = gUnpacker.get_entries(k_device, 0, seg, ch, k_tdc);
+          for(Int_t m=0; m<n; ++m){
+            UInt_t tdc = gUnpacker.get(k_device, 0, seg, ch, k_tdc, m);
+            hid = gHist.getSequentialID(kDET, ch, kTDC, seg+1);
+            hptr_array[hid]->Fill(tdc);
+	    if (tdc_min < tdc && tdc < tdc_max)
+	      has_hit = true;
+	  }
 	}
-	for( int m=0; m<nhit; ++m ){
-	  int val = gUnpacker.get(k_device, 0, seg, 0, data[idata] , m);
-	  hid = gHist.getSequentialID(kDET, 0, type[idata], seg+1);
-	  hptr_array[hid]->Fill(val);	    
-	  if(data[idata]==k_adc &&
-	     gUnpacker.get_entries(k_device, 0, seg, 0, k_leading)){
-	    hid = gHist.getSequentialID(kDET, 0, kADCwTDC, seg+1);
-	    hptr_array[hid]->Fill(val);
-	  } 
-	} // nhit
-      } // data
-      // if( ntdc>0 ){
-      //   hid  = gHist.getSequentialID(kDET, 0, kHitPat, 0);
-      //   hptr_array[hid]->Fill(mul);	    
-      // }
-    }//seg	    
-    hid  = gHist.getSequentialID(kDET, 0, kMulti, 0);
-    hptr_array[hid]->Fill(mul);	    	    
+	{ // ADC
+	  Int_t n = gUnpacker.get_entries(k_device, 0, seg, ch, k_adc);
+          for(Int_t m=0; m<n; ++m){
+            UInt_t adc = gUnpacker.get(k_device, 0, seg, ch, k_adc, m);
+            hid = gHist.getSequentialID(kDET, ch, kADC, seg+1);
+            hptr_array[hid]->Fill(adc);
+            if(has_hit){
+              hid = gHist.getSequentialID(kDET, ch, kADCwTDC, seg+1);
+              hptr_array[hid]->Fill(adc);
+            } 
+          } // nhit
+	}
+	if (has_hit && seg == 4){
+	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
+	  hptr_array[hid]->Fill(seg);
+	  multiplicity++;
+	}
+      }
+    }//seg
+    hid = gHist.getSequentialID(kDET, 0, kMulti, 0);
+    hptr_array[hid]->Fill(multiplicity);
   } //hodo
-
+    
   { // HTOF
     DetectorType kDET=kHTOF;
     const int k_device = gUnpacker.get_device_id("HTOF");
@@ -585,6 +593,11 @@ process_event( void )
 	hptr_array[hid]->Fill(seg);
 	multiplicity++;
       }
+      // int hid_num = gHist.getSequentialID(kDET, 2, kADCwTDC, seg+1);
+      // int hid_den = gHist.getSequentialID(kDET, 2, kADC, seg+1);
+      // hid = gHist.getSequentialID(kDET, 0, kThreshold, 0);
+      // // hptr_array[hid]->Reset("ICES");
+      // hptr_array[hid]->Divide(hptr_array[hid_num], hptr_array[hid_num], 1.0, 1.0);
     }//seg
     hid = gHist.getSequentialID(kDET, 0, kMulti, 0);
     hptr_array[hid]->Fill(multiplicity);

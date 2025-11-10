@@ -42,6 +42,7 @@ TCanvas*  HTOFTDC(Int_t ch);
 TCanvas*  HTOFTDCU();
 TCanvas*  HTOFTDCD();
 TCanvas*  HTOFTDCHT();
+TCanvas*  HTOFThreshold();
 TCanvas*  HTOFTDC2();
 TCanvas*  T1();
 TCanvas*  CVCADC();

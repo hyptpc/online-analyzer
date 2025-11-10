@@ -54,6 +54,7 @@ enum DataType{
   kResetL, kResetT, //17
   kEnergy1, kEnergy2,  kEnergy3, kEnergy4,  kEnergy5, kEnergy6, //23
   kChisqr, kEff,kProf, kWireCorr, kResid, //28
+  kThreshold,
   sizeDataType,
   factorDataType = 1000
 };//max 50

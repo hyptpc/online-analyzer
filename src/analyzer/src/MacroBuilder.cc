@@ -350,6 +350,25 @@ HTOFTDCHT()
   return HTOFTDC(2);
 }
 
+//____________________________________________________________________________
+TCanvas*
+HTOFThreshold()
+{
+  TCanvas *c1 = new TCanvas(__func__, __func__);
+  c1->Divide(6, 6);
+  const Int_t n_seg = 34;
+  for(Int_t seg=0; seg<n_seg; ++seg){
+    c1->cd(seg+1);
+    auto h = GHist::get( HistMaker::getUniqueID(kHTOF, 0, kThreshold, seg+1));
+    if(!h) continue;
+    h->SetMinimum(0.0);
+    h->SetMaximum(1.5);
+    h->SetLineWidth(2);
+    h->Draw("hist");
+  }
+  return c1;
+}
+
 //_____________________________________________________________________________
 TCanvas*
 HTOFTDC2()
@@ -458,7 +477,7 @@ SAC3()
   TH1 *h = GHist::get( HistMaker::getUniqueID(kSAC3, 0, kADC, 1 ) );
   if( !h ) return c1;
   h->Draw();
-  h = GHist::get( HistMaker::getUniqueID(kCVC, 0, kADCwTDC, 1 ) );
+  h = GHist::get( HistMaker::getUniqueID(kSAC3, 0, kADCwTDC, 1 ) );
   if( !h ) return c1;
   h->SetLineColor(kRed+1);
   h->Draw("same");

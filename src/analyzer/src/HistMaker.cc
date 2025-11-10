@@ -1027,7 +1027,7 @@ TList* HistMaker::createHTOF(DetectorType kDET, std::string strDet, const int ns
   list.push_back( HistMakerInfo(kCTime,  "MeanTime",       "time [ns]", 5000,-1000,1000) );
   list.push_back( HistMakerInfo(kHitPat, "HitPat",  "Segment", nsegments+1 ,-0.5,nsegments+0.5) );
   list.push_back( HistMakerInfo(kMulti,  "Multi",   "Multiplicity", nsegments+1 ,-0.5,nsegments+0.5) );
-
+  
   size_t size=list.size();
   for(size_t i=0; i<size-3;i++){
     // Declaration of the sub-directory
@@ -1076,6 +1076,15 @@ TList* HistMaker::createHTOF(DetectorType kDET, std::string strDet, const int ns
 			     list[i].nbinsx, list[i].xmin, list[i].xmax,
 			     list[i].xtitle, list[i].ytitle));
     }
+  }
+  {
+    const char* nameSubDir = "Threshold";
+    int target_id = getUniqueID(kDET, 0, kThreshold, 0);
+    const char* title = NULL;
+    title = Form("%s_%s", nameDetector, nameSubDir);
+    top_dir->Add(createTH1(target_id, title, // 1 origin
+			   nbins,xmin,xmax,
+			   "ADC [ch]",""));
   }
   {
     const char* nameSubDir = "HitPat2D";
