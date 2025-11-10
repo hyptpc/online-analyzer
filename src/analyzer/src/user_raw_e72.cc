@@ -589,6 +589,55 @@ process_event( void )
     hid = gHist.getSequentialID(kDET, 0, kMulti, 0);
     hptr_array[hid]->Fill(multiplicity);
   } //hodo
+
+  Bool_t has_hit_T1 = false;
+  { // T1
+    DetectorType kDET=kT1;
+    const int k_device = gUnpacker.get_device_id("T1");
+    const int k_adc = gUnpacker.get_data_id("T1", "adc");
+    const int k_tdc = gUnpacker.get_data_id("T1", "leading");
+    const UInt_t tdc_min = gUser.GetParameter("T1_TDC", 0);
+    const UInt_t tdc_max = gUser.GetParameter("T1_TDC", 1);
+    const Int_t n_seg = 1;
+    const Int_t n_ch = 1;
+    Int_t multiplicity = 0;
+    for(int seg = 0; seg<n_seg; ++seg){
+      for(int ch=0; ch<n_ch; ++ch){
+	Bool_t has_hit = false;
+	{ // TDC
+	  Int_t n = gUnpacker.get_entries(k_device, 0, seg, ch, k_tdc);
+          for(Int_t m=0; m<n; ++m){
+            UInt_t tdc = gUnpacker.get(k_device, 0, seg, ch, k_tdc, m);
+            hid = gHist.getSequentialID(kDET, ch, kTDC, seg+1);
+            hptr_array[hid]->Fill(tdc);
+	    if (tdc_min < tdc && tdc < tdc_max){
+	      has_hit    = true;
+	      has_hit_T1 = true;
+	    }
+	  }
+	}
+	{ // ADC
+	  Int_t n = gUnpacker.get_entries(k_device, 0, seg, ch, k_adc);
+          for(Int_t m=0; m<n; ++m){
+            UInt_t adc = gUnpacker.get(k_device, 0, seg, ch, k_adc, m);
+            hid = gHist.getSequentialID(kDET, ch, kADC, seg+1);
+            hptr_array[hid]->Fill(adc);
+            if(has_hit){
+              hid = gHist.getSequentialID(kDET, ch, kADCwTDC, seg+1);
+              hptr_array[hid]->Fill(adc);
+            } 
+          } // nhit
+	}
+	if(has_hit){
+	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
+	  hptr_array[hid]->Fill(seg);
+	  multiplicity++;
+	}
+      }
+    }//seg
+    hid = gHist.getSequentialID(kDET, 0, kMulti, 0);
+    hptr_array[hid]->Fill(multiplicity);
+  } //hodo
   
   { // KVC
     DetectorType kDET=kKVC;
@@ -599,7 +648,7 @@ process_event( void )
     const UInt_t tdc_max = gUser.GetParameter("KVC_TDC", 1);
     const Int_t n_seg = 8;
     const Int_t n_ch = 5;
-    Int_t multiplicity = 0;
+    Int_t multiplicity[2] = {0, 0}; // 0: just multi., 1: for eff check
     for(int seg = 0; seg<n_seg; ++seg){
       for(int ch=0; ch<n_ch; ++ch){
 	Bool_t has_hit = false;
@@ -628,58 +677,15 @@ process_event( void )
 	if(has_hit && ch == 4){
 	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
 	  hptr_array[hid]->Fill(seg);
-	  multiplicity++;
+	  multiplicity[0]++;
+	  if ( has_hit_T1 && 2 <= seg && seg <= 5 ) multiplicity[1]++;
 	}
       }
     }//seg
     hid = gHist.getSequentialID(kDET, 0, kMulti, 0);
-    hptr_array[hid]->Fill(multiplicity);
-  } //hodo
-
-  { // T1
-    DetectorType kDET=kT1;
-    const int k_device = gUnpacker.get_device_id("T1");
-    const int k_adc = gUnpacker.get_data_id("T1", "adc");
-    const int k_tdc = gUnpacker.get_data_id("T1", "leading");
-    const UInt_t tdc_min = gUser.GetParameter("T1_TDC", 0);
-    const UInt_t tdc_max = gUser.GetParameter("T1_TDC", 1);
-    const Int_t n_seg = 1;
-    const Int_t n_ch = 1;
-    Int_t multiplicity = 0;
-    for(int seg = 0; seg<n_seg; ++seg){
-      for(int ch=0; ch<n_ch; ++ch){
-	Bool_t has_hit = false;
-	{ // TDC
-	  Int_t n = gUnpacker.get_entries(k_device, 0, seg, ch, k_tdc);
-          for(Int_t m=0; m<n; ++m){
-            UInt_t tdc = gUnpacker.get(k_device, 0, seg, ch, k_tdc, m);
-            hid = gHist.getSequentialID(kDET, ch, kTDC, seg+1);
-            hptr_array[hid]->Fill(tdc);
-	    if (tdc_min < tdc && tdc < tdc_max)
-	      has_hit = true;
-	  }
-	}
-	{ // ADC
-	  Int_t n = gUnpacker.get_entries(k_device, 0, seg, ch, k_adc);
-          for(Int_t m=0; m<n; ++m){
-            UInt_t adc = gUnpacker.get(k_device, 0, seg, ch, k_adc, m);
-            hid = gHist.getSequentialID(kDET, ch, kADC, seg+1);
-            hptr_array[hid]->Fill(adc);
-            if(has_hit){
-              hid = gHist.getSequentialID(kDET, ch, kADCwTDC, seg+1);
-              hptr_array[hid]->Fill(adc);
-            } 
-          } // nhit
-	}
-	if(has_hit){
-	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
-	  hptr_array[hid]->Fill(seg);
-	  multiplicity++;
-	}
-      }
-    }//seg
-    hid = gHist.getSequentialID(kDET, 0, kMulti, 0);
-    hptr_array[hid]->Fill(multiplicity);
+    hptr_array[hid]->Fill(multiplicity[0]);
+    hid = gHist.getSequentialID(kDET, 0, kMulti, 1);
+    hptr_array[hid]->Fill(multiplicity[1]);
   } //hodo
 
   { // CVC
