@@ -691,7 +691,7 @@ process_event( void )
 	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
 	  hptr_array[hid]->Fill(seg);
 	  multiplicity[0]++;
-	  if ( has_hit_T1 && 2 <= seg && seg <= 5 ) multiplicity[1]++;
+	  if ( has_hit_T1 ) multiplicity[1]++;
 	}
       }
     }//seg
