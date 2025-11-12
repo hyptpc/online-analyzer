@@ -87,58 +87,58 @@ ScalerAnalyzer::Decode()
     Clear("all");
   }
 
-  //////////////////// Trigger Flag
-  std::bitset<NumOfSegTFlag> trigger_flag;
-  {
-    static const auto k_device = gUnpacker.get_device_id("TriggerFlag");
-    static const auto k_tdc    = gUnpacker.get_data_id("TriggerFlag", "leading");
-    for (Int_t seg=0; seg<NumOfSegTFlag; ++seg){
-      for (Int_t i=0, n=gUnpacker.get_entries(k_device, 0, seg, 0, k_tdc);
-	  i<n; ++i){
-	auto tdc = gUnpacker.get(k_device, 0, seg, 0, k_tdc, i);
-	if (tdc>0){
-	  trigger_flag.set(seg);
-	}
-      }
-    }
-    std::stringstream ss;
-    for (Int_t i=trigger_flag.size() - 1; i>=0; --i){
-      ss << (trigger_flag[i] ? '!' : '.');
-    }
-    m_trigger_flag = ss.str();
-    // std::cout << m_trigger_flag << std::endl;
-  }
-  if (trigger_flag[trigger::kSpillOnEnd]){
-    // std::cout << TTimeStamp() << "\tSpillOnEnd" << std::endl;
-    m_is_spill_on_end = true;
-    m_is_spill_end = true;
-  }
-  if (trigger_flag[trigger::kSpillOffEnd]){
-    // std::cout << TTimeStamp() << "\tSpillOffEnd" << std::endl;
-    m_is_spill_end = true;
-  }
-  if (m_flag[kSpillOn]){
-    if (!trigger_flag[trigger::kSpillOnEnd] &&
-       !trigger_flag[trigger::kL1SpillOn]){
-      return false;
-    }
-  }
-  auto spill_off_end = trigger_flag[trigger::kSpillOffEnd];
-  if (m_flag[kSpillOff]){
-    if (!spill_off_end &&
-       !trigger_flag[trigger::kL1SpillOff]){
-      return false;
-    }
-  }
+  // //////////////////// Trigger Flag
+  // std::bitset<NumOfSegTFlag> trigger_flag;
+  // {
+  //   static const auto k_device = gUnpacker.get_device_id("TriggerFlag");
+  //   static const auto k_tdc    = gUnpacker.get_data_id("TriggerFlag", "leading");
+  //   for (Int_t seg=0; seg<NumOfSegTFlag; ++seg){
+  //     for (Int_t i=0, n=gUnpacker.get_entries(k_device, 0, seg, 0, k_tdc);
+  // 	  i<n; ++i){
+  // 	auto tdc = gUnpacker.get(k_device, 0, seg, 0, k_tdc, i);
+  // 	if (tdc>0){
+  // 	  trigger_flag.set(seg);
+  // 	}
+  //     }
+  //   }
+  //   std::stringstream ss;
+  //   for (Int_t i=trigger_flag.size() - 1; i>=0; --i){
+  //     ss << (trigger_flag[i] ? '!' : '.');
+  //   }
+  //   m_trigger_flag = ss.str();
+  //   // std::cout << m_trigger_flag << std::endl;
+  // }
+  // if (trigger_flag[trigger::kSpillOnEnd]){
+  //   // std::cout << TTimeStamp() << "\tSpillOnEnd" << std::endl;
+  //   m_is_spill_on_end = true;
+  //   m_is_spill_end = true;
+  // }
+  // if (trigger_flag[trigger::kSpillOffEnd]){
+  //   // std::cout << TTimeStamp() << "\tSpillOffEnd" << std::endl;
+  //   m_is_spill_end = true;
+  // }
+  // if (m_flag[kSpillOn]){
+  //   if (!trigger_flag[trigger::kSpillOnEnd] &&
+  //      !trigger_flag[trigger::kL1SpillOn]){
+  //     return false;
+  //   }
+  // }
+  // auto spill_off_end = trigger_flag[trigger::kSpillOffEnd];
+  // if (m_flag[kSpillOff]){
+  //   if (!spill_off_end &&
+  //      !trigger_flag[trigger::kL1SpillOff]){
+  //     return false;
+  //   }
+  // }
 
-  if (m_flag[kScalerSheet] && !m_is_spill_end){
-    for (Int_t i=0; i<MaxColumn; ++i){
-      for (Int_t j=0; j<MaxRow; ++j){
-	m_info[i][j].prev = 0;
-      }
-    }
-    return true;
-  }
+  // if (m_flag[kScalerSheet] && !m_is_spill_end){
+  //   for (Int_t i=0; i<MaxColumn; ++i){
+  //     for (Int_t j=0; j<MaxRow; ++j){
+  // 	m_info[i][j].prev = 0;
+  //     }
+  //   }
+  //   return true;
+  // }
 
   //////////////////// Scaler Data
   {

@@ -101,18 +101,18 @@ process_begin(const std::vector<std::string>& argv)
     scaler_on.Set(c, r++, ScalerInfo("T0",         0, 13));
     scaler_on.Set(c, r++, ScalerInfo("BH2",        0,  7));
     scaler_on.Set(c, r++, ScalerInfo("BAC",        0,  8));
+    scaler_on.Set(c, r++, ScalerInfo("KVC1",       0, 11));
+    scaler_on.Set(c, r++, ScalerInfo("T1",         0, 53));
     scaler_on.Set(c, r++, ScalerInfo("HTOF",       0,  9));
-    scaler_on.Set(c, r++, ScalerInfo("HTOF-Mp2",     0, 48));
-    scaler_on.Set(c, r++, ScalerInfo("HTOF-Mp3",     0, 49));
-    scaler_on.Set(c, r++, ScalerInfo("BEAM-A",       0, 19));
-    scaler_on.Set(c, r++, ScalerInfo("BEAM-B",       0, 20));
-    scaler_on.Set(c, r++, ScalerInfo("BEAM-C",       0, 21));
-    scaler_on.Set(c, r++, ScalerInfo("BEAM-D",       0, 22));
-    scaler_on.Set(c, r++, ScalerInfo("BEAM-E",       0, 23));
-    scaler_on.Set(c, r++, ScalerInfo("BEAM-F",       0, 24));
-    scaler_on.Set(c, r++, ScalerInfo("SAC",        0, 10));
-    scaler_on.Set(c, r++, ScalerInfo("T1",         0, 14));
-    scaler_on.Set(c, r++, ScalerInfo("T2",         0, 15));
+    scaler_on.Set(c, r++, ScalerInfo("HTOF-Mp2",   0, 48));
+    scaler_on.Set(c, r++, ScalerInfo("HTOF-Mp3",   0, 49));
+    scaler_on.Set(c, r++, ScalerInfo("HTOF-Fwd",   0, 54));
+    scaler_on.Set(c, r++, ScalerInfo("BEAM-A",     0, 19));
+    scaler_on.Set(c, r++, ScalerInfo("BEAM-B",     0, 20));
+    scaler_on.Set(c, r++, ScalerInfo("BEAM-C",     0, 21));
+    scaler_on.Set(c, r++, ScalerInfo("BEAM-D",     0, 22));
+    scaler_on.Set(c, r++, ScalerInfo("BEAM-E",     0, 23));
+    scaler_on.Set(c, r++, ScalerInfo("BEAM-F",     0, 24));
   }
 
   {
@@ -121,19 +121,20 @@ process_begin(const std::vector<std::string>& argv)
     scaler_on.Set(c, r++, ScalerInfo("10M-Clock",    0,  0));
     scaler_on.Set(c, r++, ScalerInfo("TM",           0,  51));
     scaler_on.Set(c, r++, ScalerInfo("SY",          -1, -1));
-    scaler_on.Set(c, r++, ScalerInfo("K-Beam",       0, 25));
-    scaler_on.Set(c, r++, ScalerInfo("Pi-Beam",      0, 30));
-    scaler_on.Set(c, r++, ScalerInfo("Beam",         0, 26));
-    scaler_on.Set(c, r++, ScalerInfo("KVC1",       0, 11));
-    scaler_on.Set(c, r++, ScalerInfo("KVC2",       0, 12));
+    scaler_on.Set(c, r++, ScalerInfo("K-Beam",       0, 27));
+    scaler_on.Set(c, r++, ScalerInfo("Pi-Beam",      0, 29));
+    scaler_on.Set(c, r++, ScalerInfo("Beam",         0, 30));
+    scaler_on.Set(c, r++, ScalerInfo("CVC",          0, 12));
+    scaler_on.Set(c, r++, ScalerInfo("SAC3",         0, 10));
+    scaler_on.Set(c, r++, ScalerInfo("SFV",          0, 52));
+    scaler_on.Set(c, r++, ScalerInfo("Clock-PS",      0, 40));
     scaler_on.Set(c, r++, ScalerInfo("TRIG-A",        0, 25));
     scaler_on.Set(c, r++, ScalerInfo("TRIG-B",        0, 26));
     scaler_on.Set(c, r++, ScalerInfo("TRIG-C",        0, 27));
     scaler_on.Set(c, r++, ScalerInfo("TRIG-D",        0, 28));
     scaler_on.Set(c, r++, ScalerInfo("TRIG-E",        0, 29));
     scaler_on.Set(c, r++, ScalerInfo("TRIG-F",        0, 30));
-    scaler_on.Set(c, r++, ScalerInfo("BVH",         0, 50));
-    scaler_on.Set(c, r++, ScalerInfo("Clock-PS",      0, 40));
+    // scaler_on.Set(c, r++, ScalerInfo("BVH",         0, 50));
   }
 
   {
@@ -228,6 +229,7 @@ process_event()
   prev_flush = now;
 
   if(scaler_on.Decode()){
+    flush_flag |= (scaler_on.Get("10M-Clock") > 18e6);
     if(flush_flag && !scaler_on.IsSpillEnd())
       // if(!scaler_on.IsSpillEnd())
       return 0;
@@ -295,6 +297,7 @@ process_event()
 
   // Scaler Spill Off
   if(scaler_off.Decode()){
+    flush_flag |= (scaler_off.Get("10M-Clock") > 18e6);
     if(flush_flag && !scaler_off.IsSpillEnd())
       // if(!scaler_off.IsSpillEnd())
       return 0;
@@ -380,7 +383,7 @@ process_event()
     if(host.Contains("k18term4") &&
        event_number > 1 && prev_spill != curr_spill){
       std::cout << "exec tagslip sound!" << std::endl;
-      gSystem->Exec("ssh k18epics.monitor.k18net \"aplay ~/sound/tagslip.wav\" &");
+      // gSystem->Exec("ssh k18epics.monitor.k18net \"aplay ~/sound/tagslip.wav\" &");
     }
     prev_spill = curr_spill;
   }
