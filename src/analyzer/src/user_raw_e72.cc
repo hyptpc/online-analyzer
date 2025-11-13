@@ -152,7 +152,7 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(gHist.createHodo(kCVC, "CVC", 8, 3, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kSAC3, "SAC3", 1, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kSFV, "SFV", 5, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
-  gHttp.Register(gHist.createHodo(kCOBO, "COBO", 8, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,16.75e6,16.8e6));
+  gHttp.Register(gHist.createHodo(kCOBO, "COBO", 8, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,1.45e6,1.7e6));
   
   gHttp.Register(gHist.createTriggerFlag());
   // Chambers
@@ -844,7 +844,6 @@ process_event( void )
     } 
   } //hodo
 
-
   { // COBO
     DetectorType kDET=kCOBO;
     const int k_device = gUnpacker.get_device_id("COBO");
@@ -860,7 +859,9 @@ process_event( void )
           for(Int_t m=0; m<n; ++m){
             UInt_t tdc = gUnpacker.get(k_device, 0, seg, ch, k_tdc, m);
             hid = gHist.getSequentialID(kDET, ch, kTDC, seg+1);
+	    std::cout << seg << " " << tdc << std::endl;
             hptr_array[hid]->Fill(tdc);
+	    break;
 	  }
 	}
 	hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
