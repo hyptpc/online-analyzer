@@ -670,6 +670,42 @@ HistMaker::createBTOF(Bool_t flag_ps)
   return top_dir;
 }
 
+//_____________________________________________________________________________
+TList*
+HistMaker::createCorrelation(Bool_t flag_ps)
+{
+  std::string strDet = "Correlation";
+  name_created_detectors_.push_back(strDet);
+  if(flag_ps) name_ps_files_.push_back(strDet);
+  const char* nameDetector = strDet.c_str();
+  TList *top_dir = new TList;
+  top_dir->SetName(nameDetector);
+  { 
+    Int_t target_id = getUniqueID(kCorrelation, 0, kHitPat2D, 0);
+    TString title = Form("%s BH2%BHT", nameDetector);
+    top_dir->Add(createTH2(++target_id, title,
+			   NumOfSegBHT, -0.5, NumOfSegBHT-0.5,
+			   NumOfSegBH2, -0.5, NumOfSegBH2-0.5,
+			   "BHT segment", "BH2 segment"));
+    title = Form("%s HTOF-Mp2", nameDetector);
+    top_dir->Add(createTH2(++target_id, title,
+			   NumOfSegHTOF, -0.5, NumOfSegHTOF-0.5,
+			   NumOfSegHTOF, -0.5, NumOfSegHTOF-0.5,
+			   "HTOF segment1", "HTOF segment2"));
+    title = Form("%s BH2%%HTOF", nameDetector);
+    top_dir->Add(createTH2(++target_id, title,
+			   NumOfSegHTOF, -0.5, NumOfSegHTOF-0.5,
+			   NumOfSegBH2, -0.5, NumOfSegBH2-0.5,
+			   "HTOF segment", "BH2 segment"));
+    title = Form("%s KVC%%HTOF", nameDetector);
+    top_dir->Add(createTH2(++target_id, title,
+			   NumOfSegHTOF, -0.5, NumOfSegHTOF-0.5,
+			   NumOfSegKVC, -0.5, NumOfSegKVC-0.5,
+			   "HTOF segment", "KVC segment"));
+  }
+  return top_dir;
+}
+
 
 // -------------------------------------------------------------------------
 // createT98Hist

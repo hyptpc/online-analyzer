@@ -144,6 +144,7 @@ public:
   TList* createT2(bool flag_ps=true);
   TList* createTPC( Bool_t flag_ps=true);
   TList* createBTOF( Bool_t flag_ps=true);
+  TList* createCorrelation(bool flag_ps=true);
 
   TList* createBcOutTracking(bool flag_ps=true);  
 
