@@ -1,5 +1,7 @@
 #!/bin/sh
 
+cd $(dirname $(readlink -f $0))
+
 name=scaler
 session=`tmux ls 2>/dev/null | grep $name`
 if [ -z "$session" ]; then
