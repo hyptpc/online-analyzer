@@ -6,6 +6,8 @@
 #include <iostream>
 #include <TString.h>
 
+const Int_t NumOfSegBHT = 63;
+const Int_t NumOfSegBH2 = 15;
 const Int_t NumOfSegBVH = 4;
 const Int_t NumOfSegT1  = 1;
 const Int_t NumOfSegT2  = 1;

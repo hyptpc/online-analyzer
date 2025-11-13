@@ -59,6 +59,8 @@ enum DataType{
   factorDataType = 1000
 };//max 50
 
+enum eUorD { kU, kD, kUorD };
+
 struct HistMakerInfo
 {
   DataType type;
@@ -140,7 +142,8 @@ public:
   TList* createBVH(bool flag_ps=true);
   TList* createT1(bool flag_ps=true);
   TList* createT2(bool flag_ps=true);
-  TList* createTPC( Bool_t flag_ps=true );
+  TList* createTPC( Bool_t flag_ps=true);
+  TList* createBTOF( Bool_t flag_ps=true);
 
   TList* createBcOutTracking(bool flag_ps=true);  
 
@@ -154,6 +157,7 @@ public:
   TList* createMHTDC(DetectorType kDET, std::string strDet, int nsegments, double xmax=1024., bool flag_ps=true);
   TList* createBLDC(DetectorType kDET, std::string strDet, int nlayers, int nwires, 
                     bool WIRE_RAW = false, bool ANA=false,bool flag_ps=true);
+  
 #if 1
   TList* createCDC(bool flag_ps=true);
 #endif

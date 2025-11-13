@@ -166,7 +166,9 @@ bool
 HodoParamMan::GetTime( int cid, int plid, int seg, int ud, int tdc, double &time ) const
 {
   HodoTParam* map = GetTmap( cid, plid, seg, ud );
-  if(!map) return false;
+  if(!map){
+    return false;
+  }
   time = map->Time( tdc );
   return true;
 }

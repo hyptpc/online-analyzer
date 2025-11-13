@@ -7,6 +7,7 @@
 #ifndef HODO_PARAM_MAN_HH
 #define HODO_PARAM_MAN_HH
 
+#include <iostream>
 #include <string>
 #include <map>
 #include <TRandom3.h>
@@ -35,7 +36,8 @@ public:
   double Offset( void )  const { return m_offset; }
   double Gain( void )    const { return m_gain; }
   double Time( int tdc ) const
-  { return ( (double)tdc + gRandom->Uniform(-0.5,0.5) )* m_gain + m_offset; }
+  {
+    return ( (double)tdc - m_offset ) * m_gain; }
   int    Tdc( double time ) const
   { return (int)( time/m_gain + m_offset ); }
 };

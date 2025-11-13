@@ -647,6 +647,30 @@ HistMaker::createTPC(Bool_t flag_ps)
 }
 
 
+//_____________________________________________________________________________
+TList *
+HistMaker::createBTOF(Bool_t flag_ps)
+{
+  TString det_name = "BTOF";
+  auto top_dir = new TList;
+  top_dir->SetName(det_name);
+  const auto hid = getUniqueID(kMisc, 0, kTDC);
+
+  top_dir->Add(createTH1(hid, det_name,
+                         300, -20, 20, "[ns]", ""));
+  top_dir->Add(createTH2(hid+1,"BAC vs BTOF",300,-20,20,100,0,4000,"BTOF [ns]","ADC"));
+    
+  /*
+  top_dir->Add(createTH1(hid + 1, "BH1-6_BH2-4",
+                         600, 50000, 350000, "[ch]", ""));
+  
+  top_dir->Add(createTH1(hid + 2, det_name + "_wide",
+                         1800, -90, 5, "[ns]", ""));
+  */
+  return top_dir;
+}
+
+
 // -------------------------------------------------------------------------
 // createT98Hist
 // -------------------------------------------------------------------------

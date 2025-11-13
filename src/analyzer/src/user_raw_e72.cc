@@ -110,6 +110,7 @@ process_begin( const std::vector<std::string>& argv )
 {
   ConfMan::getInstance().initialize(argv);
   ConfMan::getInstance().initializeUserParamMan();
+  ConfMan::getInstance().initializeHodoParamMan();
   // gROOT->SetBatch(kTRUE);
   gStyle->SetOptStat(1110);
   gStyle->SetTitleW(.4);
@@ -121,7 +122,8 @@ process_begin( const std::vector<std::string>& argv )
   gStyle->SetPalette(55);
   
   // unpacker and all the parameter managers are initialized at this stage  
-  int port=8081;
+  //int port=8081;
+  int port=8083;
   if(argv.size()==4){
     outputname=argv.at(3);
     port=8089;
@@ -161,6 +163,9 @@ process_begin( const std::vector<std::string>& argv )
   
   // TPC
   gHttp.Register(gHist.createTPC(true));
+
+  // BTOF
+  gHttp.Register(gHist.createBTOF(true));
   
   
   if(0 != gHist.setHistPtr(hptr_array)){ return -1; }
@@ -344,7 +349,7 @@ process_event( void )
     int multiplicity=0;
     int mul[2]={0,0};
     int segud[2]={};
-    for(int seg = 0; seg<63; ++seg){
+    for(int seg = 0; seg<NumOfSegBHT; ++seg){
       int ntdc[2]={0,0};
       for(int ud=0; ud<2; ++ud){	  
 	int nhit = gUnpacker.get_entries(k_device, 0, seg, ud, k_l);
@@ -691,6 +696,7 @@ process_event( void )
 	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
 	  hptr_array[hid]->Fill(seg);
 	  multiplicity[0]++;
+	  // if ( has_hit_T1 && 2 <= seg && seg <= 5 ) multiplicity[1]++;
 	  if ( has_hit_T1 ) multiplicity[1]++;
 	}
       }
@@ -1025,6 +1031,111 @@ process_event( void )
       //}
 
   //} // TPC
+
+      //------------------------------------------------------------------
+    // BTOF
+    //------------------------------------------------------------------
+  
+    {
+      // Unpacker
+      static const Int_t k_d_bht  = gUnpacker.get_device_id("BHT");
+      static const Int_t k_d_bh2  = gUnpacker.get_device_id("BH2");
+      static const Int_t k_bht_tdc    = gUnpacker.get_data_id("BHT", "leading");
+      static const Int_t k_bh2_tdc    = gUnpacker.get_data_id("BH2", "leading");
+
+      // HodoParam
+      static const Int_t cid_bht  = 1;
+      static const Int_t cid_bh2  = 6;
+      static const Int_t plid     = 0;
+      
+      // Sequential ID
+      static const Int_t btof_id  = gHist.getSequentialID(kMisc, 0, kTDC);
+      static const auto& hodoMan = HodoParamMan::GetInstance();
+      // TDC gate range
+      //static const UInt_t tdc_min_bht = gUser.GetParameter("BHT_TDC", 0);
+      //static const UInt_t tdc_max_bht = gUser.GetParameter("BHT_TDC", 1);
+      static const UInt_t tdc_min_bht = 1400000;
+      static const UInt_t tdc_max_bht = 1500000;
+      
+      
+      static const UInt_t tdc_min_bh2 = gUser.GetParameter("BH2_TDC", 0);
+      static const UInt_t tdc_max_bh2 = gUser.GetParameter("BH2_TDC", 1);
+
+
+      //BAC
+      
+      DetectorType kDET=kBAC;
+      const int k_device = gUnpacker.get_device_id("BAC");
+      const int k_adc = gUnpacker.get_data_id("BAC","adc");
+      const Int_t n_seg = 5;
+      const Int_t n_ch = 1;
+      Int_t adc_bac = -9999;
+      { // ADC
+	int ch = 0;
+	Int_t n = gUnpacker.get_entries(k_device, 0, 4, ch, k_adc);
+	for(Int_t m=0; m<n; ++m){
+	  UInt_t adc = gUnpacker.get(k_device, 0, 4, ch, k_adc, m);
+	  adc_bac = adc;
+	  //hid = gHist.getSequentialID(kDET, ch, kADC, seg+1);
+	  //hptr_array[hid]->Fill(adc);
+	  /*
+            if(has_hit){
+	    hid = gHist.getSequentialID(kDET, ch, kADCwTDC, seg+1);
+	    //hptr_array[hid]->Fill(adc);
+            } 
+	  */
+	} // nhit
+      }
+      
+      
+      // BH2
+      Double_t t0  = 1e10;
+      Double_t ofs = 10;
+      for(Int_t seg=0; seg<NumOfSegBH2; ++seg) {
+	Int_t nhitu = gUnpacker.get_entries(k_d_bh2, 0, seg, kU, k_bh2_tdc);
+	Int_t nhitd = gUnpacker.get_entries(k_d_bh2, 0, seg, kD, k_bh2_tdc);
+	for(Int_t mu=0; mu<nhitu; ++mu) {
+	  auto tdcu = gUnpacker.get(k_d_bh2, 0, seg, kU, k_bh2_tdc, mu);
+	  if (tdcu < tdc_min_bh2 || tdc_max_bh2 < tdcu) continue;
+	  for(Int_t md=0; md<nhitd; ++md) {
+	    auto tdcd = gUnpacker.get(k_d_bh2, 0, seg, kD, k_bh2_tdc, md);
+	    if (tdcd < tdc_min_bh2 || tdc_max_bh2 < tdcd) continue;
+	    Double_t bh2ut=-9999., bh2dt=-9999.;
+	    hodoMan.GetTime(cid_bh2, plid, seg, kU, tdcu, bh2ut);
+	    hodoMan.GetTime(cid_bh2, plid, seg, kD, tdcd, bh2dt);
+	    Double_t bh2mt = (bh2ut + bh2dt)/2.;
+	    t0 = bh2mt;
+	    if (TMath::Abs(t0) > TMath::Abs(bh2mt)) {
+	      hodoMan.GetTime(cid_bh2, plid, seg, 2, 0, ofs);
+	      t0 = bh2ut;
+	    }
+	  }
+	}
+      }
+
+      // BHT
+      for(Int_t seg=0; seg<NumOfSegBHT; ++seg) {
+	Int_t nhitu = gUnpacker.get_entries(k_d_bht, 0, seg, kU, k_bht_tdc);
+	Int_t nhitd = gUnpacker.get_entries(k_d_bht, 0, seg, kD, k_bht_tdc);
+	for(Int_t mu=0; mu<nhitu; ++mu) {
+	  auto tdcu = gUnpacker.get(k_d_bht, 0, seg, kU, k_bht_tdc, mu);
+	  if (tdcu < tdc_min_bht || tdc_max_bht < tdcu) continue;
+	  for(Int_t md=0; md<nhitd; ++md) {
+	    auto tdcd = gUnpacker.get(k_d_bht, 0, seg, kD, k_bht_tdc, md);
+	    if (tdcd < tdc_min_bht || tdc_max_bht < tdcd) continue;
+	    Double_t bhttu = -9999., bhttd = -9999.;
+	    hodoMan.GetTime(cid_bht, plid, seg, kU, tdcu, bhttu);
+	    hodoMan.GetTime(cid_bht, plid, seg, kD, tdcd, bhttd);
+	    Double_t mt = (bhttu+bhttd)/2.;
+	    Double_t btof = mt-(t0+ofs);
+	    hptr_array[btof_id]->Fill(btof);
+	    hptr_array[btof_id+1]->Fill(btof,adc_bac);
+	    
+	  }// if (tdc)
+	}// if (nhit)
+      }// for(seg)
+    }
+
 
   
 
