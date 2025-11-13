@@ -223,19 +223,6 @@ process_begin( const std::vector<std::string>& argv )
     }
   }
 
-  // // TriggerFlag
-  // gHttp.Register(http::MHTDCTDC(kTriggerFlag,"_TriggerFlag",0,32,8,4),"TriggerFlag");
-  // gHttp.Register(http::MHTDCHitPatMulti(kTriggerFlag,"_TriggerFlag"),"TriggerFlag");
-  // {
-  //   int hid1 = gHist.getSequentialID(kTriggerFlag, 0, kHitPat, 1);  
-  //   hptr_array[hid1]->GetXaxis()->SetTitle("");
-  //   for( Int_t i=0; i<32; ++i ){
-  //     int hid2 = gHist.getSequentialID(kTriggerFlag, 0, kTDC, i+1);
-  //     hptr_array[hid2]->SetTitle(Form("%s_%s",hptr_array[hid2]->GetTitle(),flagnames[i].Data()));
-  //     hptr_array[hid1]->GetXaxis()->SetBinLabel(i+1,flagnames[i]);
-  //   }
-  // }		   
-
   //=== set directory ===//
   for( Int_t i=0, n=hptr_array.size(); i<n; ++i ){
     hptr_array[i]->SetDirectory(0);
@@ -333,8 +320,8 @@ process_event( void )
     }
   }
 
-  if(trigger_flag[trigger::kSpillOnEnd] || trigger_flag[trigger::kSpillOffEnd])
-    return 0;
+  // if(trigger_flag[trigger::kSpillOnEnd] || trigger_flag[trigger::kSpillOffEnd])
+  //   return 0;
 
   //if(COSMIC&&!CLOCK) return 0;
   // BHT ------------------------------------------------------------
