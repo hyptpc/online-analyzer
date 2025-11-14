@@ -21,7 +21,7 @@ exe_file=$bin_dir/tag_checker
 data_dir=$ana_dir/data
 
 ##### configure file
-conf_file=/misc/software/param/conf/analyzer_tag.conf
+conf_file=/misc/share/param/conf/analyzer_tag_e72.conf
 
 #######################################################################
 if [ ! -f $exe_file ]; then
