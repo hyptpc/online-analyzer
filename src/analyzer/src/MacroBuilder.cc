@@ -446,7 +446,7 @@ TCanvas*
 CVCTDC()
 {
   TCanvas *c1 = new TCanvas(__func__, __func__);
-  c1->Divide(4, 6);
+  c1->Divide(4, 4);
   const Int_t n_seg = 8;
   for(Int_t seg=0; seg<n_seg; ++seg){
     c1->cd(seg+1)->SetLogy();
@@ -456,11 +456,6 @@ CVCTDC()
 
     c1->cd(seg+n_seg+1)->SetLogy();
     h = GHist::get(HistMaker::getUniqueID(kCVC, 1, kTDC, seg+1));
-    if(!h) continue;
-    h->Draw();
-
-    c1->cd(seg+2*n_seg+1)->SetLogy();
-    h = GHist::get(HistMaker::getUniqueID(kCVC, 2, kTDC, seg+1));
     if(!h) continue;
     h->Draw();
   }
@@ -495,8 +490,7 @@ TCanvas*
 SFV()
 {
   TCanvas *c1 = new TCanvas(__func__, __func__);
-  c1->Divide(3, 2);
-  for( Int_t i=0; i<5; ++i ){
+  for( Int_t i=0; i<1; ++i ){
     c1->cd(i+1)->SetLogy();
     TH1 *h = GHist::get( HistMaker::getUniqueID(kSFV, 0, kTDC, i + 1 ) );
     if( !h ) continue;
@@ -578,7 +572,6 @@ Multiplicity()
   TCanvas *c1 = new TCanvas(__func__, __func__);
   std::vector<UInt_t> hid_list = {
     HistMaker::getUniqueID(kBHT, 0, kMulti, 0),
-    HistMaker::getUniqueID(kT0, 0, kMulti, 0),
     HistMaker::getUniqueID(kBH2, 0, kMulti, 0),
     HistMaker::getUniqueID(kBAC, 0, kMulti, 0),
     HistMaker::getUniqueID(kHTOF, 0, kMulti, 0),
@@ -586,6 +579,7 @@ Multiplicity()
     HistMaker::getUniqueID(kKVC, 0, kMulti, 1),
     HistMaker::getUniqueID(kCVC, 0, kMulti, 0),
     HistMaker::getUniqueID(kSAC3, 0, kMulti, 1),
+    HistMaker::getUniqueID(kSFV, 0, kMulti, 0),
   };
   c1->Divide(3, 3);
   for(Int_t i=0, n=hid_list.size(); i<n; ++i){
@@ -603,7 +597,6 @@ HitPat()
   TCanvas *c1 = new TCanvas(__func__, __func__);
   std::vector<UInt_t> hid_list = {
     HistMaker::getUniqueID(kBHT, 0, kHitPat, 0),
-    HistMaker::getUniqueID(kT0, 0, kHitPat, 0),
     HistMaker::getUniqueID(kBH2, 0, kHitPat, 0),
     HistMaker::getUniqueID(kBAC, 0, kHitPat, 0),
     HistMaker::getUniqueID(kHTOF, 0, kHitPat, 0),
@@ -613,6 +606,8 @@ HitPat()
     HistMaker::getUniqueID(kKVC, 0, kHitPat, 0),
     HistMaker::getUniqueID(kT1, 0, kHitPat, 0),
     HistMaker::getUniqueID(kCVC, 0, kHitPat, 0),
+    HistMaker::getUniqueID(kCVC, 0, kHitPat, 1),
+    HistMaker::getUniqueID(kCVC, 0, kHitPat, 2),
     HistMaker::getUniqueID(kSAC3, 0, kHitPat, 0),
     HistMaker::getUniqueID(kSFV, 0, kHitPat, 0),
   };
