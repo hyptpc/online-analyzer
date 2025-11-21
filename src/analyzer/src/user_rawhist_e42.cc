@@ -2113,7 +2113,6 @@ process_event( void )
       // std::cout << "active pad = " << n_active_pad << std::endl;
       hptr_array[tpcmul_id]->Fill( n_active_pad );
       hptr_array[amulmax_id]->Fill( hptr_array[agetmul_id]->GetMaximum() );
-
       // TDC (Time Stamp)
       // UInt_t tdc_h = gUnpacker.get( k_device, 0, 0, 0, k_tdc_high );
       // UInt_t tdc_l = gUnpacker.get( k_device, 0, 0, 0, k_tdc_low );

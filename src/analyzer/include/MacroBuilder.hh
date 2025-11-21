@@ -105,6 +105,7 @@ TCanvas* TPC3D( void );
 TCanvas* TPCADCPAD( void );
 TCanvas* TPCTDCPAD( void );
 TCanvas* TPCHTOFPAD( void );
+TCanvas* BH2HTOFPAD( void );
 TCanvas* TPCFADC( void );
 
 // E03

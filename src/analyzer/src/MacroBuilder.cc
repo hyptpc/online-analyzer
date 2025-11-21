@@ -16,6 +16,8 @@
 #include <TPolyLine.h>
 #include <TString.h>
 #include <TText.h>
+#include <TEllipse.h>
+#include <TPaveText.h>
 
 #include "DetectorID.hh"
 #include "Main.hh"
@@ -1103,18 +1105,37 @@ TPCADCPAD( void )
 TCanvas*
 TPCHTOFPAD( void )
 {
-  auto id = HistMaker::getUniqueID( kTPC, 0, kADC2D, 3 );
+  //auto id = HistMaker::getUniqueID( kTPC, 0, kADC2D, 3 );
+  auto id = HistMaker::getUniqueID( kTPC, 0, kADC2D, 5 );
   auto id_htof = HistMaker::getUniqueID( kHTOF, 0, kHitPat, 2 );
+  auto id_bh2 = HistMaker::getUniqueID( kBH2, 0, kHitPat, 2 );
   auto c1 = new TCanvas( __func__, __func__ );
+  c1->SetTitle("E72 2D Event Display");
+  c1->SetName("E72 2D Event Display");
   c1->cd();
+
+  auto h_bh2 = GHist::get(id_bh2);
+  if (h_bh2 ){
+    h_bh2->GetXaxis()->SetRangeUser(-700,400);
+    h_bh2->SetMaximum( 170);
+    h_bh2->Draw("colz same");
+  }
+
+  else 
+  {std::cout << " no h_bh2 " << std::endl; getchar();}
   
   auto h_htof = GHist::get( id_htof );
   if( h_htof ){
+    
     h_htof->SetMaximum( 200 );
     h_htof->Draw( "colz same" );
   }
+
+  
   else 
   {std::cout << " no h_tof " << std::endl; getchar();}
+
+  
   
   auto h = GHist::get( id );
   if( h ){
@@ -1136,6 +1157,103 @@ TPCHTOFPAD( void )
   pLine->SetLineColor(1);
   pLine->SetFillColorAlpha(kWhite, 0);
   pLine->Draw();
+
+
+  //Target
+  TEllipse *LH2_Target = new TEllipse(-143,0,40);
+  LH2_Target->SetLineColor(kPink+7);
+  LH2_Target->SetLineWidth(2);
+  LH2_Target->SetFillStyle(0);
+
+  LH2_Target->Draw("same");
+
+  //Target holder
+  TEllipse *LH2_Target_holder = new TEllipse(-143,0,113./2.);
+  LH2_Target_holder->SetLineColor(kGreen+1);
+  LH2_Target_holder->SetLineWidth(2);
+  LH2_Target_holder->SetFillStyle(0);
+
+  LH2_Target->Draw("same");
+  LH2_Target_holder->Draw("same");
+
+  TPaveText* pt = (TPaveText*)gPad->GetPrimitive("title");
+  if(pt){
+    pt->Clear();
+    pt->AddText("E72 2D Event Display");
+    gPad->Modified();
+    gPad->Update();
+  }
+
+  return c1;
+}
+
+//_____________________________________________________________________________
+TCanvas*
+BH2HTOFPAD( void )
+{
+  auto id = HistMaker::getUniqueID( kTPC, 0, kADC2D, 4 );
+  auto id_htof = HistMaker::getUniqueID( kHTOF, 0, kHitPat, 3 );
+  auto id_bh2 = HistMaker::getUniqueID( kBH2, 0, kHitPat, 3 );
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->cd();
+
+  auto h_bh2 = GHist::get(id_bh2);
+  h_bh2->SetTitle("E72 2D Event Display");
+  if (h_bh2 ){
+    h_bh2->GetXaxis()->SetRangeUser(-700,400);
+    //h_bh2->SetMaximum( 200);
+    h_bh2->Draw("colz same");
+  }
+
+  else 
+  {std::cout << " no h_bh2 " << std::endl; getchar();}
+  
+  auto h_htof = GHist::get( id_htof );
+  if( h_htof ){
+    
+    //h_htof->SetMaximum( 200 );
+    h_htof->Draw( "colz same" );
+  }
+
+  
+  else 
+  {std::cout << " no h_tof " << std::endl; getchar();}
+
+  
+  
+  auto h = GHist::get( id );
+  if( h ){
+    h->SetLineWidth( 0 );
+    h->GetXaxis()->SetRangeUser(-400,400);
+    h->GetYaxis()->SetRangeUser(-400,400);
+    //h->SetMaximum( 200 );
+    h->Draw( "col same" );
+  }
+
+  Double_t l = (500./2.)/(1+sqrt(2.));
+  Double_t px[9]={-l*(1+sqrt(2.)),-l,l,l*(1+sqrt(2.)),
+    l*(1+sqrt(2.)),l,-l,-l*(1+sqrt(2.)),
+    -l*(1+sqrt(2.))};
+  Double_t py[9]={l,l*(1+sqrt(2.)),l*(1+sqrt(2.)),l,
+    -l,-l*(1+sqrt(2.)),-l*(1+sqrt(2.)),-l,
+    l};
+  TPolyLine* pLine = new TPolyLine( 9, px, py );
+  pLine->SetLineColor(1);
+  pLine->SetFillColorAlpha(kWhite, 0);
+  pLine->Draw();
+  c1->cd( 1 )->SetLogz();
+
+  //Target
+  TEllipse *LH2_Target = new TEllipse(-143,0,40);
+  LH2_Target->SetLineColor(kRed);
+  LH2_Target->SetLineWidth(2);
+  LH2_Target->SetFillStyle(0);
+
+  LH2_Target->Draw("same");
+  c1->SetTitle("E72 Hit Pattern");
+  c1->SetName("E72 Hit Pattern");
+  c1->Modified();
+  c1->Update();
 
   return c1;
 }
@@ -1758,6 +1876,7 @@ TCanvas*
 HitPatternScat( void )
 {
   std::vector<Int_t> hist_id = {
+    HistMaker::getUniqueID(kBH2, 0, kHitPat),
     HistMaker::getUniqueID(kHTOF, 0, kHitPat),
     HistMaker::getUniqueID(kSDC1, 0, kHitPat, 3),
     HistMaker::getUniqueID(kSDC2, 0, kHitPat),
