@@ -7,9 +7,9 @@ import sys
 import time
 import ROOT
 
-spill_length = 22500000
+spill_length = 22000000
 # spill_length = 55406920
-error_length =   500000
+error_length =   200000
 
 scaler_dir = os.path.abspath('/misc/share/monitor-tmp')
 scaler_list = [os.path.join(scaler_dir, 'scaler-hul-scaler-101.txt'),
@@ -24,11 +24,11 @@ channel_map = {
   'BH2': [0, 7],
   'BAC': [0, 8],
   'KVC': [0, 11],
-  'T1': [0, 53],
-  'HTOF': [0, 9],
-  'HTOF-Mp2': [0, 48],
+  'T1': [0, 52],
+  'HTOF-OR': [0, 9],
+  'HTOF-NIM-Mp2': [0, 48],
   'HTOF-Mp3': [0, 49],
-  'HTOF-Fwd': [0, 54],
+  'HTOF-Fwd': [0, 53],
   'BEAM-A': [0, 19],
   'BEAM-B': [0, 20],
   'BEAM-C': [0, 21],
@@ -36,14 +36,14 @@ channel_map = {
   'BEAM-E': [0, 23],
   'BEAM-F': [0, 24],
   '10M-Clock': [0, 0],
-  'TM': [0, 51],
+  'TM': [0, 50],
   'SY': [-1, -1],
   'K-Beam': [0, 30],
   'Pi-Beam': [0, 29],
-  'Beam': [0, 28],
+  'Beam': [-1, -1],
   'CVC': [0, 12],
   'SAC3': [0, 10],
-  'SFV': [0, 52],
+  'SFV': [0, 51],
   'Clock-PS': [0, 40],
   'TRIG-A': [0, 25],
   'TRIG-B': [0, 26],
@@ -521,6 +521,8 @@ class ScalerAnalyzer():
           self.spill_end = False
           self.ignore = True
           return
+    # BEAM
+    self.scaler['Beam'] = self.scaler['K-Beam'] + self.scaler['Pi-Beam']
     # BH1 SUM
     # self.scaler['BH1-SUM'] = 0
     # for i in range(11):
