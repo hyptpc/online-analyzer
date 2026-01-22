@@ -78,6 +78,9 @@ my_tgt_scaler	:= $(bin_dir)/scaler
 my_obj_e72	:= $(core_obj) user_raw_e72.o
 my_tgt_e72	:= $(bin_dir)/e72
 
+my_obj_tpc	:= $(core_obj) user_raw_e72_wtpc.o
+my_tgt_tpc	:= $(bin_dir)/e72_tpc
+
 my_obj_fadc	:= $(core_obj) user_fadc.o
 my_tgt_fadc	:= $(bin_dir)/fadc
 
@@ -91,6 +94,7 @@ all::	$(my_tgt_raw) \
 	$(my_tgt_rm) \
 	$(my_tgt_beam) \
 	$(my_tgt_e72) \
+	$(my_tgt_tpc) \
 	$(my_tgt_tag) \
 	$(my_tgt_scaler) \
 	$(my_tgt_udebug) \
@@ -182,6 +186,13 @@ my_obj_e72	:= $(my_obj_e72)
 my_lib_e72	:= libmye72.so
 $(eval $(call make-lib,$(my_lib_e72),$(my_obj_e72)))
 $(eval $(call make-nogui-target,$(my_tgt_e72),$(my_lib_e72)))
+
+#_______________________________________________________________________________
+my_obj_tpc	:= $(addprefix $(my_dir)/src/,$(my_obj_tpc))
+my_obj_tpc	:= $(my_obj_tpc)
+my_lib_tpc	:= libmytpc.so
+$(eval $(call make-lib,$(my_lib_tpc),$(my_obj_tpc)))
+$(eval $(call make-nogui-target,$(my_tgt_tpc),$(my_lib_tpc)))
 
 #_______________________________________________________________________________
 my_obj_fadc	:= $(addprefix $(my_dir)/src/,$(my_obj_fadc))

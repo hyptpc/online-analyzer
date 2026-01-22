@@ -162,6 +162,9 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(gHist.createBLDC(kBLC2a,"BLC2a",8,32,true));
   gHttp.Register(gHist.createBLDC(kBLC2b,"BLC2b",8,32,true));
   
+  // TPC
+  gHttp.Register(gHist.createTPC(true));
+
   // BTOF
   gHttp.Register(gHist.createBTOF(true));
   
@@ -933,6 +936,134 @@ process_event( void )
 	hptr_array[hid]->Fill(multiplicity);
       }
     }
+
+
+  // TPC -----------------------------------------------------------
+
+  //UInt_t cobo_data_size = 0;
+  {
+    //if(cobo_data_size > 0){
+      static const Int_t k_device   = gUnpacker.get_device_id( "TPC" );
+      static const Int_t k_adc      = gUnpacker.get_data_id( "TPC", "adc" );
+      // static const Int_t k_tdc_high = gUnpacker.get_data_id( "TPC", "tdc_high" );
+      // static const Int_t k_tdc_low  = gUnpacker.get_data_id( "TPC", "tdc_low" );
+      // sequential id
+      static const Int_t tpca_id   = gHist.getSequentialID( kTPC, 0, kADC );
+      static const Int_t tpct_id   = gHist.getSequentialID( kTPC, 0, kTDC );
+      static const Int_t rms_id    = gHist.getSequentialID( kTPC, 0, kPede );
+      static const Int_t tpcfa_id   = gHist.getSequentialID( kTPC, 0, kFADC );
+      static const Int_t tpca2d_id = gHist.getSequentialID( kTPC, 0, kADC2D );
+      static const Int_t tpcmul_id = gHist.getSequentialID( kTPC, 0, kMulti );
+      static const Int_t agetmul_id = gHist.getSequentialID( kTPC, 3, kMulti );
+      static const Int_t amulmax_id = gHist.getSequentialID( kTPC, 4, kMulti );
+      
+      hptr_array[tpca2d_id]->Reset();
+      hptr_array[tpca2d_id+1]->Reset();
+      hptr_array[tpca2d_id+2]->Reset();
+      hptr_array[tpca2d_id+4]->Reset();
+      hptr_array[agetmul_id]->Reset();
+      
+      // FADC
+      Int_t n_active_pad = 0;
+      std::vector<Double_t> max_fadc( NumOfTimeBucket );
+      Int_t max_adc = -1;
+      Int_t max_tb  = -1;
+      Int_t max_pad = -1;
+      for( Int_t layer=0; layer<32; ++layer ){
+	for( Int_t ch=0; ch<272; ++ch ){
+	  Int_t pad = gTpcPad.GetPadId( layer, ch );
+	  if( pad < 0 ) continue;
+	  Int_t nhit = gUnpacker.get_entries( k_device, layer, 0, ch, k_adc );
+	  if( nhit == 0 ){
+	    hptr_array[tpca2d_id]->SetBinContent( pad+1, 0 );
+	    hptr_array[tpca2d_id+1]->SetBinContent( pad+1, 0 );
+	    hptr_array[tpca2d_id+2]->SetBinContent( pad+1, 0 );
+	    continue;
+	  }
+	  // if( nhit != 200 ){
+	  //   hddaq::cerr << "#W NumOfTimeBucket is wrong " << nhit << "/200 "
+	  //               << "(layer=" << layer << ", row=" << ch << ", pad="
+	  //               << pad << ")" << std::endl;
+	  // }
+	  std::vector<Double_t> fadc( nhit );
+	  
+	  for( Int_t i=0; i<nhit; ++i ){
+	    Int_t adc = gUnpacker.get( k_device, layer, 0, ch, k_adc, i );
+	    fadc[i] = adc;
+	    if( max_adc < adc && nhit == NumOfTimeBucket ){
+	      max_adc = adc;
+	      max_tb  = i;
+	      max_pad = pad;
+	    }
+	  }
+	  if( max_pad == pad ){
+	    max_fadc = fadc;
+	  }
+	  
+	  Double_t mean = TMath::Mean( nhit, fadc.data() );
+	  Double_t rms = TMath::RMS( nhit, fadc.data() );
+	  Double_t max_adc = TMath::MaxElement( nhit, fadc.data() );
+	  Int_t loc_max = TMath::LocMax( nhit, fadc.data() );
+
+	  if( max_adc - mean <= 0 ) continue;
+	  Int_t aget = gTpcPad.GetParam( layer, ch )->AGetId();
+	  Int_t asad = gTpcPad.GetParam( layer, ch )->AsAdId();
+	  hptr_array[agetmul_id]->Fill( asad*4+aget );
+
+	  hptr_array[tpca_id]->Fill( max_adc - mean );
+	  hptr_array[tpct_id]->Fill( loc_max );
+	  hptr_array[rms_id]->Fill( rms );
+	  hptr_array[tpca2d_id]->SetBinContent( pad+1, max_adc - mean );
+	  hptr_array[tpca2d_id+1]->SetBinContent( pad+1, rms );
+	  hptr_array[tpca2d_id+2]->SetBinContent( pad+1, loc_max );
+	  Double_t pad_z = gTpcPad.GetPoint( pad ).Z();
+	  Double_t pad_x = gTpcPad.GetPoint( pad ).X();
+	  if( max_adc - mean > 0 ){
+	    ++n_active_pad;
+	    hptr_array[tpca2d_id+3]->Fill( pad_z, pad_x );
+	  }
+	}
+      }
+      std::cout << "run# " << run_number << "  ev# " << event_number
+		<< "  active pad = " << n_active_pad << std::endl;
+      hptr_array[tpcmul_id]->Fill( n_active_pad );
+      hptr_array[amulmax_id]->Fill( hptr_array[agetmul_id]->GetMaximum() );
+      if( max_adc > 0 ){
+	for( Int_t i=0; i<NumOfTimeBucket; ++i ){
+	  hptr_array[tpcfa_id]->Fill( i, max_fadc[i] );
+	}
+      }
+      // TDC (Time Stamp)
+      // UInt_t tdc_h = gUnpacker.get( k_device, 0, 0, 0, k_tdc_high );
+      // UInt_t tdc_l = gUnpacker.get( k_device, 0, 0, 0, k_tdc_low );
+      // std::cout << tdc_h << ", " << tdc_l << std::endl;
+
+#if 0
+      // Debug, dump data relating this detector
+      gUnpacker.dump_data_device(k_device);
+#endif
+    }
+  /*
+    { ///// TPC-CLOCK
+      static const auto device_id = gUnpacker.get_device_id("HTOF");
+      static const auto leading_id = gUnpacker.get_data_id("HTOF", "fpga_leading");
+      static const auto tdc_hid = gHist.getSequentialID(kTPC, 1, kTDC);
+      static const auto mul_hid = gHist.getSequentialID(kTPC, 1, kMulti);
+      static const Int_t seg = 34;
+      UInt_t multiplicity = 0;
+      for(Int_t m=0, n=gUnpacker.get_entries(device_id, 0, seg, 0, leading_id);
+          m<n; ++m){
+        auto tdc = gUnpacker.get(device_id, 0, seg, 0, leading_id, m);
+        if(tdc != 0){
+          hptr_array[tdc_hid]->Fill(tdc);
+          ++multiplicity;
+	}
+      }
+      hptr_array[mul_hid]->Fill(multiplicity);
+  */
+      //}
+
+  //} // TPC
 
       //------------------------------------------------------------------
     // BTOF

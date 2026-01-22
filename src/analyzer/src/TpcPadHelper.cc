@@ -13,7 +13,12 @@
 #include <cstdlib>
 
 #include "FuncName.hh"
+#include "ConfMan.hh"
 
+namespace
+{
+const std::string&class_name("TpcPadHelper");
+}
 const Double_t TpcPadHelper::PadParameter[32][6]=
 { // Layer#, #ofPad, division#, radius#, padLength
   {  0,  48,  14.75,  48, 0,  9.0 },
@@ -84,7 +89,7 @@ TpcPadParam::Print( void ) const
 
 //_____________________________________________________________________________
 TpcPadHelper::TpcPadHelper( void )
-  : m_map()
+  : m_map(), m_file_name("")
 {
 }
 
@@ -188,7 +193,24 @@ TpcPadHelper::GetPoint( Int_t pad ) const
   return vec;
 }
 
+//______________________________________________________________________________
+void
+ConfMan::initializeTpcPadHelper()
+{
+  if(name_file_["TPCPAD:"] != ""){
+    TpcPadHelper& gTpcPad = TpcPadHelper::GetInstance();
+    gTpcPad.SetFileName(name_file_["TPCPAD:"]);
+    flag_[kIsGood] = gTpcPad.Initialize();
+  }else{
+    std::cout << "#E ConfMan::"
+	      << " File path does not exist in " << name_file_["TPCPAD:"] 
+	      << std::endl;
+    flag_.reset(kIsGood);
+  }
+}
+
 //_____________________________________________________________________________
+/*
 Bool_t
 TpcPadHelper::Initialize( const TString &file_name )
 {
@@ -230,6 +252,69 @@ TpcPadHelper::Initialize( const TString &file_name )
   }
 #if 0
   std::cout << FUNC_NAME << " " << file_name
+	    << " ... initialized (NParam=" << m_map.size() << ")" << std::endl;
+  for( const auto& p : m_map ){
+    std::cout << " PadId=" << p.second->PadId()
+	      << " LayerId=" << p.second->LayerId()
+	      << " RowId=" << p.second->RowId()
+	      << std::endl;
+  }
+#endif
+  return true;
+}
+*/
+
+
+Bool_t
+TpcPadHelper::Initialize( const std::string& filename )
+{
+  m_file_name = filename;
+  return Initialize();
+};
+
+Bool_t
+TpcPadHelper::Initialize( void )
+{
+  static const std::string func_name("["+class_name+"::"+__func__+"()]");
+
+  std::ifstream ifs( m_file_name.c_str() );
+  if( !ifs.is_open() ){
+    std::cerr << "#E " << func_name << " "
+		<< "No such parameter file : " << m_file_name << std::endl;
+    std::exit(EXIT_FAILURE);
+  }
+  
+  TString line;
+  while( ifs.good() && line.ReadLine( ifs ) ){
+    if( line[0]=='#' )
+      continue;
+    std::istringstream iss( line.Data() );
+    Int_t aget, asad, channel, layer, row, pad;
+    iss >> aget >> asad >> channel >> layer >> row >> pad;
+    if( aget < 0 || asad < 0 || channel < 0 )
+      continue;
+    Int_t key = TpcPadParam::Key( asad, aget, channel );
+    if( m_map.find( key ) != m_map.end() ){
+      std::cerr << FUNC_NAME << " " << m_file_name
+		<< " ... duplicated parameter" << std::endl;
+      TpcPadParam( asad, aget, channel, pad, layer, row ).Print();
+      m_map.find( key )->second->Print();
+      continue;
+      // return false;
+    }
+    if( GetParam( pad ) ){
+      std::cerr << FUNC_NAME << " " << m_file_name
+		<< " ... duplicated parameter" << std::endl;
+      TpcPadParam( asad, aget, channel, pad, layer, row ).Print();
+      GetParam( pad )->Print();
+      continue;
+      // return false;
+    }
+    m_map[key] = new TpcPadParam( asad, aget, channel,
+                                  pad, layer, row );
+  }
+#if 0
+  std::cout << FUNC_NAME << " " << m_file_name
 	    << " ... initialized (NParam=" << m_map.size() << ")" << std::endl;
   for( const auto& p : m_map ){
     std::cout << " PadId=" << p.second->PadId()

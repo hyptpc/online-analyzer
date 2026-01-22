@@ -48,6 +48,7 @@ public:
   void initializeMsTParamMan();
 
   void initializeUserParamMan();
+  void initializeTpcPadHelper();
 
   void initializeGeAdcCalibMan();
 

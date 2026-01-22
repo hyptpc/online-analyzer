@@ -13,6 +13,7 @@
 #include "DCTdcCalibMan.hh"
 //#include "DCDriftParamMan.hh"
 #include "UserParamMan.hh"
+#include "TpcPadHelper.hh"
 //#include "MatrixParamMan.hh"
 //#include "MsTParamMan.hh"
 //#include "GeAdcCalibMan.hh"
