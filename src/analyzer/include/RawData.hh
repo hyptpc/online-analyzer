@@ -48,6 +48,7 @@ private:
   std::vector<DCRHitContainer> m_BLC2bRawHC;
   std::vector<DCRHitContainer> m_BPC1RawHC;
   std::vector<DCRHitContainer> m_BPC2RawHC;
+  std::vector<DCRHitContainer> m_BcOutRawHC;
   
   HodoRHitContainer m_VmeCalibRawHC;
 
@@ -59,6 +60,7 @@ public:
   const HodoRHitContainer& GetHodoRawHC( const int &detid ) const;
   const DCRHitContainer&   GetDCRawHC( const int &detid, int layer ) const;
   const HodoRHitContainer& GetVmeCalibRawHC( void ) const;
+  const DCRHitContainer&   GetBcOutRawHC( int layer )const;
 
 };
 
@@ -124,6 +126,14 @@ inline const HodoRHitContainer&
 RawData::GetVmeCalibRawHC( void ) const
 {
   return m_VmeCalibRawHC;
+}
+
+//______________________________________________________________________________
+inline const DCRHitContainer&
+RawData::GetBcOutRawHC( int layer ) const
+{
+  if( layer<0 || layer>NumOfLayersBcOut ) layer = 0;
+  return m_BcOutRawHC[layer];
 }
 
 #endif

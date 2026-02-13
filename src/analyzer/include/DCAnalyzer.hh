@@ -35,7 +35,7 @@ private:
   DCAnalyzer& operator =( const DCAnalyzer& );
 
 private:
-  enum e_type { k_BLC1a, k_BLC1b, k_BLC2a, k_BLC2b, k_BPC1, k_BPC2,
+  enum e_type { k_BLC1a, k_BLC1b, k_BLC2a, k_BLC2b, k_BPC1, k_BPC2, k_BcIn, k_BcOut,
 		n_type };
   std::vector<bool>     m_is_decoded;
   std::vector<int>      m_much_combi;
@@ -45,12 +45,17 @@ private:
   std::vector<DCHitContainer>       m_BLC2bHC;
   std::vector<DCHitContainer>       m_BPC1HC;
   std::vector<DCHitContainer>       m_BPC2HC;
+  std::vector<DCHitContainer>       m_BcOutHC;
+
+  DCLocalTrackContainer m_BcOutTC;
 
 public:
   bool DecodeRawHits( RawData* rawData );
   // bool DecodeFiberHits( FiberCluster* FiberCl, int layer );
   bool DecodeRawHits( RawData* rawData, e_type k_type,const int &detid );
   bool DecodeDCHits( RawData* rawData , const int &detid);
+  bool DecodeBcOutHits( RawData* rawData );
+  
 
   inline const DCHitContainer& GetDCHC( const int &detid, int layer ) const;
 
@@ -62,10 +67,15 @@ public:
 
   bool ReCalcAll( void );
 
+  bool TrackSearchBcOut (void);
+  int GetNtracksBcOut( void )  const { return m_BcOutTC.size(); }
+
 protected:
   void ClearDCHits( void );
   void ClearDCHits( const int &detid );
   void ChiSqrCut( DCLocalTrackContainer& cont, double chisqr );
+  void ClearBcOutHits( void );
+  void ClearTracksBcOut( void );
 };
 
 //______________________________________________________________________________

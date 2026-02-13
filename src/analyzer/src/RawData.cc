@@ -163,7 +163,7 @@ namespace
     }
   }
   inline void
-  DecodeDC( int id, int layer, int nwire, DCRHitContainer& cont, int tdcmin, int tdcmax )
+  DecodeDC( int id, int layer, int nwire, DCRHitContainer& cont, int tdcmin, int tdcmax)
   {
     for(int wire=0; wire<nwire; ++wire){
       int nhit = gUnpacker.get_entries( id, layer, 0, wire, 0 );
@@ -197,7 +197,8 @@ RawData::RawData( void )
     m_BLC1aRawHC(8+1),
     m_BLC1bRawHC(8+1),
     m_BLC2aRawHC(8+1),
-    m_BLC2bRawHC(8+1)
+    m_BLC2bRawHC(8+1),
+    m_BcOutRawHC(NumOfLayersBcOut+1)
 {
   debug::ObjectCounter::increase(class_name);
 }
@@ -223,6 +224,7 @@ RawData::ClearAll( void )
   del::ClearContainerAll( m_BLC1bRawHC );
   del::ClearContainerAll( m_BLC2aRawHC );
   del::ClearContainerAll( m_BLC2bRawHC );
+  del::ClearContainerAll( m_BcOutRawHC );
 }
 
 //______________________________________________________________________________
@@ -247,6 +249,11 @@ RawData::DecodeHits( void )
     DecodeDC( DetIdBLC1b, i, 32, m_BLC1bRawHC[i], 0,2000 );
     DecodeDC( DetIdBLC2a, i, 32, m_BLC2aRawHC[i], 0,2000 );
     DecodeDC( DetIdBLC2b, i, 32, m_BLC2bRawHC[i], 0,2000 );
+
+    //BcOut
+    DecodeDC( DetIdBLC2a, i, 32, m_BcOutRawHC[i],0,2000);
+    DecodeDC( DetIdBLC2b, i, 32, m_BcOutRawHC[i+8],0,2000);
+    
   }
 
   m_is_decoded = true;

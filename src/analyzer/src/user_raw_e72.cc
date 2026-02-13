@@ -222,6 +222,10 @@ process_begin( const std::vector<std::string>& argv )
     }
   }
 
+  //Beam profile - BLC
+  gHttp.Register(http::BLDCXYProf(kBLC2a,"BLC2a",0),"Profile");
+  gHttp.Register(http::BLDCXYProf(kBLC2b,"BLC2b",0),"Profile");
+
   //=== set directory ===//
   for( Int_t i=0, n=hptr_array.size(); i<n; ++i ){
     hptr_array[i]->SetDirectory(0);

@@ -17,6 +17,7 @@
 #include "ConfMan.hh"
 #include "DCHit.hh"
 #include "DCLocalTrack.hh"
+#include "DCTrackSearch.hh"
 #include "DCRawHit.hh"
 #include "DebugCounter.hh"
 #include "Hodo2Hit.hh"
@@ -24,14 +25,25 @@
 #include "MathTools.hh"
 #include "RawData.hh"
 #include "UserParamMan.hh"
+#include "DCGeomMan.hh"
 #include "DeleteUtility.hh"
 
+#define DefStatic
+#include "DCParameters.hh"
+#undef DefStatic
+
 // Tracking routine selection __________________________________________________
+/* BcInTracking */
+#define UseBcIn    0 // not supported
+/* BcOutTracking */
+#define BcOut_XUV  0 // XUV Tracking (slow but accerate)
+#define BcOut_Pair 1 // Pair plane Tracking (fast but bad for large angle track)
 namespace
 {
   // using namespace ;
   const std::string& class_name("DCAnalyzer");
   const UserParamMan& gUser = UserParamMan::GetInstance();
+  const DCGeomMan&    gGeom = DCGeomMan::GetInstance();
   //______________________________________________________________________________
 }
 
@@ -135,6 +147,48 @@ DCAnalyzer::DecodeRawHits( RawData *rawData )
   DecodeRawHits( rawData, k_BLC1b, DetIdBLC1b );
   DecodeRawHits( rawData, k_BLC2a, DetIdBLC2a );
   DecodeRawHits( rawData, k_BLC2b, DetIdBLC2b );
+  DecodeBcOutHits( rawData );
+  return true;
+}
+
+//______________________________________________________________________________
+bool
+DCAnalyzer::DecodeBcOutHits( RawData *rawData )
+{
+  static const std::string func_name("["+class_name+"::"+__func__+"()]");
+
+  if( m_is_decoded[k_BcOut] ){
+    hddaq::cout << "#D " << func_name << " "
+		<< "already decoded" << std::endl;
+    return true;
+  }
+
+  ClearBcOutHits();
+
+  for( int layer=0; layer<NumOfLayersBcOut; ++layer ){
+    const DCRHitContainer &RHitCont=rawData->GetBcOutRawHC(layer);
+    int nh = RHitCont.size();
+    for( int i=0; i<nh; ++i ){
+      DCRawHit *rhit  = RHitCont[i];
+      DCHit    *hit   = new DCHit( rhit->PlaneId()+PlOffsBc, rhit->WireId() );
+      int       nhtdc      = rhit->GetTdcSize();
+      int       nhtrailing = rhit->GetTrailingSize();
+      if(!hit) continue;
+      for( int j=0; j<nhtdc; ++j ){
+	hit->SetTdcVal( rhit->GetTdc(j) );
+      }
+      for( int j=0; j<nhtrailing; ++j ){
+	hit->SetTdcTrailing( rhit->GetTrailing(j) );
+      }
+
+      if( hit->CalcDCObservables() )
+	m_BcOutHC[layer].push_back(hit);
+      else
+	delete hit;
+    }
+  }
+
+  m_is_decoded[k_BcOut] = true;
   return true;
 }
 
@@ -168,6 +222,15 @@ DCAnalyzer::ClearDCHits( void)
   del::ClearContainerAll( m_BLC1bHC );
   del::ClearContainerAll( m_BLC2aHC );
   del::ClearContainerAll( m_BLC2bHC );
+  
+  ClearBcOutHits();
+}
+
+//______________________________________________________________________________
+void
+DCAnalyzer::ClearBcOutHits( void )
+{
+  del::ClearContainerAll( m_BcOutHC );
 }
 
 //______________________________________________________________________________
@@ -237,4 +300,34 @@ DCAnalyzer::ChiSqrCut( DCLocalTrackContainer& TrackCont,
   TrackCont.resize( ValidCand.size() );
   std::copy( ValidCand.begin(), ValidCand.end(), TrackCont.begin() );
   ValidCand.clear();
+}
+
+//______________________________________________________________________________
+bool
+DCAnalyzer::TrackSearchBcOut( void )
+{
+  static const Int_t MinLayer = gUser.GetParameter("MinLayerBcOut");
+
+  ClearTracksBcOut();
+
+#if BcOut_Pair //Pair Plane Tracking Routine for BcOut
+  track::LocalTrackSearch( m_BcOutHC, PPInfoBcOut, NPPInfoBcOut,
+			   m_BcOutTC, MinLayer );
+  return true;
+#endif
+
+#if BcOut_XUV  //XUV Tracking Routine for BcOut
+  track::LocalTrackSearchVUX( m_BcOutHC, PPInfoBcOut, NPPInfoBcOut,
+			      m_BcOutTC, MinLayer );
+  return true;
+#endif
+
+  return false;
+}
+
+//______________________________________________________________________________
+void
+DCAnalyzer::ClearTracksBcOut( void )
+{
+  del::ClearContainer( m_BcOutTC );
 }

@@ -60,6 +60,7 @@ const int DetIdSDC = 106;
 const int DetIdFDC = 107;
 const int DetIdBLC1= 111;
 const int DetIdBLC2= 112;
+const int DetIdBcOut = 120;
 
 // HypTPC
 const Int_t DetIdTPC       = 70;
@@ -69,6 +70,16 @@ const Int_t NumOfTimeBucket = 170;
 // 
 const int DetIdVmeRm=91;
 const int NumOfPlaneVmeRm=3;
+
+//BcInOut
+const Int_t PlMinBcIn        =   0;
+const Int_t PlMaxBcIn        =  15;
+const Int_t PlMinBcOut       =  16;
+const Int_t PlMaxBcOut       =  31;
+const Int_t PlOffsBc         = 100;
+const Int_t NumOfLayersBcIn   = PlMaxBcIn   - PlMinBcIn   + 1;
+const Int_t NumOfLayersBcOut  = PlMaxBcOut  - PlMinBcOut  + 1;
+
 
 namespace trigger
 {

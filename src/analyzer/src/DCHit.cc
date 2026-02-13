@@ -22,7 +22,7 @@
 //#include "DCDriftParamMan.hh"
 #include "DetectorID.hh"
 //#include "DCGeomMan.hh"
-//#include "DCParameters.hh"
+#include "DCParameters.hh"
 #include "DCTdcCalibMan.hh"
 #include "DCLTrackHit.hh"
 #include "DebugCounter.hh"
