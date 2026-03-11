@@ -1076,61 +1076,27 @@ TPCFADC( void )
 }
 
 //_____________________________________________________________________________
-
 TCanvas*
 SHS2D( void )
 {
-  auto id_bh2 = HistMaker::getUniqueID( kEventDisplay, 0, kHitPoly, 1 );
-  auto id_bac = HistMaker::getUniqueID( kEventDisplay, 0, kHitPoly, 3 );
-  auto id_htof = HistMaker::getUniqueID( kEventDisplay, 0, kHitPoly, 5 );
-  auto id_tpc = HistMaker::getUniqueID( kTPC, 0, kADC2D, 3);
-  auto id_kvc = HistMaker::getUniqueID( kEventDisplay, 0, kHitPoly, 7 );
-  
   auto c1 = new TCanvas( __func__, __func__ );
   c1->cd();
 
-  auto h_bh2 = GHist::get(id_bh2);
-  h_bh2->SetTitle("E72 2D Event Display");
-  if (h_bh2 ){
-    //h_bh2->GetXaxis()->SetRangeUser(-700,400);
-    //h_bh2->SetMaximum( 200);
-    h_bh2->Draw("colz same");
-  }
+  for(int i=0;i<sizeof(EvtDis_Det_name)/sizeof(EvtDis_Det_name[0]);i++){
+    auto id_det = HistMaker::getUniqueID(kEventDisplay, 0, kHitPoly, i*2+1);
+    auto h_det = GHist::get(id_det);
+    if(h_det){
+      h_det->SetTitle("E72 2D Event Display");
+      h_det->Draw("colz same");
+    }
 
-  else 
-  {std::cout << " no h_bh2 " << std::endl; getchar();}
-
-  auto h_bac = GHist::get(id_bac);
-  if (h_bac ){
-    h_bac->Draw("colz same");
-  }
-
-  else 
-  {std::cout << " no h_bac " << std::endl; getchar();}
-  
-  auto h_htof = GHist::get( id_htof );
-  if( h_htof ){
+    else
+      {std::cout<<"No "<<EvtDis_Det_name[i]<<" Hist"<<std::endl; getchar();}
     
-    //h_htof->SetMaximum( 200 );
-    h_htof->Draw( "colz same" );
-  }
-
-  
-  else 
-  {std::cout << " no h_tof " << std::endl; getchar();}
-
-  auto h_kvc = GHist::get( id_kvc );
-  if( h_kvc ){
     
-    h_kvc->Draw( "colz same" );
   }
-
   
-  else 
-  {std::cout << " no h_kvc " << std::endl; getchar();}
-
-  
-  
+  auto id_tpc = HistMaker::getUniqueID( kTPC, 0, kADC2D, 3);
   auto h = GHist::get( id_tpc );
   if( h ){
     h->SetLineWidth( 0 );
@@ -1159,7 +1125,14 @@ SHS2D( void )
   LH2_Target->SetLineWidth(2);
   LH2_Target->SetFillStyle(0);
 
+  //Target holder
+  TEllipse *LH2_Target_holder = new TEllipse(-143,0,113./2.);
+  LH2_Target_holder->SetLineColor(kGreen+1);
+  LH2_Target_holder->SetLineWidth(2);
+  LH2_Target_holder->SetFillStyle(0);
+
   LH2_Target->Draw("same");
+  LH2_Target_holder->Draw("same");
   c1->SetTitle("E72 Hit Pattern");
   c1->SetName("E72 Hit Pattern");
   c1->Modified();

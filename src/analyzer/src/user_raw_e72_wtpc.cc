@@ -39,6 +39,10 @@
 #include "TpcPadHelper.hh"
 #include "UserParamMan.hh"
 #include "HodoParamMan.hh"
+#include "DCGeomMan.hh"
+#include "DetSizeMan.hh"
+
+#include "HistMaker.hh"
 
 #define DEBUG    0
 #define FLAG_DAQ 1
@@ -52,10 +56,12 @@ using namespace hddaq::unpacker;
 namespace
 {
 std::vector<TH1*> hptr_array;
-HistMaker&   gHist = HistMaker::getInstance();
+HistMaker&   gHist   = HistMaker::getInstance();
 HttpServer&    gHttp = HttpServer::GetInstance();
-const auto& gUser     = UserParamMan::GetInstance();
-const auto& gTpcPad = TpcPadHelper::GetInstance();
+const auto& gUser    = UserParamMan::GetInstance();
+const auto& gTpcPad  = TpcPadHelper::GetInstance();
+const auto& gGeom    = DCGeomMan::GetInstance();
+const auto& gSize    = DetSizeMan::GetInstance();
 
 TText text;
 TText end;
@@ -112,6 +118,8 @@ process_begin( const std::vector<std::string>& argv )
   ConfMan::getInstance().initializeUserParamMan();
   ConfMan::getInstance().initializeHodoParamMan();
   ConfMan::getInstance().initializeTpcPadHelper();
+  ConfMan::getInstance().initializeDCGeomMan();
+  ConfMan::getInstance().initializeDetSizeMan();
   // gROOT->SetBatch(kTRUE);
   gStyle->SetOptStat(1110);
   gStyle->SetTitleW(.4);
@@ -297,6 +305,8 @@ process_event( void )
     h->SetTitle(h->GetName() + TString(Form(" run%05d", run_number)));
   }
 
+  std::map<int, std::vector<Int_t>> hit_seg_map; 
+
 
   Int_t hid;
   bool COSMIC=false;
@@ -330,7 +340,6 @@ process_event( void )
   //   return 0;
 
   //if(COSMIC&&!CLOCK) return 0;
-  std::vector<Int_t> bht_hit_seg;
   // BHT ------------------------------------------------------------
   {
     // data type    
@@ -386,8 +395,8 @@ process_event( void )
       }//ud
       if(ntdc[0]>0&&ntdc[1]>0){
 	hid  = gHist.getSequentialID(kDET, 0, kHitPat, 0);
-	hptr_array[hid]->Fill(seg);	    
-	bht_hit_seg.push_back(seg);
+	hptr_array[hid]->Fill(seg);
+	hit_seg_map[k_device].push_back(seg);
 	multiplicity++;
       }
     }//seg
@@ -458,7 +467,6 @@ process_event( void )
     }
   } //hodo
 
-  std::vector<Int_t> bh2_hit_seg;
   {
     // BH2    
     int i=1;
@@ -490,7 +498,7 @@ process_event( void )
 	      if (tdc_min < val && val < tdc_max) {
 		hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
 		hptr_array[hid]->Fill(seg);
-		bh2_hit_seg.push_back(seg);
+		hit_seg_map[k_device].push_back(seg);
 		mul++;
 	      }
 	    }
@@ -502,7 +510,6 @@ process_event( void )
     hptr_array[hid]->Fill(mul);	    	    
   } //hodo
 
-  bool do_hit_bac = false; 
   { // BAC
     DetectorType kDET=kBAC;
     const int k_device = gUnpacker.get_device_id("BAC");
@@ -541,7 +548,7 @@ process_event( void )
 	if (has_hit && seg == 4){
 	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
 	  hptr_array[hid]->Fill(seg);
-	  do_hit_bac = true; 
+	  hit_seg_map[k_device].push_back(0);
 	  multiplicity++;
 	}
       }
@@ -550,7 +557,6 @@ process_event( void )
     hptr_array[hid]->Fill(multiplicity);
   } //hodo
     
-  std::vector<Int_t> htof_hit_seg;
   { // HTOF
     DetectorType kDET=kHTOF;
     const int k_device = gUnpacker.get_device_id("HTOF");
@@ -596,12 +602,12 @@ process_event( void )
       if (has_hit_ud[0] && has_hit_ud[1]) {
 	hid = gHist.getSequentialID(kDET, 0, kHitPat, 3);
 	hptr_array[hid]->Fill(seg);
-	htof_hit_seg.push_back(seg);
+	hit_seg_map[k_device].push_back(seg);
 	multiplicity++;
       }
-      if (htof_hit_seg.size() >= 2){
+      if (hit_seg_map[k_device].size() >= 2){
 	hid = gHist.getSequentialID(kCorrelation, 0, kHitPat2D, 2);
-	hptr_array[hid]->Fill(htof_hit_seg[0], htof_hit_seg[1]);
+	hptr_array[hid]->Fill(hit_seg_map[k_device][0], hit_seg_map[k_device][1]);
       }
       // int hid_num = gHist.getSequentialID(kDET, 2, kADCwTDC, seg+1);
       // int hid_den = gHist.getSequentialID(kDET, 2, kADC, seg+1);
@@ -662,7 +668,7 @@ process_event( void )
     hptr_array[hid]->Fill(multiplicity);
   } //hodo
   
-  std::vector<Int_t> kvc_hit_seg;
+
   { // KVC
     DetectorType kDET=kKVC;
     const int k_device = gUnpacker.get_device_id("KVC");
@@ -701,7 +707,7 @@ process_event( void )
 	if(has_hit && ch == 4){
 	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
 	  hptr_array[hid]->Fill(seg);
-	  kvc_hit_seg.push_back(seg);
+	  hit_seg_map[k_device].push_back(seg);
 	  multiplicity[0]++;
 	  // if ( has_hit_T1 && 2 <= seg && seg <= 5 ) multiplicity[1]++;
 	  if ( has_hit_T1 ) multiplicity[1]++;
@@ -1177,76 +1183,59 @@ process_event( void )
 #if DEBUG
   std::cout << __FILE__ << " " << __LINE__ << std::endl;
 #endif
-
+  
   {
+    const int bht_id = gUnpacker.get_device_id("BHT");
+    const int bh2_id = gUnpacker.get_device_id("BH2");
+    const int htof_id = gUnpacker.get_device_id("HTOF");
+    const int kvc_id = gUnpacker.get_device_id("KVC");
+    
     hid = gHist.getSequentialID(kCorrelation, 0, kHitPat2D, 1);
-    if (bh2_hit_seg.size() > 0 && bht_hit_seg.size() > 0){
-      hptr_array[hid]->Fill(bht_hit_seg[0], bh2_hit_seg[0]);
+    if (hit_seg_map[bh2_id].size() > 0 && hit_seg_map[bht_id].size() > 0){
+      hptr_array[hid]->Fill(hit_seg_map[bht_id][0], hit_seg_map[bh2_id][0]);
     }
     hid = gHist.getSequentialID(kCorrelation, 0, kHitPat2D, 3);
-    if (bh2_hit_seg.size() > 0 && htof_hit_seg.size() > 0){
-      hptr_array[hid]->Fill(htof_hit_seg[0], bh2_hit_seg[0]);
+    if (hit_seg_map[bh2_id].size() > 0 && hit_seg_map[htof_id].size() > 0){
+      hptr_array[hid]->Fill(hit_seg_map[htof_id][0], hit_seg_map[bh2_id][0]);
     }
     hid = gHist.getSequentialID(kCorrelation, 0, kHitPat2D, 4);
-    if (kvc_hit_seg.size() > 0 && htof_hit_seg.size() > 0){
-      hptr_array[hid]->Fill(htof_hit_seg[0], kvc_hit_seg[0]);
+    if (hit_seg_map[kvc_id].size() > 0 && hit_seg_map[htof_id].size() > 0){
+      hptr_array[hid]->Fill(hit_seg_map[htof_id][0], hit_seg_map[kvc_id][0]);
     }
   }
 
   //EventDispaly
   {
-    int bh2_pattern_id =  gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 1);
-    int bh2_count_id =  gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 2);
 
-    int bac_pattern_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 3);
-    int bac_count_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 4);
-    
-    int htof_pattern_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 5);
-    int htof_count_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 6);
-
-    int kvc_pattern_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 7);
-    int kvc_count_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 8);
-    
-    hptr_array[bh2_pattern_id]->Reset();
-    hptr_array[bac_pattern_id]->Reset();
-    hptr_array[htof_pattern_id]->Reset();
-    hptr_array[kvc_pattern_id]->Reset();
-
-    //BH2
-    if (bh2_hit_seg.size() > 0){
-      for(int i=0;i<bh2_hit_seg.size();i++){
-	int bh2_seg = bh2_hit_seg[i]+1;
-	hptr_array[bh2_pattern_id]->SetBinContent(bh2_seg,100.);
-	double bin = hptr_array[bh2_count_id]->GetBinContent(bh2_seg);
-	hptr_array[bh2_count_id]->SetBinContent(bh2_seg, bin+1);
+    int det_hist_pat_id = 0;
+    int det_hist_count_id = 0;
+    int hist_id = 0;
+    for(int i=0;i<sizeof(EvtDis_Det_name)/sizeof(EvtDis_Det_name[0]);i++){
+      const Int_t k_device = gUnpacker.get_device_id(EvtDis_Det_name[i].Data());
+      det_hist_pat_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, ++hist_id);
+      hptr_array[det_hist_pat_id]->Reset();
+      det_hist_count_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, ++hist_id);
+      
+      const auto& hit_seg = hit_seg_map[k_device];
+      if(!hit_seg.empty()){
+	for(int i=0;i<hit_seg.size();i++){
+	  int seg = hit_seg[i];
+	  int binid = 0;
+	  if(k_device == gUnpacker.get_device_id("HTOF")){
+	    if(seg == 0) binid = 1;
+	    else if(seg == 1 || seg == 2) binid = 2;
+	    else if(seg == 3 || seg == 4) binid = 3;
+	    else binid = seg-1;
+	  }
+	  else{
+	    binid = seg + 1;
+	  }
+	  hptr_array[det_hist_pat_id]->SetBinContent(binid,100.);
+	  double bin_cont = hptr_array[det_hist_count_id]->GetBinContent(binid);
+	  hptr_array[det_hist_count_id]->SetBinContent(binid, bin_cont+1);
+	}
       }
     }
-    //BAC
-    if (do_hit_bac){
-      hptr_array[bac_pattern_id]->SetBinContent(1,100.);
-      double bin = hptr_array[bac_count_id]->GetBinContent(1);
-      hptr_array[bac_count_id]->SetBinContent(1, bin+1);
-    }
-
-    //HTOF
-    if(htof_hit_seg.size() > 0){
-      for(int i=0;i<htof_hit_seg.size();i++){
-	int htof_seg = htof_hit_seg[i]+1;
-	hptr_array[htof_pattern_id]->SetBinContent(htof_seg, 100.);
-	double bin = hptr_array[htof_count_id]->GetBinContent(htof_seg);
-	hptr_array[htof_count_id]->SetBinContent(htof_seg, bin+1);
-      }
-    }
-    //KVC
-    if (kvc_hit_seg.size() > 0){
-      for(int i=0;i<kvc_hit_seg.size();i++){
-	int kvc_seg = kvc_hit_seg[i]+1;
-	hptr_array[kvc_pattern_id]->SetBinContent(kvc_seg,100.);
-	double bin = hptr_array[kvc_count_id]->GetBinContent(kvc_seg);
-	hptr_array[kvc_count_id]->SetBinContent(kvc_seg, bin+1);
-      }
-    }
-
   }
   
 

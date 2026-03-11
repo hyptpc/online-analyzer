@@ -43,6 +43,8 @@ public:
   void initializeDCTdcCalibMan();
   void initializeDCDriftParamMan();
 
+  void initializeDetSizeMan();
+
   void initializeEMCParamMan();
   void initializeMatrixParamMan();
   void initializeMsTParamMan();

@@ -10,6 +10,9 @@
 #include "HistHelper.hh"
 #include "HistMaker.hh"
 
+#include "DCGeomMan.hh"
+#include "DetSizeMan.hh"
+
 #include <TH1.h>
 #include <TH2.h>
 #include <TList.h>
@@ -32,6 +35,8 @@ std::string getStr_FromEnum(const char* c){
 namespace
 {
   const std::string& MyName("HistMaker::");
+  const DCGeomMan& gGeom  = DCGeomMan::GetInstance();
+  const DetSizeMan& gSize = DetSizeMan::GetInstance();
 }
 
 // Constructor -------------------------------------------------------------
@@ -709,19 +714,19 @@ HistMaker::createCorrelation(Bool_t flag_ps)
 TList*
 HistMaker::createEventDisplay(Bool_t flag_ps)
 {
-
+  
   double c_x_min = -700.;
   double c_x_max = 700.;
   double c_y_min = -500.;
   double c_y_max = 500.;
 
   //TargetID order (kEventDisplay, kHitPoly)
-  //1 : BH2 Hit pattern
-  //2 : BH2 Hit count
-  //3 : BAC Hit pattern
-  //4 : BAC Hit count
-  //5 : HTOF Hit pattern
-  //6 : HTOF Hit count
+  //1 : HTOF Hit pattern
+  //2 : HTOF Hit count
+  //3 : BH2 Hit pattern
+  //4 : BH2 Hit count
+  //5 : BAC Hit pattern
+  //6 : BAC Hit count
   //7 : KVC Hit pattern
   //8 : KVC Hit count
   
@@ -733,85 +738,27 @@ HistMaker::createEventDisplay(Bool_t flag_ps)
   top_dir->SetName(nameDetector);
   Int_t target_id = getUniqueID(kEventDisplay, 0, kHitPoly, 0);
 
-  // BH2
-  TString title;
-  {
-    title = Form("%s BH2_HitPatternPoly", nameDetector);
-    auto bh2_pattern_poly = dynamic_cast<TH2Poly*>
-      ( createTH2Poly(++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max) );
-    title = Form("%s BH2_HitCountPoly", nameDetector);
-    auto bh2_count_poly = dynamic_cast<TH2Poly*>
-      ( createTH2Poly(++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max) );
-    const Double_t w = 14;
-    const Double_t t = 5;
-
-    const Double_t bh2_z = -594.;
-
-    double zmin = bh2_z - w/2.;
-    double zmax = bh2_z + w/2.;
-
-    double totalw = NumOfSegBH2*w;
-    double x_start = -totalw / 2.;
-
-    for(Int_t i=0;i<NumOfSegBH2;i++){
-      double xmin = x_start + i*w;
-      double xmax = xmin + w;
-	
-      bh2_pattern_poly->AddBin(zmin,xmin,zmax,xmax);
-      bh2_count_poly->AddBin(zmin,xmin,zmax,xmax);
-      
-    }
-    
-    bh2_pattern_poly->SetStats( 0 );
-    bh2_pattern_poly->SetMinimum( 0. );
-    bh2_pattern_poly->SetMaximum( 200. );
-
-    bh2_count_poly->SetStats( 0 );
-    bh2_count_poly->SetMinimum( 0. );
-
-    top_dir->Add( bh2_pattern_poly );
-    top_dir->Add( bh2_count_poly );
-    
-  }
-
-  //BAC
-  {
-    title = Form("%s BAC_HitPatternPoly", nameDetector);
-    
-    auto bac_pattern_poly = dynamic_cast<TH2Poly*>
-      ( createTH2Poly( ++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max ) );
-    title = Form( "%s BAC_HitCountPoly", nameDetector );
-    auto bac_count_poly = dynamic_cast<TH2Poly*>
-      ( createTH2Poly( ++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max) );
-    const Double_t w = 37.0;
-    const Double_t t = 115.0;
-
-    const Double_t bac_z = -498.3;
-    const Double_t bac_x = -17.25;
-    double zmin = bac_z - w/2.;
-    double zmax = bac_z + w/2.;
-    double xmin = -t/2. + bac_x;
-    double xmax = t/2. + bac_x;
-    
-    bac_pattern_poly->AddBin(zmin,xmin,zmax,xmax);
-    bac_count_poly->AddBin(zmin,xmin,zmax,xmax);
-
-    top_dir->Add( bac_pattern_poly );
-    top_dir->Add( bac_count_poly );
-  }
+  const int tpc_id = gGeom.GetDetectorId("HypTPC");
+  const double tpc_z = gGeom.GetGlobalPosition(tpc_id).z();
   
+  
+  TString title;
   //HTOF
   {
-    title = Form("%s HTOF_HitPatternPoly", nameDetector);
+    title = Form("%s_HTOF_HitPatternPoly", nameDetector);
     
     auto htof_pattern_poly = dynamic_cast<TH2Poly*>
       ( createTH2Poly( ++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max ) );
-    title = Form( "%s HTOF_HitCountPoly", nameDetector );
+    title = Form( "%s_HTOF_HitCountPoly", nameDetector );
     auto htof_count_poly = dynamic_cast<TH2Poly*>
       ( createTH2Poly( ++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max) );
+
+    const auto& htof_size = gSize.GetSize("HTOF");
+    
+    const Double_t w = htof_size.x();
     const Double_t L = 337;
-    const Double_t t = 10;
-    const Double_t w = 68;
+    const Double_t t = htof_size.z();
+
     Double_t theta[8];
     Double_t X[5];
     Double_t Y[5];
@@ -848,44 +795,49 @@ HistMaker::createEventDisplay(Bool_t flag_ps)
     top_dir->Add( htof_pattern_poly );
     top_dir->Add( htof_count_poly);
   }
-
-  // KVC
-  {
-    title = Form("%s KVC_HitPatternPoly", nameDetector);
-    auto kvc_pattern_poly = dynamic_cast<TH2Poly*>
+  
+  for (int i = 1; i < sizeof(EvtDis_Det_name)/sizeof(EvtDis_Det_name[0]); i++) {
+    auto name = EvtDis_Det_name[i];
+    title = Form("%s_%s_HitPatternPoly",nameDetector,name.Data());
+    auto h_pattern_poly = dynamic_cast<TH2Poly*>
       ( createTH2Poly(++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max) );
-    title = Form("%s KVC_HitCountPoly", nameDetector);
-    auto kvc_count_poly = dynamic_cast<TH2Poly*>
+    title = Form("%s_%s_HitCountPoly", nameDetector, name.Data());
+    auto h_count_poly = dynamic_cast<TH2Poly*>
       ( createTH2Poly(++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max) );
-    const Double_t kvc_w = 26;
-    const Double_t kvc_t = 20;
+    const auto& det_size = gSize.GetSize(name.Data());
+    const Double_t w = det_size.x();
+    Double_t t = det_size.z();
+    if(name == "BH2")t*=4;
+    
+    const int det_id = gGeom.GetDetectorId(name.Data());
+    auto det_pos = gGeom.GetGlobalPosition(det_id);
+    const Double_t det_x = det_pos.x();
+    const Double_t det_z = det_pos.z() - tpc_z;
+    
+    double zmin = det_z - t/2.;
+    double zmax = det_z + t/2.;
 
-    const Double_t kvc_z = 610.55;
-    const Double_t kvc_x = 216.78;
-
-    double kvc_zmin = kvc_z - kvc_t/2.;
-    double kvc_zmax = kvc_z + kvc_t/2.;
-
-    double totalw = NumOfSegKVC*kvc_w;
+    double totalw = NumOfSeg[i]*w;
     double x_start = -totalw / 2.;
 
-    for(Int_t i=0;i<NumOfSegKVC;i++){
-      double kvc_xmin = x_start + i*kvc_w + kvc_x;
-      double kvc_xmax = kvc_xmin + kvc_w;
-      kvc_pattern_poly->AddBin(kvc_zmin,kvc_xmin,kvc_zmax,kvc_xmax);
-      kvc_count_poly->AddBin(kvc_zmin,kvc_xmin,kvc_zmax,kvc_xmax);
+    for(Int_t j=0;j<NumOfSeg[i];j++){
+      double xmin = x_start + j*w + det_x;
+      double xmax = xmin + w;
+	
+      h_pattern_poly->AddBin(zmin,xmin,zmax,xmax);
+      h_count_poly->AddBin(zmin,xmin,zmax,xmax);
       
     }
     
-    kvc_pattern_poly->SetStats( 0 );
-    kvc_pattern_poly->SetMinimum( 0. );
-    kvc_pattern_poly->SetMaximum( 200. );
+    h_pattern_poly->SetStats( 0 );
+    h_pattern_poly->SetMinimum( 0. );
+    h_pattern_poly->SetMaximum( 200. );
 
-    kvc_count_poly->SetStats( 0 );
-    kvc_count_poly->SetMinimum( 0. );
+    h_count_poly->SetStats( 0 );
+    h_count_poly->SetMinimum( 0. );
 
-    top_dir->Add( kvc_pattern_poly );
-    top_dir->Add( kvc_count_poly );
+    top_dir->Add( h_pattern_poly );
+    top_dir->Add( h_count_poly );
     
   }
   

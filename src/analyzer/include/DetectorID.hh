@@ -14,6 +14,7 @@ const Int_t NumOfSegT2  = 1;
 
 const Int_t NumOfSegHTOF = 34;
 const Int_t NumOfSegKVC = 8;
+const Int_t NumOfSegBAC = 1;
 
 // Counters ___________________________________________________________
 const int DetIdCDH    =  0;

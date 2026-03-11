@@ -1,397 +1,469 @@
-/*
-  DCGeomMan.cc
-
-  2012/1/24
-*/
+// -*- C++ -*-
 
 #include "DCGeomMan.hh"
-#include "DCGeomRecord.hh"
 #include "ConfMan.hh"
 
-#include <string>
-#include <stdexcept>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
 
-const int MaxChar = 200;
+#include <std_ostream.hh>
 
-DCGeomMan *DCGeomMan::geomMan_=0;
+#include "DCGeomRecord.hh"
+#include "DeleteUtility.hh"
+#include "Exception.hh"
+#include "FuncName.hh"
 
-// initialize DCGeomMan -----------------------------------------------------
+//_____________________________________________________________________________
+DCGeomMan::DCGeomMan()
+  : m_is_ready(false),
+    m_file_name(),
+    m_container(),
+    m_detector_id_map(),
+    m_global_z_map(),
+    m_local_z_map()
+{
+}
+
+//_____________________________________________________________________________
+DCGeomMan::~DCGeomMan()
+{
+  ClearElements();
+}
+
+//______________________________________________________________________________
 void
 ConfMan::initializeDCGeomMan()
 {
-  if(name_file_["DCGEOM:"] != ""){
-    DCGeomMan& gDCGeo = DCGeomMan::GetInstance();
-    flag_[kIsGood] = gDCGeo.Initialize(name_file_["DCGEOM:"]);
+  if(name_file_["DCGEO:"] != ""){
+    DCGeomMan& gGeom = DCGeomMan::GetInstance();
+    gGeom.SetFileName(name_file_["DCGEO:"]);
+    flag_[kIsGood] = gGeom.Initialize();
   }else{
     std::cout << "#E ConfMan::"
-	      << " File path does not exist in " << name_file_["DCGEOM:"] 
+	      << " File path does not exist in " << name_file_["DCGEO:"] 
 	      << std::endl;
     flag_.reset(kIsGood);
   }
 }
-// initialize DCGeomMan -----------------------------------------------------
 
-DCGeomMan::DCGeomMan()
-  : TOFid_(51), LCid_(54)
-{}
-
-DCGeomMan::~DCGeomMan()
-{}
-
-
-DCGeomMan & DCGeomMan::GetInstance( void )
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::dXdW(Int_t layer) const
 {
-  if( !geomMan_ ){
-    geomMan_ = new DCGeomMan();
-  }
-  return *geomMan_;
+  return GetRecord(layer)->dXdW();
 }
 
-double DCGeomMan::GetLocalZ( int lnum ) const
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::dXdW(const TString& key) const
 {
-  static const std::string funcname = "[DCGeomMan::GetLocalZ(int)]"; 
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( pGeo ) return pGeo->length_;
+  return dXdW(GetDetectorId(key));
+}
+
+//_____________________________________________________________________________
+void
+DCGeomMan::SetFileName(const TString& file_name)
+{
+  m_file_name = file_name;
+}
+
+//_____________________________________________________________________________
+Bool_t
+DCGeomMan::Initialize(const TString& file_name)
+{
+  m_file_name = file_name;
+  return Initialize();
+}
+
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::GetLocalZ(Int_t lnum) const
+{
+  return GetRecord(lnum)->Length();
+}
+
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::GetLocalZ(const TString& key) const
+{
+  return GetLocalZ(GetDetectorId(key));
+}
+
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::GetResolution(Int_t lnum) const
+{
+  return GetRecord(lnum)->Resolution();
+}
+
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::GetResolution(const TString& key) const
+{
+  return GetResolution(GetDetectorId(key));
+}
+
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::GetTiltAngle(Int_t lnum) const
+{
+  return GetRecord(lnum)->TiltAngle();
+}
+
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::GetTiltAngle(const TString& key) const
+{
+  return GetTiltAngle(GetDetectorId(key));
+}
+
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::GetRotAngle1(Int_t lnum) const
+{
+  return GetRecord(lnum)->RotationAngle1();
+}
+
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::GetRotAngle1(const TString& key) const
+{
+  return GetRotAngle1(GetDetectorId(key));
+}
+
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::GetRotAngle2(Int_t lnum) const
+{
+  return GetRecord(lnum)->RotationAngle2();
+}
+
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::GetRotAngle2(const TString& key) const
+{
+  return GetRotAngle2(GetDetectorId(key));
+}
+
+//_____________________________________________________________________________
+const ThreeVector&
+DCGeomMan::GetGlobalPosition(Int_t lnum) const
+{
+  return GetRecord(lnum)->Pos();
+}
+
+//_____________________________________________________________________________
+const ThreeVector&
+DCGeomMan::GetGlobalPosition(const TString& key) const
+{
+  return GetGlobalPosition(GetDetectorId(key));
+}
+
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::GetOffset(Int_t lnum) const
+{
+  return GetRecord(lnum)->Ofs();
+}
+
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::GetOffset(const TString& key) const
+{
+  return GetOffset(GetDetectorId(key));
+}
+
+//_____________________________________________________________________________
+ThreeVector
+DCGeomMan::NormalVector(Int_t lnum) const
+{
+  return GetRecord(lnum)->NormalVector();
+}
+
+//_____________________________________________________________________________
+ThreeVector
+DCGeomMan::NormalVector(const TString& key) const
+{
+  return NormalVector(GetDetectorId(key));
+}
+
+//_____________________________________________________________________________
+ThreeVector
+DCGeomMan::UnitVector(Int_t lnum) const
+{
+  return GetRecord(lnum)->UnitVector();
+}
+
+//_____________________________________________________________________________
+ThreeVector
+DCGeomMan::UnitVector(const TString& key) const
+{
+  return UnitVector(GetDetectorId(key));
+}
+
+//_____________________________________________________________________________
+const DCGeomRecord*
+DCGeomMan::GetRecord(Int_t lnum) const
+{
+  auto itr = m_container.find(lnum);
+  if(itr != m_container.end())
+    return itr->second;
   else{
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
+    throw Exception(FUNC_NAME + " No record for Layer#" +
+                    TString::Itoa(lnum, 10));
+    return nullptr;
   }
 }
 
-double DCGeomMan::GetResolution( int lnum ) const
+//_____________________________________________________________________________
+const DCGeomRecord*
+DCGeomMan::GetRecord(const TString& key) const
 {
-  static const std::string funcname = "[DCGeomMan::GetResolution(int)]"; 
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( pGeo ) return pGeo->resol_;
-  else{
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
+  return GetRecord(GetDetectorId(key));
 }
 
-double DCGeomMan::GetTiltAngle( int lnum ) const
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::CalcWirePosition(Int_t lnum, Double_t wire) const
 {
-  static const std::string funcname = "[DCGeomMan::GetTiltAngle(int)]";
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( pGeo ) return pGeo->tiltAngle_;
-  else{
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
+  return GetRecord(lnum)->WirePos(wire);
 }
 
-double DCGeomMan::GetRotAngle1( int lnum ) const
+//_____________________________________________________________________________
+Double_t
+DCGeomMan::CalcWirePosition(const TString& key, Double_t wire) const
 {
-  static const std::string funcname = "[DCGeomMan::GetRotAngle1(int)]";
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( pGeo ) return pGeo->rotAngle1_;
-  else{
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
+  return CalcWirePosition(GetDetectorId(key), wire);
 }
 
-double DCGeomMan::GetRotAngle2( int lnum ) const
+//_____________________________________________________________________________
+Int_t
+DCGeomMan::CalcWireNumber(Int_t lnum, Double_t pos) const
 {
-  static const std::string funcname = "[DCGeomMan::GetRotAngle2(int)]";
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( pGeo ) return pGeo->rotAngle2_;
-  else{
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
+  return GetRecord(lnum)->WireNumber(pos);
 }
 
-const ThreeVector & DCGeomMan::GetGlobalPosition( int lnum ) const
+//_____________________________________________________________________________
+Int_t
+DCGeomMan::CalcWireNumber(const TString& key, Double_t wire) const
 {
-  static const std::string funcname = "[DCGeomMan::GetGlobalPosition(int)]";
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( pGeo ) return pGeo->pos_;
-  else{
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
+  return CalcWireNumber(GetDetectorId(key), wire);
 }
 
-ThreeVector DCGeomMan::NormalVector( int lnum ) const
+//_____________________________________________________________________________
+void
+DCGeomMan::ClearElements()
 {
-  static const std::string funcname = "[DCGeomMan::NormalVector(int)]";
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( pGeo ) return pGeo->NormalVector();
-  else{
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
+  del::ClearMap(m_container);
 }
 
-ThreeVector DCGeomMan::UnitVector( int lnum ) const
+//_____________________________________________________________________________
+Bool_t
+DCGeomMan::Initialize()
 {
-  static const std::string funcname = "[DCGeomMan::UnitVector(int)]";
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( pGeo ) return pGeo->UnitVector();
-  else{
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
-}
-
-const DCGeomRecord * DCGeomMan::GetRecord( int lnum ) const
-{
-  static const std::string funcname = "[DCGeomMan::GetRecord(int)]";
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( pGeo ) return pGeo;
-  else{
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
-}
- 
-double DCGeomMan::calcWirePosition( int lnum, double wire ) const
-{
-  static const std::string funcname = "[DCGeomMan::calcWirePosition()]";
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( pGeo ){
-    return pGeo->WirePos(wire);
-  }
-  else{
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
-}
-
-int DCGeomMan::calcWireNumber( int lnum, double pos ) const
-{
-  static const std::string funcname = "[DCGeomMan::calcWireNumber()]";
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( pGeo ){
-    return pGeo->WireNumber(pos);
-  }
-  else{
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
-}
- 
-
-void DCGeomMan::clearElements( void )
-{
-  //  for_each( geomRecord_.begin(), geomRecord_.end(), DeleteObject() );
-  std::map <int, DCGeomRecord *>::iterator itr;
-  for( itr=geomRecord_.begin(); itr!=geomRecord_.end(); ++itr ){
-    delete itr->second;
-    itr->second = 0;
-  }
-  geomRecord_.clear();
-  TOFid_=51;
-}
-
-
-bool DCGeomMan::Initialize( void )
-{
-  static const std::string funcname = "[DCGeomMan::Initialize]";
-  char str[MaxChar];
-  char cname[MaxChar];
-  int id;
-  double xs, ys, zs, ta, ra1, ra2, l, res, w0, dd, ofs;
-  //double A = 0.8/750.;
-
-  FILE *fp;
-
-  if( ( fp = fopen( filename_.c_str(), "r" ) ) == 0 ){
-    throw std::invalid_argument(funcname+": file open fail");
+  if(m_is_ready){
+    hddaq::cerr << FUNC_NAME << " already initialied" << std::endl;
+    return false;
   }
 
-  clearElements();
+  std::ifstream ifs(m_file_name);
+  if(!ifs.is_open()){
+    hddaq::cerr << FUNC_NAME
+		<< " file open fail : " << m_file_name << std::endl;
+    return false;
+  }
 
-  while( fgets( str, MaxChar, fp ) != 0 ){
-    if( str[0]!='#' ){
-      if( sscanf( str, "%d %s %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-		  &id, cname, &xs, &ys, &zs, &ta, &ra1, &ra2, &l, &res,
-		  &w0, &dd, &ofs )
-	  == 13 ){
-	DCGeomRecord *pRec = 
-	  new DCGeomRecord( id, cname, xs, ys, zs, 
-			    ta, ra1, ra2, l, res,
-			    w0, dd, ofs );
-	DCGeomRecord *pOld = geomRecord_[id];
-	geomRecord_[id] = pRec;
+  ClearElements();
 
-	if(strcmp(cname,"TOF")==0) {
-	  TOFid_=id;
-	}
-	
-	if( pOld ){
-	  std::cerr << funcname << ": duplicated id number. "
-		    << " following record is deleted." << std::endl;
-	  std::cerr << "Id=" << pOld->id_ << " " << pOld->pos_
-		    << " ) ... " << std::endl;
-	  delete pOld;
-	}
+  TString line;
+  while(ifs.good() && line.ReadLine(ifs)){
+    if(line.IsNull() || line[0]=='#') continue;
+    std::istringstream iss(line.Data());
+    Int_t id; TString name;
+    Double_t gx, gy, gz, ta, ra1, ra2, l, res, w0, dd, ofs;
+    if(iss >> id >> name >> gx >> gy >> gz >> ta >> ra1 >> ra2
+       >> l >> res >> w0 >> dd >> ofs){
+      DCGeomRecord *record =
+	new DCGeomRecord(id, name, gx, gy, gz, ta, ra1, ra2,
+                          l, res, w0, dd, ofs);
+      if(m_container[id]){
+	hddaq::cerr << FUNC_NAME << " "
+		    << "duplicated key is deleted : " << id << std::endl;
+	m_container[id]->Print();
+	delete m_container[id];
       }
-      else {
-	std::string strtemp=str;
-	std::cerr << funcname << ": Invalid format " << strtemp << std::endl;
-      }
+      m_container[id] = record;
+      m_detector_id_map[name] = id;
+      m_global_z_map[name]    = gz;
+      m_local_z_map[name]     = l;
+    }else{
+      hddaq::cerr << FUNC_NAME << " "
+		  << "invalid format : " << line << std::endl;
     }
   }
 
-  fclose(fp);
-
-  std::cout << funcname << " Initialization finished." << std::endl;
-
-  return true;
+  m_is_ready = true;
+  return m_is_ready;
 }
 
-
-std::vector <int> DCGeomMan::GetDetectorIDList( void ) const
+//_____________________________________________________________________________
+std::vector<Int_t>
+DCGeomMan::GetDetectorIDList() const
 {
-  std::vector<int> vlist;
-  vlist.reserve(geomRecord_.size());
-  std::map <int, DCGeomRecord *>::const_iterator 
-    itr=geomRecord_.begin(), end=geomRecord_.end();
-
-  for(; itr!=end; ++itr ){
-    vlist.push_back( itr->first );
+  std::vector<Int_t> vlist;
+  vlist.reserve(m_container.size());
+  for(auto& itr: m_container){
+    vlist.push_back(itr.first);
   }
-
   return vlist;
 }
 
-ThreeVector DCGeomMan::Local2GlobalPos( int lnum, 
-					const ThreeVector &in ) const
+//_____________________________________________________________________________
+ThreeVector
+DCGeomMan::Local2GlobalPos(Int_t lnum, const ThreeVector& in) const
 {
-  static const std::string funcname = 
-    "[DCGeomMan::Local2GlobalPos(ThreeVecor &)]";
+  const DCGeomRecord *record = GetRecord(lnum);
+  if(!record)
+    throw Exception(FUNC_NAME + " No record for Layer#" +
+                    TString::Itoa(lnum, 10));
 
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( !pGeo ) 
-    throw std::out_of_range(funcname+": No record" );
+  Double_t x = record->dxds()*in.x() + record->dxdt()*in.y()
+    + record->dxdu()*in.z() + record->Pos().x();
+  Double_t y = record->dyds()*in.x() + record->dydt()*in.y()
+    + record->dydu()*in.z() + record->Pos().y();
+  Double_t z = record->dzds()*in.x() + record->dzdt()*in.y()
+    + record->dzdu()*in.z() + record->Pos().z();
 
-  double x = pGeo->dxds_*in.x() + pGeo->dxdt_*in.y()
-    + pGeo->dxdu_*in.z() + pGeo->pos_.x();
-  double y = pGeo->dyds_*in.x() + pGeo->dydt_*in.y()
-    + pGeo->dydu_*in.z() + pGeo->pos_.y();
-  double z = pGeo->dzds_*in.x() + pGeo->dzdt_*in.y()
-    + pGeo->dzdu_*in.z() + pGeo->pos_.z();
-
-  return ThreeVector( x, y, z );
+  return ThreeVector(x, y, z);
 }
 
-ThreeVector DCGeomMan::Global2LocalPos( int lnum,
-					const ThreeVector &in ) const
+//_____________________________________________________________________________
+ThreeVector
+DCGeomMan::Local2GlobalPos(const TString& key, const ThreeVector& in) const
 {
-  static const std::string funcname = 
-    "[DCGeomMan::Global2LocalPos(ThreeVecor &)]";
-
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( !pGeo ){
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
-
-  double x 
-    = pGeo->dsdx_*(in.x()-pGeo->pos_.x())
-    + pGeo->dsdy_*(in.y()-pGeo->pos_.y())
-    + pGeo->dsdz_*(in.z()-pGeo->pos_.z());
-  double y 
-    = pGeo->dtdx_*(in.x()-pGeo->pos_.x())
-    + pGeo->dtdy_*(in.y()-pGeo->pos_.y())
-    + pGeo->dtdz_*(in.z()-pGeo->pos_.z());
-  double z 
-    = pGeo->dudx_*(in.x()-pGeo->pos_.x())
-    + pGeo->dudy_*(in.y()-pGeo->pos_.y())
-    + pGeo->dudz_*(in.z()-pGeo->pos_.z());
-
-  return ThreeVector( x, y, z );
+  return Local2GlobalPos(GetDetectorId(key), in);
 }
 
-ThreeVector DCGeomMan::Local2GlobalDir( int lnum,
-					const ThreeVector &in ) const
+//_____________________________________________________________________________
+ThreeVector
+DCGeomMan::Global2LocalPos(Int_t lnum, const ThreeVector& in) const
 {
-  static const std::string funcname = 
-    "[DCGeomMan::Local2GlobalDir(ThreeVecor &)]";
-
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( !pGeo ){
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
+  const DCGeomRecord *record = GetRecord(lnum);
+  if(!record){
+    throw Exception(FUNC_NAME + " No record for Layer#" +
+                    TString::Itoa(lnum, 10));
   }
 
-  double x = pGeo->dxds_*in.x() + pGeo->dxdt_*in.y()
-    + pGeo->dxdu_*in.z();
-  double y = pGeo->dyds_*in.x() + pGeo->dydt_*in.y()
-    + pGeo->dydu_*in.z();
-  double z = pGeo->dzds_*in.x() + pGeo->dzdt_*in.y()
-    + pGeo->dzdu_*in.z();
+  Double_t x
+    = record->dsdx()*(in.x()-record->Pos().x())
+    + record->dsdy()*(in.y()-record->Pos().y())
+    + record->dsdz()*(in.z()-record->Pos().z());
+  Double_t y
+    = record->dtdx()*(in.x()-record->Pos().x())
+    + record->dtdy()*(in.y()-record->Pos().y())
+    + record->dtdz()*(in.z()-record->Pos().z());
+  Double_t z
+    = record->dudx()*(in.x()-record->Pos().x())
+    + record->dudy()*(in.y()-record->Pos().y())
+    + record->dudz()*(in.z()-record->Pos().z());
 
-  return ThreeVector( x, y, z );
+  return ThreeVector(x, y, z);
 }
 
-ThreeVector DCGeomMan::Global2LocalDir( int lnum,
-					const ThreeVector &in ) const
+//_____________________________________________________________________________
+ThreeVector
+DCGeomMan::Global2LocalPos(const TString& key, const ThreeVector& in) const
 {
-  static const std::string funcname = 
-    "[DCGeomMan::Global2LocalDir(ThreeVecor &)]";
-
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( !pGeo ){
-    std::cerr << funcname << ": No record. Layer#=" 
-	      << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
-
-  double x = pGeo->dsdx_*in.x() + pGeo->dsdy_*in.y()+ pGeo->dsdz_*in.z();
-  double y = pGeo->dtdx_*in.x() + pGeo->dtdy_*in.y()+ pGeo->dtdz_*in.z();
-  double z = pGeo->dudx_*in.x() + pGeo->dudy_*in.y()+ pGeo->dudz_*in.z();
-
-  return ThreeVector( x, y, z );
+  return Global2LocalPos(GetDetectorId(key), in);
 }
 
-void DCGeomMan::SetResolution( int lnum,  double res) const
+//_____________________________________________________________________________
+ThreeVector
+DCGeomMan::Local2GlobalDir(Int_t lnum, const ThreeVector& in) const
 {
-  static const std::string funcname = "[DCGeomMan::SetResolution(int, double)]"; 
-  DCGeomRecord *pGeo = geomRecord_[lnum];
-  if( pGeo ) {
-    pGeo->resol_=res;
-    return;
+  const DCGeomRecord *record = GetRecord(lnum);
+  if(!record){
+    throw Exception(FUNC_NAME + " No record for Layer#" +
+                    TString::Itoa(lnum, 10));
   }
-  else{
-    std::cerr << funcname << ": No record. Layer#=" 
-              << lnum << std::endl;
-    throw std::out_of_range(funcname+": No record" );
-  }
+
+  Double_t x = record->dxds()*in.x() + record->dxdt()*in.y()
+    + record->dxdu()*in.z();
+  Double_t y = record->dyds()*in.x() + record->dydt()*in.y()
+    + record->dydu()*in.z();
+  Double_t z = record->dzds()*in.x() + record->dzdt()*in.y()
+    + record->dzdu()*in.z();
+
+  return ThreeVector(x, y, z);
 }
 
-int DCGeomMan::GetDetectorId( const std::string &detName ) const
+//_____________________________________________________________________________
+ThreeVector
+DCGeomMan::Local2GlobalDir(const TString& key, const ThreeVector& in) const
 {
-  const std::string funcName = "DCGeomMan::GetDetectorId";
+  return Local2GlobalDir(GetDetectorId(key), in);
+}
 
-  std::map <int, DCGeomRecord *>::const_iterator 
-    itr=geomRecord_.begin(), end=geomRecord_.end();
-
-  for(; itr!=end; ++itr ){
-    if (itr->second->name_ == detName)
-      return itr->second->id_;
+//_____________________________________________________________________________
+ThreeVector
+DCGeomMan::Global2LocalDir(Int_t lnum, const ThreeVector& in) const
+{
+  const DCGeomRecord *record = GetRecord(lnum);
+  if(!record){
+    throw Exception(FUNC_NAME + " No record for Layer#" +
+                    TString::Itoa(lnum, 10));
   }
 
-  std::cerr << funcName << " : No such detector " << detName << std::endl;
-  exit(-1);
+  Double_t x = record->dsdx()*in.x() + record->dsdy()*in.y()
+    + record->dsdz()*in.z();
+  Double_t y = record->dtdx()*in.x() + record->dtdy()*in.y()
+    + record->dtdz()*in.z();
+  Double_t z = record->dudx()*in.x() + record->dudy()*in.y()
+    + record->dudz()*in.z();
 
-  return -1;
+  return ThreeVector(x, y, z);
+}
+
+//_____________________________________________________________________________
+ThreeVector
+DCGeomMan::Global2LocalDir(const TString& key, const ThreeVector& in) const
+{
+  return Global2LocalDir(GetDetectorId(key), in);
+}
+
+//_____________________________________________________________________________
+void
+DCGeomMan::SetResolution(Int_t lnum, Double_t res)
+{
+  DCGeomRecord *record = m_container[lnum];
+  if(!record){
+    throw Exception(FUNC_NAME + " No record for Layer#" +
+                    TString::Itoa(lnum, 10));
+  }
+  record->SetResolution(res);
+}
+
+//_____________________________________________________________________________
+void
+DCGeomMan::SetResolution(const TString& key, Double_t res)
+{
+  SetResolution(GetDetectorId(key), res);
+}
+
+//_____________________________________________________________________________
+Int_t
+DCGeomMan::GetDetectorId(const TString &key) const
+{
+  for(auto& itr: m_container){
+    if(itr.second->Name().EqualTo(key, TString::kIgnoreCase))
+      return itr.second->Id();
+  }
+
+  throw Exception(FUNC_NAME + " No such key = " + key);
 }

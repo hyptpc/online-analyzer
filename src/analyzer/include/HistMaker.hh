@@ -8,6 +8,12 @@
 #include<string>
 
 #include<TROOT.h>
+#include "DetectorID.hh"
+
+
+//For EventDisplay
+const TString EvtDis_Det_name[] = {"HTOF","BH2","BAC","KVC"};
+const int NumOfSeg[] = {NumOfSegHTOF, NumOfSegBH2, NumOfSegBAC, NumOfSegKVC};
 
 enum DetectorType {
   kDetectorZero,
