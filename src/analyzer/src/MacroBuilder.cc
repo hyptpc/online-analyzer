@@ -1075,6 +1075,100 @@ TPCFADC( void )
   return c1;
 }
 
+//_____________________________________________________________________________
+
+TCanvas*
+SHS2D( void )
+{
+  auto id_bh2 = HistMaker::getUniqueID( kEventDisplay, 0, kHitPoly, 1 );
+  auto id_bac = HistMaker::getUniqueID( kEventDisplay, 0, kHitPoly, 3 );
+  auto id_htof = HistMaker::getUniqueID( kEventDisplay, 0, kHitPoly, 5 );
+  auto id_tpc = HistMaker::getUniqueID( kTPC, 0, kADC2D, 3);
+  auto id_kvc = HistMaker::getUniqueID( kEventDisplay, 0, kHitPoly, 7 );
+  
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->cd();
+
+  auto h_bh2 = GHist::get(id_bh2);
+  h_bh2->SetTitle("E72 2D Event Display");
+  if (h_bh2 ){
+    //h_bh2->GetXaxis()->SetRangeUser(-700,400);
+    //h_bh2->SetMaximum( 200);
+    h_bh2->Draw("colz same");
+  }
+
+  else 
+  {std::cout << " no h_bh2 " << std::endl; getchar();}
+
+  auto h_bac = GHist::get(id_bac);
+  if (h_bac ){
+    h_bac->Draw("colz same");
+  }
+
+  else 
+  {std::cout << " no h_bac " << std::endl; getchar();}
+  
+  auto h_htof = GHist::get( id_htof );
+  if( h_htof ){
+    
+    //h_htof->SetMaximum( 200 );
+    h_htof->Draw( "colz same" );
+  }
+
+  
+  else 
+  {std::cout << " no h_tof " << std::endl; getchar();}
+
+  auto h_kvc = GHist::get( id_kvc );
+  if( h_kvc ){
+    
+    h_kvc->Draw( "colz same" );
+  }
+
+  
+  else 
+  {std::cout << " no h_kvc " << std::endl; getchar();}
+
+  
+  
+  auto h = GHist::get( id_tpc );
+  if( h ){
+    h->SetLineWidth( 0 );
+    h->GetXaxis()->SetRangeUser(-400,400);
+    h->GetYaxis()->SetRangeUser(-400,400);
+    //h->SetMaximum( 200 );
+    h->Draw( "col same" );
+  }
+
+  Double_t l = (500./2.)/(1+sqrt(2.));
+  Double_t px[9]={-l*(1+sqrt(2.)),-l,l,l*(1+sqrt(2.)),
+    l*(1+sqrt(2.)),l,-l,-l*(1+sqrt(2.)),
+    -l*(1+sqrt(2.))};
+  Double_t py[9]={l,l*(1+sqrt(2.)),l*(1+sqrt(2.)),l,
+    -l,-l*(1+sqrt(2.)),-l*(1+sqrt(2.)),-l,
+    l};
+  TPolyLine* pLine = new TPolyLine( 9, px, py );
+  pLine->SetLineColor(1);
+  pLine->SetFillColorAlpha(kWhite, 0);
+  pLine->Draw();
+  c1->cd( 1 )->SetLogz();
+
+  //Target
+  TEllipse *LH2_Target = new TEllipse(-143,0,40);
+  LH2_Target->SetLineColor(kRed);
+  LH2_Target->SetLineWidth(2);
+  LH2_Target->SetFillStyle(0);
+
+  LH2_Target->Draw("same");
+  c1->SetTitle("E72 Hit Pattern");
+  c1->SetName("E72 Hit Pattern");
+  c1->Modified();
+  c1->Update();
+
+  return c1;
+}
+
+
 //____________________________________________________________________________
 TCanvas*
 TriggerFlagMHTDCTDC( DetectorType det, std::string strDet, int subDet, int nlayers, int nx, int ny )

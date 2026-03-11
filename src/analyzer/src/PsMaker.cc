@@ -1515,6 +1515,13 @@ void PsMaker::create(std::string& name)
     drawOneCanvas(id_list, par_list, false, false, "box");
   }
 
+  // EventDisplay ------------------------------------------------------------
+  if(name == CONV_STRING(kEventDisplay)){
+    par_list[kXdiv] = 1; par_list[kYdiv] = 1;
+    id_list.push_back(HistMaker::getUniqueID(kEventDisplay, 0, kHitPoly, 1));
+    drawOneCanvas(id_list, par_list, false, false, "box");
+  }
+
   // TriggerFlag------------------------------------------------------------
   if(name == CONV_STRING(kTriggerFlag)){
     int base_id = 0;

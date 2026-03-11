@@ -706,6 +706,194 @@ HistMaker::createCorrelation(Bool_t flag_ps)
   return top_dir;
 }
 
+TList*
+HistMaker::createEventDisplay(Bool_t flag_ps)
+{
+
+  double c_x_min = -700.;
+  double c_x_max = 700.;
+  double c_y_min = -500.;
+  double c_y_max = 500.;
+
+  //TargetID order (kEventDisplay, kHitPoly)
+  //1 : BH2 Hit pattern
+  //2 : BH2 Hit count
+  //3 : BAC Hit pattern
+  //4 : BAC Hit count
+  //5 : HTOF Hit pattern
+  //6 : HTOF Hit count
+  //7 : KVC Hit pattern
+  //8 : KVC Hit count
+  
+  std::string strDet = "EventDisplay";
+  name_created_detectors_.push_back(strDet);
+  if(flag_ps) name_ps_files_.push_back(strDet);
+  const char* nameDetector = strDet.c_str();
+  TList *top_dir = new TList;
+  top_dir->SetName(nameDetector);
+  Int_t target_id = getUniqueID(kEventDisplay, 0, kHitPoly, 0);
+
+  // BH2
+  TString title;
+  {
+    title = Form("%s BH2_HitPatternPoly", nameDetector);
+    auto bh2_pattern_poly = dynamic_cast<TH2Poly*>
+      ( createTH2Poly(++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max) );
+    title = Form("%s BH2_HitCountPoly", nameDetector);
+    auto bh2_count_poly = dynamic_cast<TH2Poly*>
+      ( createTH2Poly(++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max) );
+    const Double_t w = 14;
+    const Double_t t = 5;
+
+    const Double_t bh2_z = -594.;
+
+    double zmin = bh2_z - w/2.;
+    double zmax = bh2_z + w/2.;
+
+    double totalw = NumOfSegBH2*w;
+    double x_start = -totalw / 2.;
+
+    for(Int_t i=0;i<NumOfSegBH2;i++){
+      double xmin = x_start + i*w;
+      double xmax = xmin + w;
+	
+      bh2_pattern_poly->AddBin(zmin,xmin,zmax,xmax);
+      bh2_count_poly->AddBin(zmin,xmin,zmax,xmax);
+      
+    }
+    
+    bh2_pattern_poly->SetStats( 0 );
+    bh2_pattern_poly->SetMinimum( 0. );
+    bh2_pattern_poly->SetMaximum( 200. );
+
+    bh2_count_poly->SetStats( 0 );
+    bh2_count_poly->SetMinimum( 0. );
+
+    top_dir->Add( bh2_pattern_poly );
+    top_dir->Add( bh2_count_poly );
+    
+  }
+
+  //BAC
+  {
+    title = Form("%s BAC_HitPatternPoly", nameDetector);
+    
+    auto bac_pattern_poly = dynamic_cast<TH2Poly*>
+      ( createTH2Poly( ++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max ) );
+    title = Form( "%s BAC_HitCountPoly", nameDetector );
+    auto bac_count_poly = dynamic_cast<TH2Poly*>
+      ( createTH2Poly( ++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max) );
+    const Double_t w = 37.0;
+    const Double_t t = 115.0;
+
+    const Double_t bac_z = -498.3;
+    const Double_t bac_x = -17.25;
+    double zmin = bac_z - w/2.;
+    double zmax = bac_z + w/2.;
+    double xmin = -t/2. + bac_x;
+    double xmax = t/2. + bac_x;
+    
+    bac_pattern_poly->AddBin(zmin,xmin,zmax,xmax);
+    bac_count_poly->AddBin(zmin,xmin,zmax,xmax);
+
+    top_dir->Add( bac_pattern_poly );
+    top_dir->Add( bac_count_poly );
+  }
+  
+  //HTOF
+  {
+    title = Form("%s HTOF_HitPatternPoly", nameDetector);
+    
+    auto htof_pattern_poly = dynamic_cast<TH2Poly*>
+      ( createTH2Poly( ++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max ) );
+    title = Form( "%s HTOF_HitCountPoly", nameDetector );
+    auto htof_count_poly = dynamic_cast<TH2Poly*>
+      ( createTH2Poly( ++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max) );
+    const Double_t L = 337;
+    const Double_t t = 10;
+    const Double_t w = 68;
+    Double_t theta[8];
+    Double_t X[5];
+    Double_t Y[5];
+    Double_t seg_X[5];
+    Double_t seg_Y[5];
+    for( Int_t i=0; i<8; i++ ){
+      theta[i] = (-180+45*i)*acos(-1)/180.;
+      for( Int_t j=0; j<4; j++ ){
+	seg_X[1] = L-t/2.;
+	seg_X[2] = L+t/2.;
+	seg_X[3] = L+t/2.;
+	seg_X[4] = L-t/2.;
+	seg_X[0] = seg_X[4];
+	seg_Y[1] = w*j-2*w;
+	seg_Y[2] = w*j-2*w;
+	seg_Y[3] = w*j-1*w;
+	seg_Y[4] = w*j-1*w;
+	seg_Y[0] = seg_Y[4];
+	for( Int_t k=0; k<5; k++ ){
+	  X[k] = cos(theta[i])*seg_X[k]-sin(theta[i])*seg_Y[k];
+	  Y[k] = sin(theta[i])*seg_X[k]+cos(theta[i])*seg_Y[k];
+	}
+	htof_pattern_poly->AddBin( 5, X, Y );
+	htof_count_poly->AddBin( 5, X, Y );
+      }
+    }
+    htof_pattern_poly->SetStats( 0 );
+    htof_pattern_poly->SetMinimum( 0. );
+    htof_pattern_poly->SetMaximum( 170. );
+
+    htof_count_poly->SetStats( 0 );
+    htof_count_poly->SetMinimum( 0. );
+    
+    top_dir->Add( htof_pattern_poly );
+    top_dir->Add( htof_count_poly);
+  }
+
+  // KVC
+  {
+    title = Form("%s KVC_HitPatternPoly", nameDetector);
+    auto kvc_pattern_poly = dynamic_cast<TH2Poly*>
+      ( createTH2Poly(++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max) );
+    title = Form("%s KVC_HitCountPoly", nameDetector);
+    auto kvc_count_poly = dynamic_cast<TH2Poly*>
+      ( createTH2Poly(++target_id, title, c_x_min,c_x_max,c_y_min,c_y_max) );
+    const Double_t kvc_w = 26;
+    const Double_t kvc_t = 20;
+
+    const Double_t kvc_z = 610.55;
+    const Double_t kvc_x = 216.78;
+
+    double kvc_zmin = kvc_z - kvc_t/2.;
+    double kvc_zmax = kvc_z + kvc_t/2.;
+
+    double totalw = NumOfSegKVC*kvc_w;
+    double x_start = -totalw / 2.;
+
+    for(Int_t i=0;i<NumOfSegKVC;i++){
+      double kvc_xmin = x_start + i*kvc_w + kvc_x;
+      double kvc_xmax = kvc_xmin + kvc_w;
+      kvc_pattern_poly->AddBin(kvc_zmin,kvc_xmin,kvc_zmax,kvc_xmax);
+      kvc_count_poly->AddBin(kvc_zmin,kvc_xmin,kvc_zmax,kvc_xmax);
+      
+    }
+    
+    kvc_pattern_poly->SetStats( 0 );
+    kvc_pattern_poly->SetMinimum( 0. );
+    kvc_pattern_poly->SetMaximum( 200. );
+
+    kvc_count_poly->SetStats( 0 );
+    kvc_count_poly->SetMinimum( 0. );
+
+    top_dir->Add( kvc_pattern_poly );
+    top_dir->Add( kvc_count_poly );
+    
+  }
+  
+  return top_dir;
+  
+}
+
+
 
 // -------------------------------------------------------------------------
 // createT98Hist
@@ -1088,6 +1276,7 @@ TList* HistMaker::createHTOF(DetectorType kDET, std::string strDet, const int ns
   list.push_back( HistMakerInfo(kHitPat, "HitPat",  "Segment", nsegments+1 ,-0.5,nsegments+0.5) );
   list.push_back( HistMakerInfo(kMulti,  "Multi",   "Multiplicity", nsegments+1 ,-0.5,nsegments+0.5) );
   
+  
   size_t size=list.size();
   for(size_t i=0; i<size-3;i++){
     // Declaration of the sub-directory
@@ -1156,6 +1345,10 @@ TList* HistMaker::createHTOF(DetectorType kDET, std::string strDet, const int ns
 			   nsegments,-0.5,nsegments-0.5,
 			   "up segment","down segment"));
   }
+
+
+  
+  
   // Return the TList pointer which is added into TGFileBrowser
   return top_dir;
 }

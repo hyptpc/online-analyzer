@@ -94,6 +94,10 @@ TCanvas* TPCTDCPAD( void );
 TCanvas* TPCHTOFPAD( void );
 TCanvas* TPCFADC( void );
 
+//Event Display
+TCanvas* SHS2D( void );
+
+
 void      UpdateBLDCEfficiency();
 void      UpdateCounterEfficiency();
 }

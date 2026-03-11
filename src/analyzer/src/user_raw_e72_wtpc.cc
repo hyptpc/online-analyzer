@@ -167,8 +167,9 @@ process_begin( const std::vector<std::string>& argv )
 
   // BTOF
   gHttp.Register(gHist.createBTOF(true));
-  
   gHttp.Register(gHist.createCorrelation());
+  gHttp.Register(gHist.createEventDisplay());
+
   
   if(0 != gHist.setHistPtr(hptr_array)){ return -1; }
   
@@ -211,6 +212,8 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::COBO());
   gHttp.Register(http::HitPat());
   gHttp.Register(http::Multiplicity());
+  
+  gHttp.Register(http::SHS2D());
 
   // Chambers except for CDC
   for(int i=0;i<nchm;i++){
@@ -499,6 +502,7 @@ process_event( void )
     hptr_array[hid]->Fill(mul);	    	    
   } //hodo
 
+  bool do_hit_bac = false; 
   { // BAC
     DetectorType kDET=kBAC;
     const int k_device = gUnpacker.get_device_id("BAC");
@@ -537,6 +541,7 @@ process_event( void )
 	if (has_hit && seg == 4){
 	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
 	  hptr_array[hid]->Fill(seg);
+	  do_hit_bac = true; 
 	  multiplicity++;
 	}
       }
@@ -1187,6 +1192,63 @@ process_event( void )
       hptr_array[hid]->Fill(htof_hit_seg[0], kvc_hit_seg[0]);
     }
   }
+
+  //EventDispaly
+  {
+    int bh2_pattern_id =  gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 1);
+    int bh2_count_id =  gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 2);
+
+    int bac_pattern_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 3);
+    int bac_count_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 4);
+    
+    int htof_pattern_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 5);
+    int htof_count_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 6);
+
+    int kvc_pattern_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 7);
+    int kvc_count_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 8);
+    
+    hptr_array[bh2_pattern_id]->Reset();
+    hptr_array[bac_pattern_id]->Reset();
+    hptr_array[htof_pattern_id]->Reset();
+    hptr_array[kvc_pattern_id]->Reset();
+
+    //BH2
+    if (bh2_hit_seg.size() > 0){
+      for(int i=0;i<bh2_hit_seg.size();i++){
+	int bh2_seg = bh2_hit_seg[i]+1;
+	hptr_array[bh2_pattern_id]->SetBinContent(bh2_seg,100.);
+	double bin = hptr_array[bh2_count_id]->GetBinContent(bh2_seg);
+	hptr_array[bh2_count_id]->SetBinContent(bh2_seg, bin+1);
+      }
+    }
+    //BAC
+    if (do_hit_bac){
+      hptr_array[bac_pattern_id]->SetBinContent(1,100.);
+      double bin = hptr_array[bac_count_id]->GetBinContent(1);
+      hptr_array[bac_count_id]->SetBinContent(1, bin+1);
+    }
+
+    //HTOF
+    if(htof_hit_seg.size() > 0){
+      for(int i=0;i<htof_hit_seg.size();i++){
+	int htof_seg = htof_hit_seg[i]+1;
+	hptr_array[htof_pattern_id]->SetBinContent(htof_seg, 100.);
+	double bin = hptr_array[htof_count_id]->GetBinContent(htof_seg);
+	hptr_array[htof_count_id]->SetBinContent(htof_seg, bin+1);
+      }
+    }
+    //KVC
+    if (kvc_hit_seg.size() > 0){
+      for(int i=0;i<kvc_hit_seg.size();i++){
+	int kvc_seg = kvc_hit_seg[i]+1;
+	hptr_array[kvc_pattern_id]->SetBinContent(kvc_seg,100.);
+	double bin = hptr_array[kvc_count_id]->GetBinContent(kvc_seg);
+	hptr_array[kvc_count_id]->SetBinContent(kvc_seg, bin+1);
+      }
+    }
+
+  }
+  
 
   //update
   if(gUnpacker.get_counter()%100 == 0){

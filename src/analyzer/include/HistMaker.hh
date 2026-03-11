@@ -26,7 +26,7 @@ enum DetectorType {
   kBVH, kBVH2, kT1, kT2, kSFV,
   kTPC, kPede,
   kQDC, kQDC1, kQDC2, //37
-  kTriggerFlag, kDAQ, kCorrelation, kMisc,
+  kTriggerFlag, kDAQ, kCorrelation, kMisc, kEventDisplay,
   kTimeStamp, kDCEff,kAna, 
   kHRTDC1,kHRTDC2,kHRTDC3, kHRTDC4,kHRTDC5,kHRTDC6, 
   kMHTDC,
@@ -49,6 +49,7 @@ enum DataType{
   // Usual data type
   kADC,   kTDC,   kHitPat,   kMulti, //4
   kADC2D, kTDC2D, kHitPat2D, kMulti2D, //8
+  kHitPoly, 
   kADCwTDC, kFADC, kTOT, //11
   kDeltaE, kCTime, kDeltaE2D, kCTime2D, //15
   kResetL, kResetT, //17
@@ -145,6 +146,7 @@ public:
   TList* createTPC( Bool_t flag_ps=true);
   TList* createBTOF( Bool_t flag_ps=true);
   TList* createCorrelation(bool flag_ps=true);
+  TList* createEventDisplay(bool flag_ps=true);
 
   TList* createBcOutTracking(bool flag_ps=true);  
 
