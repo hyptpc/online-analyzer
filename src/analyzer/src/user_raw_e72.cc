@@ -55,7 +55,7 @@ std::vector<TH1*> hptr_array;
 HistMaker&   gHist = HistMaker::getInstance();
 HttpServer&    gHttp = HttpServer::GetInstance();
 const auto& gUser     = UserParamMan::GetInstance();
-const auto& gTpcPad = TpcPadHelper::GetInstance();
+//auto& gTpcPad = TpcPadHelper::GetInstance();
 
 TText text;
 TText end;
@@ -111,7 +111,6 @@ process_begin( const std::vector<std::string>& argv )
   ConfMan::getInstance().initialize(argv);
   ConfMan::getInstance().initializeUserParamMan();
   ConfMan::getInstance().initializeHodoParamMan();
-  ConfMan::getInstance().initializeTpcPadHelper();
   // gROOT->SetBatch(kTRUE);
   gStyle->SetOptStat(1110);
   gStyle->SetTitleW(.4);
@@ -162,6 +161,9 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(gHist.createBLDC(kBLC2a,"BLC2a",8,32,true));
   gHttp.Register(gHist.createBLDC(kBLC2b,"BLC2b",8,32,true));
   
+  // TPC
+  //gHttp.Register(gHist.createTPC(true));
+
   // BTOF
   gHttp.Register(gHist.createBTOF(true));
   
@@ -221,10 +223,6 @@ process_begin( const std::vector<std::string>& argv )
       gHttp.Register(http::BLDCWIRE(chm[i],tmpstr,l,nwires[i],8,4), chm_name[i]);
     }
   }
-
-  //Beam profile - BLC
-  gHttp.Register(http::BLDCXYProf(kBLC2a,"BLC2a",0),"Profile");
-  gHttp.Register(http::BLDCXYProf(kBLC2b,"BLC2b",0),"Profile");
 
   //=== set directory ===//
   for( Int_t i=0, n=hptr_array.size(); i<n; ++i ){
@@ -321,7 +319,7 @@ process_event( void )
 	trigger_flag.set(seg);
       }
     }
-    //std::cout << trigger_flag << std::endl;
+    std::cout << trigger_flag << std::endl;
   }
 
   // if(trigger_flag[trigger::kSpillOnEnd] || trigger_flag[trigger::kSpillOffEnd])
@@ -938,6 +936,7 @@ process_event( void )
       }
     }
 
+
       //------------------------------------------------------------------
     // BTOF
     //------------------------------------------------------------------
@@ -1076,10 +1075,9 @@ process_event( void )
 
   gSystem->ProcessEvents();
 
-  //std::cout << "\a" << std::endl;
+  std::cout << "\a" << std::endl;
 
   return 0;
 }
 
 }
-
