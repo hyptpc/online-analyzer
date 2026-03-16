@@ -7,6 +7,7 @@
 #ifndef USER_PARAM_MAN_HH
 #define USER_PARAM_MAN_HH
 
+#include <TString.h>
 #include <string>
 #include <map>
 #include <vector>
@@ -36,8 +37,11 @@ public:
   bool    Initialize( void );
   bool    Initialize( const std::string& filename );
   bool    IsReady( void ) const { return m_is_ready; }
+  Bool_t   IsInRange(const std::string& key, Double_t val) const;
   int     GetSize( const std::string& key ) const;
   double  GetParameter( const std::string& key, std::size_t i=0 ) const;
+  double  Get(const TString& key, int i=0)const
+  {return GetParameter(std::string(key.Data()),i);}
   void    SetFileName( std::string& name ) { m_file_name=name; }
   void    Print( const std::string& arg="" ) const;
 };

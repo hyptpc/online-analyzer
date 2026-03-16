@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <TString.h>
+#include <map>
 
 const Int_t NumOfSegBHT = 63;
 const Int_t NumOfSegBH2 = 15;
@@ -80,6 +81,12 @@ const Int_t PlMaxBcOut       =  31;
 const Int_t PlOffsBc         = 100;
 const Int_t NumOfLayersBcIn   = PlMaxBcIn   - PlMinBcIn   + 1;
 const Int_t NumOfLayersBcOut  = PlMaxBcOut  - PlMinBcOut  + 1;
+
+inline const std::map<TString, std::vector<TString>> DCNameList =
+{
+  {"BcIn", { "BLC1a", "BLC1b" }},
+  {"BcOut", { "BLC2a", "BLC2b" }},
+};
 
 
 namespace trigger

@@ -13,7 +13,7 @@
 #pragma link C++ enum DataType;
 #pragma link C++ class DCGeomRecord;
 #pragma link C++ class DCLocalTrack;
-#pragma link C++ class DLTrackHit;
+//#pragma link C++ class DLTrackHit;
 #pragma link C++ class HistMaker;
 #pragma link C++ class HttpServer;
 #pragma link C++ class debug::ObjectCounter;

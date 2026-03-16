@@ -1,268 +1,292 @@
-/**
- *  file: DCLocalTrack.cc
- *  date: 2017.04.10
- *
- */
-
+// -*- C++ -*-
 #include "DCLocalTrack.hh"
 
+#include <cmath>
+#include <cstring>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <cmath>
-#include <iostream>
-#include <iomanip>
-#include <cstring>
-#include <stdexcept>
-#include <sstream>
 
-#include <std_ostream.hh>
+#include <TString.h>
 
 #include "DCAnalyzer.hh"
 #include "DCLTrackHit.hh"
 #include "DCGeomMan.hh"
+#include "DebugCounter.hh"
 #include "DetectorID.hh"
+#include "FuncName.hh"
 #include "MathTools.hh"
 #include "PrintHelper.hh"
+#include "HodoParamMan.hh"
+#include "UserParamMan.hh"
+
+#define DEBUG 0
 
 namespace
 {
-  const std::string& class_name("DCLocalTrack");
-  const DCGeomMan& gGeom = DCGeomMan::GetInstance();
-
-  const int ReservedNumOfHits  = 16;
-  const int DCLocalMinNHits    =  4;
-  const int MaxIteration       = 100;// for Honeycomb
-  const double MaxChisqrDiff   = 1.0e-3;
+const auto& gUser = UserParamMan::GetInstance();
+const auto& gGeom = DCGeomMan::GetInstance();
+const auto& gHodo = HodoParamMan::GetInstance();
+const Double_t& zK18tgt = gGeom.LocalZ("K18Target");
+const Double_t& zTgt    = gGeom.LocalZ("Target");
+const Int_t ReservedNumOfHits  = 16;
+const Int_t DCLocalMinNHits    =  4;
+const Int_t DCLocalMinNHitsVXU =  2;// for SSD
+const Int_t MaxIteration       = 100;// for Honeycomb
+const Double_t MaxChisqrDiff   = 1.0e-3;
 }
 
-//______________________________________________________________________________
-DCLocalTrack::DCLocalTrack( void )
+//_____________________________________________________________________________
+DCLocalTrack::DCLocalTrack()
   : m_is_fitted(false),
     m_is_calculated(false),
-    m_Ax(0.), m_Ay(0.), m_Au(0.), m_Av(0.),
-    m_Chix(0.), m_Chiy(0.), m_Chiu(0.), m_Chiv(0.),
-    m_x0(0.), m_y0(0.),
-    m_u0(0.), m_v0(0.),
-    m_a(0.),  m_b(0.),
-    m_chisqr(1.e+10),
+    m_Ax(0.),
+    m_Ay(0.),
+    m_Au(0.),
+    m_Av(0.),
+    m_Chix(0.),
+    m_Chiy(0.),
+    m_Chiu(0.),
+    m_Chiv(0.),
+    m_x0(0.),
+    m_y0(0.),
+    m_u0(0.),
+    m_v0(0.),
+    m_a(0.),
+    m_b(0.),
+    m_chisqr(1e+10),
     m_good_for_tracking(true),
-    m_chisqr1st(1.e+10),
+    m_de(0.),
+    m_chisqr1st(1e+10),
     m_n_iteration(0)
 {
-  m_hit_array.reserve( ReservedNumOfHits );
-  debug::ObjectCounter::increase(class_name);
+  m_hit_array.reserve(ReservedNumOfHits);
+  m_hit_arrayUV.reserve(ReservedNumOfHits);
+  debug::ObjectCounter::increase(ClassName().Data());
 }
 
-//______________________________________________________________________________
-DCLocalTrack::~DCLocalTrack( void )
+//_____________________________________________________________________________
+DCLocalTrack::~DCLocalTrack()
 {
-  debug::ObjectCounter::decrease(class_name);
+  debug::ObjectCounter::decrease(ClassName().Data());
 }
 
-//______________________________________________________________________________
+//_____________________________________________________________________________
 void
-DCLocalTrack::AddHit( DCLTrackHit *hitp )
+DCLocalTrack::AddHit(DCLTrackHit *hitp)
 {
-  if( hitp )
-    m_hit_array.push_back( hitp );
+  if(hitp) m_hit_array.push_back(hitp);
+}
+//_____________________________________________________________________________
+void
+DCLocalTrack::AddHitUV(DCLTrackHit *hitp)
+{
+  if(hitp) m_hit_arrayUV.push_back(hitp);
 }
 
-//______________________________________________________________________________
+//_____________________________________________________________________________
 void
-DCLocalTrack::Calculate( void )
+DCLocalTrack::Calculate()
 {
-  static const std::string func_name("["+class_name+"::"+__func__+"()]");
-
-  if( IsCalculated() ){
-    hddaq::cerr << "#W " << func_name << " "
-		<< "already called" << std::endl;
+  if(m_is_calculated){
+    std::cerr << "Warning: " << FUNC_NAME.Data() 
+              << " is already called" << std::endl;
     return;
   }
 
-  const std::size_t n = m_hit_array.size();
-  for( std::size_t i=0; i<n; ++i ){
-    DCLTrackHit *hitp = m_hit_array[i];
-    double z0 = hitp->GetZ();
-    hitp->SetCalPosition( GetX(z0), GetY(z0) );
-    hitp->SetCalUV( m_u0, m_v0 );
-    // for Honeycomb
-    if( !hitp->IsHoneycomb() )
-      continue;
-    double scal = hitp->GetLocalCalPos();
-    double wp   = hitp->GetWirePosition();
-    double dl   = hitp->GetDriftLength();
-    double ss   = scal-wp>0 ? wp+dl : wp-dl;
-    hitp->SetLocalHitPos( ss );
+  for(auto& hit: m_hit_array){
+    Double_t z0 = hit->GetZ();
+    hit->SetCalPosition(GetX(z0), GetY(z0));
+    hit->SetCalUV(m_u0, m_v0);
+    if(hit->IsHoneycomb()){
+      Double_t scal = hit->GetLocalCalPos();
+      Double_t wp   = hit->GetWirePosition();
+      Double_t dl   = hit->DriftLength();
+      Double_t ss   = scal-wp>0 ? wp+dl : wp-dl;
+      hit->SetLocalHitPos(ss);
+    }
   }
+
   m_is_calculated = true;
 }
 
-//______________________________________________________________________________
-int
-DCLocalTrack::GetNDF( void ) const
+//_____________________________________________________________________________
+Int_t
+DCLocalTrack::GetNDF() const
 {
-  static const std::string func_name("["+class_name+"::"+__func__+"()]");
-
-  const std::size_t n = m_hit_array.size();
-  int ndf = 0;
-  for( std::size_t i=0; i<n; ++i ){
-    if( m_hit_array[i] ) ++ndf;
+  const Int_t n = (Int_t)m_hit_array.size();
+  Int_t ndf = 0;
+  for(Int_t i=0; i<n; ++i){
+    if(m_hit_array[i]) ++ndf;
   }
   return ndf-4;
 }
 
-//______________________________________________________________________________
-DCLTrackHit*
-DCLocalTrack::GetHit( std::size_t nth ) const
+//_____________________________________________________________________________
+Int_t
+DCLocalTrack::GetNHitY() const
 {
-  static const std::string func_name("["+class_name+"::"+__func__+"()]");
+  Int_t n_y=0;
+  for(const auto& hit : m_hit_array){
+    if(hit->GetTiltAngle() > 1) ++n_y;
+  }
 
-  if( nth<m_hit_array.size() )
+  return n_y;
+}
+
+//_____________________________________________________________________________
+DCLTrackHit*
+DCLocalTrack::GetHit(Int_t nth) const
+{
+  if(nth < (Int_t)m_hit_array.size())
     return m_hit_array[nth];
   else
     return 0;
 }
 
-//______________________________________________________________________________
+//_____________________________________________________________________________
 DCLTrackHit*
-DCLocalTrack::GetHitOfLayerNumber( int lnum ) const
+DCLocalTrack::GetHitUV(Int_t nth) const
 {
-  static const std::string func_name("["+class_name+"::"+__func__+"()]");
+  if(nth < (Int_t)m_hit_arrayUV.size())
+    return m_hit_arrayUV[nth];
+  else
+    return 0;
+}
 
-  const std::size_t n = m_hit_array.size();
-  for( std::size_t i=0; i<n; ++i ){
-    if( m_hit_array[i]->GetLayer()==lnum )
+//_____________________________________________________________________________
+DCLTrackHit*
+DCLocalTrack::GetHitOfLayerNumber(Int_t lnum) const
+{
+  const Int_t n = m_hit_array.size();
+  for(Int_t i=0; i<n; ++i){
+    if(m_hit_array[i]->GetLayer()==lnum)
       return m_hit_array[i];
   }
   return 0;
 }
 
-//______________________________________________________________________________
+//_____________________________________________________________________________
 void
-DCLocalTrack::DeleteNullHit( void )
+DCLocalTrack::DeleteNullHit()
 {
-  static const std::string func_name("["+class_name+"::"+__func__+"()]");
-
-  for( std::size_t i=0; i<m_hit_array.size(); ++i ){
+  for(Int_t i=0; i<(Int_t)m_hit_array.size(); ++i){
     DCLTrackHit *hitp = m_hit_array[i];
-    if( !hitp ){
-      hddaq::cout << func_name << " "
-		  << "null hit is deleted" << std::endl;
-      m_hit_array.erase( m_hit_array.begin()+i );
+    if(!hitp){
+      std::cerr << "Warning: " << FUNC_NAME.Data() 
+              << " null hit is deleted" << std::endl;
+      m_hit_array.erase(m_hit_array.begin()+i);
       --i;
     }
   }
 }
 
-//______________________________________________________________________________
-bool
-DCLocalTrack::DoFit( void )
+//_____________________________________________________________________________
+Bool_t
+DCLocalTrack::DoFit()
 {
-  static const std::string func_name("["+class_name+"::"+__func__+"()]");
-
-  if( IsFitted() ){
-    hddaq::cerr << "#W " << func_name << " "
-		<< "already called" << std::endl;
+  if(m_is_fitted){
+    std::cerr << "Warning: " << FUNC_NAME.Data() 
+              << " is already called" << std::endl;
     return false;
   }
+
 
   DeleteNullHit();
 
-  const std::size_t n = m_hit_array.size();
-  if( n < DCLocalMinNHits ){
-    hddaq::cout << "#D " << func_name << " "
-		<< "the number of layers is too small : " << n << std::endl;
+  const Int_t n = m_hit_array.size();
+  if(n < DCLocalMinNHits){
+    std::cerr << "Warning: " << FUNC_NAME.Data() 
+              << " the number of layers is too small : "
+	      << n << std::endl;
     return false;
   }
 
-  const int nItr = HasHoneycomb() ? MaxIteration : 1;
+  const Int_t nItr = HasHoneycomb() ? MaxIteration : 1;
 
-  double prev_chisqr = m_chisqr;
-  std::vector <double> z0(n), z(n), wp(n),
+  Double_t prev_chisqr = m_chisqr;
+  std::vector <Double_t> z0(n), z(n), wp(n),
     w(n), s(n), ct(n), st(n), coss(n);
-  std::vector<bool> honeycomb(n);
-  for( int iItr=0; iItr<nItr; ++iItr ){
-    for( std::size_t i=0; i<n; ++i ){
+  std::vector<Bool_t> honeycomb(n);
+  for(Int_t iItr=0; iItr<nItr; ++iItr){
+    for(Int_t i=0; i<n; ++i){
       DCLTrackHit *hitp = m_hit_array[i];
-      int    lnum = hitp->GetLayer();
+      Int_t    lnum = hitp->GetLayer();
       honeycomb[i] = hitp->IsHoneycomb();
       wp[i] = hitp->GetWirePosition();
       z0[i] = hitp->GetZ();
-      double ww = gGeom.GetResolution( lnum );
+      Double_t ww = gGeom.GetResolution(lnum);
       w[i] = 1./(ww*ww);
-      double aa = hitp->GetTiltAngle()*math::Deg2Rad();
-      ct[i] = std::cos(aa); st[i] = std::sin(aa);
-      double ss = hitp->GetLocalHitPos();
-      double dl = hitp->GetDriftLength();
-      double dsdz = m_u0*std::cos(aa)+m_v0*std::sin(aa);
-      double dcos = std::cos( std::atan(dsdz) );
+      Double_t aa = hitp->GetTiltAngle()*TMath::DegToRad();
+      ct[i] = TMath::Cos(aa); st[i] = TMath::Sin(aa);
+      Double_t ss = hitp->GetLocalHitPos();
+      Double_t dl = hitp->DriftLength();
+      Double_t dsdz = m_u0*TMath::Cos(aa)+m_v0*TMath::Sin(aa);
+      Double_t dcos = TMath::Cos(TMath::ATan(dsdz));
       coss[i] = dcos;
-      double dsin = std::sin( std::atan(dsdz) );
-      double ds = dl * dcos;
-      double dz = dl * dsin;
-      double scal = iItr==0 ? ss : GetS(z[i],aa);
-      if( honeycomb[i] ){
-	s[i] = scal-wp[i]>0 ? wp[i]+ds : wp[i]-ds;
-	z[i] = scal-wp[i]>0 ? z0[i]-dz : z0[i]+dz;
+      Double_t dsin = TMath::Sin(TMath::ATan(dsdz));
+      Double_t ds = dl * dcos;
+      Double_t dz = dl * dsin;
+      Double_t scal = iItr==0 ? ss : GetS(z[i],aa);
+      if(honeycomb[i]){
+        s[i] = scal-wp[i]>0 ? wp[i]+ds : wp[i]-ds;
+        z[i] = scal-wp[i]>0 ? z0[i]-dz : z0[i]+dz;
       }else{
-	s[i] = ss;
-	z[i] = z0[i];
+        s[i] = ss;
+        z[i] = z0[i];
       }
     }
 
-    double x0, u0, y0, v0;
-    if( !math::SolveGaussJordan( z, w, s, ct, st,
-				 x0, u0, y0, v0 ) ){
-      hddaq::cerr << func_name << " Fitting failed" << std::endl;
+    Double_t x0, u0, y0, v0;
+    if(!math::SolveGaussJordan(z, w, s, ct, st,
+    //if(math::SolveGaussJordan(z, w, s, ct, st,
+                                    x0, u0, y0, v0)){
+      std::ostringstream oss; oss << FUNC_NAME << " Fitting failed.";
+      std::cerr << "Warning: " << oss.str() << std::endl;
       return false;
     }
 
-    double chisqr = 0.;
-    double de     = 0.;
-    for( std::size_t i=0; i<n; ++i ){
-      double scal = (x0+u0*z0[i])*ct[i]+(y0+v0*z0[i])*st[i];
-      double ss   = wp[i]+(s[i]-wp[i])/coss[i];
-      double res  = honeycomb[i] ? (ss-scal)*coss[i] : s[i]-scal;
+    Double_t chisqr = 0.;
+    Double_t de     = 0.;
+    for(Int_t i=0; i<n; ++i){
+      Double_t scal = (x0+u0*z0[i])*ct[i]+(y0+v0*z0[i])*st[i];
+      Double_t ss   = wp[i]+(s[i]-wp[i])/coss[i];
+      Double_t res  = honeycomb[i] ? (ss-scal)*coss[i] : s[i]-scal;
       chisqr += w[i]*res*res;
     }
     chisqr /= GetNDF();
 
-    /* for SSD */
-    if( n==4 ){
-      chisqr = 0.;
-      for( std::size_t i=0; i<n; ++i ){
-	DCLTrackHit *hitp = m_hit_array[i];
-	if( !hitp ) continue;
-	chisqr += hitp->GetChisquare();
-	de     += hitp->GetDe();
-      }
-      chisqr /= 4;
-    }
-
-    if( iItr==0 )
-      m_chisqr1st = chisqr;
+    if(iItr==0) m_chisqr1st = chisqr;
 
     // if worse, not update
-    if( prev_chisqr-chisqr>0. ){
+    if(prev_chisqr-chisqr>0.){
       m_x0 = x0;
       m_y0 = y0;
       m_u0 = u0;
       m_v0 = v0;
       m_chisqr = chisqr;
+      m_de     = de;
     }
 
     // judge convergence
-    if( prev_chisqr-chisqr<MaxChisqrDiff ){
-#if 0
-      // if( chisqr<200. && GetTheta()>4. )
-      if( chisqr<20. )
+    if(prev_chisqr-chisqr<MaxChisqrDiff){
+#if 1
+      // if(chisqr<200. && GetTheta()>4.)
+      // if(chisqr<20.)
+      if(true)
       {
-	if( iItr==0 ) hddaq::cout << "=============" << std::endl;
-	hddaq::cout << func_name << " NIteration : " << iItr << " "
-		    << "chisqr = " << std::setw(10) << std::setprecision(4)
-		    << m_chisqr << " "
-		    << "diff = " << std::setw(20) << std::left
-		    << m_chisqr-m_chisqr1st << " ndf = " << GetNDF() << std::endl;
+        if(iItr==0) hddaq::cout << "=============" << std::endl;
+#if DEBUG
+	std::cout << FUNC_NAME.Data()
+          << " NIteration : " << iItr
+          << " chisqr = " << m_chisqr
+          << " diff = " << (m_chisqr - m_chisqr1st)
+          << " ndf = " << GetNDF()
+          << std::endl;
+#endif
       }
 #endif
       m_n_iteration = iItr;
@@ -276,29 +300,27 @@ DCLocalTrack::DoFit( void )
   return true;
 }
 
-//______________________________________________________________________________
-bool
-DCLocalTrack::DoFitVXU( void )
+//_____________________________________________________________________________
+Bool_t
+DCLocalTrack::DoFitVXU()
 {
-  static const std::string func_name("["+class_name+"::"+__func__+"()]");
-
-  if( IsFitted() ){
-    hddaq::cerr << "#W " << func_name << " "
+  if(m_is_fitted){
+    hddaq::cerr << FUNC_NAME << " "
 		<< "already called" << std::endl;
     return false;
   }
 
   DeleteNullHit();
 
-  const std::size_t n = m_hit_array.size();
-  //  if( n<DCLocalMinNHitsVXU ) return false;
+  const Int_t n = m_hit_array.size();
+  if(n<DCLocalMinNHitsVXU) return false;
 
-  double w[n+1],z[n+1],x[n+1];
+  Double_t w[n+1],z[n+1],x[n+1];
 
-  for( std::size_t i=0; i<n; ++i ){
+  for(Int_t i=0; i<n; ++i){
     DCLTrackHit *hitp = m_hit_array[i];
-    int lnum = hitp->GetLayer();
-    w[i] = gGeom.GetResolution( lnum );
+    Int_t lnum = hitp->GetLayer();
+    w[i] = gGeom.GetResolution(lnum);
     z[i] = hitp->GetZ();
     x[i] = hitp->GetLocalHitPos();
 #if 0
@@ -315,8 +337,8 @@ DCLocalTrack::DoFitVXU( void )
 #endif
   }
 
-  double A=0, B=0, C=0, D=0, E=0;// <-Add!!
-  for( std::size_t i=0; i<n; ++i ){
+  Double_t A=0, B=0, C=0, D=0, E=0;// <-Add!!
+  for(Int_t i=0; i<n; ++i){
     A += z[i]/(w[i]*w[i]);
     B += 1/(w[i]*w[i]);
     C += x[i]/(w[i]*w[i]);
@@ -327,8 +349,8 @@ DCLocalTrack::DoFitVXU( void )
   m_a = (E*B-C*A)/(D*B-A*A);
   m_b = (D*C-E*A)/(D*B-A*A);
 
-  double chisqr = 0.;
-  for( std::size_t i=0; i<n; ++i ){
+  Double_t chisqr = 0.;
+  for(Int_t i=0; i<n; ++i){
     chisqr += (x[i]-m_a*z[i]-m_b)*(x[i]-m_a*z[i]-m_b)/(w[i]*w[i]);
   }
 
@@ -336,11 +358,11 @@ DCLocalTrack::DoFitVXU( void )
   else     chisqr /= n-2.;
   m_chisqr = chisqr;
 
-  for( std::size_t i=0; i<n; ++i ){
+  for(Int_t i=0; i<n; ++i){
     DCLTrackHit *hitp = m_hit_array[i];
-    if( hitp ){
-      double zz = hitp->GetZ();
-      hitp->SetLocalCalPosVXU( m_a*zz+m_b );
+    if(hitp){
+      Double_t zz = hitp->GetZ();
+      hitp->SetLocalCalPosVXU(m_a*zz+m_b);
     }
   }
 
@@ -348,179 +370,164 @@ DCLocalTrack::DoFitVXU( void )
   return true;
 }
 
-//______________________________________________________________________________
-bool
-DCLocalTrack::FindLayer( int layer ) const
+//_____________________________________________________________________________
+Bool_t
+DCLocalTrack::FindLayer(Int_t layer) const
 {
-  const std::size_t n = m_hit_array.size();
-  for( std::size_t i=0; i<n; ++i ){
+  const Int_t n = m_hit_array.size();
+  for(Int_t i=0; i<n; ++i){
     DCLTrackHit *hitp = m_hit_array[i];
-    if( !hitp )
+    if(!hitp)
       continue;
-    if( layer == hitp->GetLayer() )
+    if(layer == hitp->GetLayer())
       return true;
   }
   return false;
 }
 
-//______________________________________________________________________________
-double
-DCLocalTrack::GetWire( int layer ) const
+//_____________________________________________________________________________
+Double_t
+DCLocalTrack::GetWire(Int_t layer) const
 {
-  const std::size_t n = m_hit_array.size();
-  for( std::size_t i=0; i<n; ++i ){
+  const Int_t n = m_hit_array.size();
+  for(Int_t i=0; i<n; ++i){
     DCLTrackHit *hitp = m_hit_array[i];
-    if( !hitp )
-      continue;
-    if( layer == hitp->GetLayer() )
-      return hitp->GetWire();
+    if(!hitp) continue;
+    if(layer == hitp->GetLayer()) return hitp->GetWire();
   }
-  return math::nan();
+  return TMath::QuietNaN();
 }
 
-//______________________________________________________________________________
-double
-DCLocalTrack::GetDifVXU( void ) const
+//_____________________________________________________________________________
+Double_t
+DCLocalTrack::GetDifVXU() const
 {
-  static const double Cu = cos(  15.*math::Deg2Rad() );
-  static const double Cv = cos( -15.*math::Deg2Rad() );
-  static const double Cx = cos(   0.*math::Deg2Rad() );
+  static const Double_t Cu = TMath::Cos( 15.*TMath::DegToRad());
+  static const Double_t Cv = TMath::Cos(-15.*TMath::DegToRad());
+  static const Double_t Cx = TMath::Cos(  0.*TMath::DegToRad());
 
   return
-    pow( m_Av/Cv - m_Ax/Cx, 2 ) +
-    pow( m_Ax/Cx - m_Au/Cu, 2 ) +
-    pow( m_Au/Cu - m_Av/Cv, 2 );
+    pow(m_Av/Cv - m_Ax/Cx, 2) +
+    pow(m_Ax/Cx - m_Au/Cu, 2) +
+    pow(m_Au/Cu - m_Av/Cv, 2);
 }
 
-//______________________________________________________________________________
-double
-DCLocalTrack::GetDifVXUSDC34( void ) const
+//_____________________________________________________________________________
+Double_t
+DCLocalTrack::GetPhi() const
 {
-  static const double Cu = cos(  30.*math::Deg2Rad() );
-  static const double Cv = cos( -30.*math::Deg2Rad() );
-  static const double Cx = cos(   0.*math::Deg2Rad() );
-
-  return
-    pow( m_Av/Cv - m_Ax/Cx, 2 ) +
-    pow( m_Ax/Cx - m_Au/Cu, 2 ) +
-    pow( m_Au/Cu - m_Av/Cv, 2 );
+  return TMath::ATan2(m_u0, m_v0);
 }
 
-//______________________________________________________________________________
-double
-DCLocalTrack::GetTheta( void ) const
+//_____________________________________________________________________________
+Double_t
+DCLocalTrack::GetTheta() const
 {
-  double cost = 1./std::sqrt(1.+m_u0*m_u0+m_v0*m_v0);
-  return std::acos(cost)*math::Rad2Deg();
+  Double_t cost = 1./TMath::Sqrt(1.+m_u0*m_u0+m_v0*m_v0);
+  return TMath::ACos(cost)*TMath::RadToDeg();
 }
 
-//______________________________________________________________________________
-bool
-DCLocalTrack::HasHoneycomb( void ) const
+//_____________________________________________________________________________
+Bool_t
+DCLocalTrack::HasHoneycomb() const
 {
-  for( std::size_t i=0, n = m_hit_array.size(); i<n; ++i ){
+  for(Int_t i=0, n = m_hit_array.size(); i<n; ++i){
     DCLTrackHit *hitp = m_hit_array[i];
-    if( !hitp ) continue;
-    if( hitp->IsHoneycomb() ) return true;
+    if(!hitp) continue;
+    if(hitp->IsHoneycomb()) return true;
   }
   return false;
 }
 
-//______________________________________________________________________________
-bool
-DCLocalTrack::ReCalc( bool applyRecursively )
+//_____________________________________________________________________________
+Bool_t
+DCLocalTrack::ReCalc(Bool_t applyRecursively)
 {
-  static const std::string func_name("["+class_name+"::"+__func__+"()]");
-
-  std::size_t n = m_hit_array.size();
-  for( std::size_t i=0; i<n; ++i ){
+  Int_t n = m_hit_array.size();
+  for(Int_t i=0; i<n; ++i){
     DCLTrackHit *hitp = m_hit_array[i];
-    if( hitp ) hitp->ReCalc( applyRecursively );
+    if(hitp) hitp->ReCalc(applyRecursively);
   }
 
-  bool status = DoFit();
-  if( !status ){
-    hddaq::cerr << "#W " << func_name << " "
+  Bool_t status = DoFit();
+  if(!status){
+    hddaq::cerr << FUNC_NAME << " "
 		<< "Recalculation fails" << std::endl;
   }
 
   return status;
 }
 
-//______________________________________________________________________________
+//_____________________________________________________________________________
 void
-DCLocalTrack::Print( const std::string& arg, std::ostream& ost ) const
+DCLocalTrack::Print(const TString& arg) const
 {
-  static const std::string func_name("["+class_name+"::"+__func__+"()]");
+  //if(SPDLOG_ACTIVE_LEVEL > spdlog::level::debug) return;
+  std::ostringstream oss;
+  PrintHelper helper(3, std::ios::fixed, oss);
 
-  PrintHelper helper( 3, std::ios::fixed, ost );
-
-  const int w = 8;
-  ost << func_name << " " << arg << std::endl
-      << " X0 : " << std::setw(w) << std::left << m_x0
+  const Int_t w = 8;
+  oss << FUNC_NAME << " " << arg << " chisqr=" << m_chisqr << std::endl;
+  oss << " X0 : " << std::setw(w) << std::left << m_x0
+      << " U0 : " << std::setw(w) << std::left << m_u0 << std::endl
       << " Y0 : " << std::setw(w) << std::left << m_y0
-      << " U0 : " << std::setw(w) << std::left << m_u0
-      << " V0 : " << std::setw(w) << std::left << m_v0;
-  helper.setf( std::ios::scientific );
-  ost << " Chisqr : " << std::setw(w) << m_chisqr << std::endl;
-  helper.setf( std::ios::fixed );
-  const std::size_t n = m_hit_array.size();
-  for( std::size_t i=0; i<n; ++i ){
+      << " V0 : " << std::setw(w) << std::left << m_v0 << std::endl;
+
+  const Int_t n = (Int_t)m_hit_array.size();
+  for(Int_t i=0; i<n; ++i){
     DCLTrackHit *hitp = m_hit_array[i];
-    if( !hitp ) continue;
-    int lnum = hitp->GetLayer();
-    double zz = hitp->GetZ();
-    double s  = hitp->GetLocalHitPos();
-    double res = hitp->GetResidual();
-    // double aa = hitp->GetTiltAngle()*math::Deg2Rad();
-    // double scal=GetX(zz)*cos(aa)+GetY(zz)*sin(aa);
-    const std::string& h = hitp->IsHoneycomb() ? "+" : "-";
-    ost << "[" << std::setw(2) << i << "]"
-	<< " #"  << std::setw(2) << lnum << h
-	<< " S " << std::setw(w) << s
-	<< " ( " << std::setw(w) << GetX(zz)
-	<< ", "  << std::setw(w) << GetY(zz)
-	<< ", "  << std::setw(w) << zz
-	<< " )"
-	<< " " << std::setw(w) << s
-	<< " -> " << std::setw(w) << res << std::endl;
-	// << " -> " << std::setw(w) << s-scal << std::endl;
+    if(!hitp) continue;
+    Int_t    lnum = hitp->GetLayer();
+    Double_t zz   = hitp->GetZ();
+    Double_t s    = hitp->GetLocalHitPos();
+    Double_t res  = hitp->GetResidual();
+    Double_t aa   = hitp->GetTiltAngle();
+    Double_t tilt = aa * TMath::DegToRad();
+    Double_t scal = GetX(zz)*TMath::Cos(tilt)+GetY(zz)*TMath::Sin(tilt);
+    TString  h    = hitp->IsHoneycomb() ? "+" : "-";
+
+    oss << "[" << std::setw(2) << i << "] L#" << std::setw(2) << lnum << h
+        << " | Hit:" << std::setw(w) << s
+        << " | Trk:" << std::setw(w) << scal
+        << " | Res:" << std::setw(w) << res << std::endl;
+    oss << "        | Tilt:" << std::setw(w) << aa
+        << " | Pos:("  << std::setw(w) << GetX(zz)
+        << "," << std::setw(w) << GetY(zz)
+        << "," << std::setw(w) << zz << ")" << std::endl;
   }
-  ost << std::endl;
+  std::cerr << oss.str() << std::endl;
 }
 
-//______________________________________________________________________________
+//_____________________________________________________________________________
 void
-DCLocalTrack::PrintVXU( const std::string& arg ) const
+DCLocalTrack::PrintVXU(const TString& arg) const
 {
-  static const std::string func_name("["+class_name+"::"+__func__+"()]");
+  PrintHelper helper(3, std::ios::fixed);
 
-  PrintHelper helper( 3, std::ios::fixed );
-
-  const int w = 10;
-  hddaq::cout << func_name << " " << arg << std::endl
+  const Int_t w = 10;
+  hddaq::cout << FUNC_NAME << " " << arg << std::endl
 	      << "(Local X = A*z + B) "
 	      << " A : " << std::setw(w) << m_a
 	      << " B : " << std::setw(w) << m_b;
-  helper.setf( std::ios::scientific );
+  helper.setf(std::ios::scientific);
   hddaq::cout << " Chisqr : " << std::setw(w) << m_chisqr << std::endl;
-  helper.setf( std::ios::fixed );
+  helper.setf(std::ios::fixed);
 
-  const std::size_t n = m_hit_array.size();
-  for( std::size_t i=0; i<n; ++i ){
+  const Int_t n = m_hit_array.size();
+  for(Int_t i=0; i<n; ++i){
     const DCLTrackHit * const hitp = m_hit_array[i];
-    if( !hitp ) continue;
-    int    lnum = hitp->GetLayer();
-    double zz   = hitp->GetZ();
-    double s    = hitp->GetLocalHitPos();
-    double res  = hitp->GetResidualVXU();
-    const std::string& h = hitp->IsHoneycomb() ? "+" : "-";
+    if(!hitp) continue;
+    Int_t    lnum = hitp->GetLayer();
+    Double_t zz   = hitp->GetZ();
+    Double_t s    = hitp->GetLocalHitPos();
+    Double_t res  = hitp->GetResidualVXU();
+    const TString& h = hitp->IsHoneycomb() ? "+" : "-";
     hddaq::cout << "[" << std::setw(2) << i << "] "
 		<< " #"  << std::setw(2) << lnum << h
 		<< " S " << std::setw(w) << s
-		<< " ( " << std::setw(w) << (m_a*zz+m_b)
+		<< " (" << std::setw(w) << (m_a*zz+m_b)
 		<< ", "  << std::setw(w) << zz
-		<< " )"
+		<< ")"
 		<< " " << std::setw(w) << s
 		<< " -> " << std::setw(w) << res << std::endl;
   }

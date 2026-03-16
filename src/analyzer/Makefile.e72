@@ -1,14 +1,3 @@
-# makefiles := $(shell ls *.mk)
-
-# all::
-# 	@ for i in $(makefiles); \
-# 	do \
-# 		$(MAKE) -k -f $$i; \
-# 	done;
-
-
-#include analyzer.mk
-
 my_name = analyzer
 my_dir  = $(src_top_dir)/$(my_name)
 
@@ -38,9 +27,6 @@ core_dict_lib	= $(core_dict_pcm:$(my_dir)/dict/%=$(lib_dir)/%)
 core_lib	= $(core_dict_src:$(my_dir)/dict/%_Dict.cc=$(lib_dir)/lib%.so)
 
 #_______________________________________________________________________________
-my_obj_skeleton	:= $(core_obj) user_skeleton.o
-my_tgt_skeleton	:= $(bin_dir)/skeleton
-
 my_obj_rm	:= $(core_obj) user_rm_e72.o
 my_tgt_rm	:= $(bin_dir)/rm
 
@@ -59,18 +45,6 @@ my_tgt_http_server_raw	:= $(bin_dir)/http_server_raw
 my_obj_http_server_sdd	:= $(core_obj) user_http_server_sdd.o
 my_tgt_http_server_sdd	:= $(bin_dir)/http_server_sdd
 
-my_obj_raw	:= $(core_obj) user_raw_e73.o
-my_tgt_raw	:= $(bin_dir)/raw
-
-my_obj_cds	:= $(core_obj) user_cds.o
-my_tgt_cds	:= $(bin_dir)/cds
-
-my_obj_sdd	:= $(core_obj) user_sdd.o
-my_tgt_sdd	:= $(bin_dir)/sdd
-
-my_obj_bpc	:= $(core_obj) user_bpc.o
-my_tgt_bpc	:= $(bin_dir)/bpc
-
 my_obj_scaler	:= $(core_obj) user_scaler_e72.o
 my_tgt_scaler	:= $(bin_dir)/scaler
 
@@ -81,33 +55,18 @@ my_tgt_e72	:= $(bin_dir)/e72
 my_obj_tpc	:= $(core_obj) user_raw_e72_wtpc.o
 my_tgt_tpc	:= $(bin_dir)/e72_tpc
 
-my_obj_fadc	:= $(core_obj) user_fadc.o
-my_tgt_fadc	:= $(bin_dir)/fadc
-
 my_obj_beam	:= $(core_obj) user_beam_e72.o
-my_tgt_beam	:= $(bin_dir)/beam
+my_tgt_beam	:= $(bin_dir)/e72_beam
 
-my_obj_tof	:= $(core_obj) user_tof.o
-my_tgt_tof	:= $(bin_dir)/tof
 #_______________________________________________________________________________
-all::	$(my_tgt_raw) \
-	$(my_tgt_rm) \
-	$(my_tgt_beam) \
+all::	$(my_tgt_rm) \
 	$(my_tgt_e72) \
-	$(my_tgt_tpc) \
+	$(my_tgt_beam) \
 	$(my_tgt_tag) \
 	$(my_tgt_scaler) \
 	$(my_tgt_udebug) \
+	$(my_tgt_tpc) \
 	$(core_dict_lib)
-#       $(my_tgt_http_server_sdd) \
-#	$(my_tgt_sdd) \
-#	$(my_tgt_cds) \
-$(my_tgt_skeleton) \
-#
-#	$(my_tgt_sdd) \
-#	$(my_tgt_beam) \
-#	$(my_tgt_tof) \
-#	$(my_tgt_scaler_e62) \
 
 beam::	$(my_tgt_beam)
 
@@ -195,60 +154,11 @@ $(eval $(call make-lib,$(my_lib_tpc),$(my_obj_tpc)))
 $(eval $(call make-nogui-target,$(my_tgt_tpc),$(my_lib_tpc)))
 
 #_______________________________________________________________________________
-my_obj_fadc	:= $(addprefix $(my_dir)/src/,$(my_obj_fadc))
-my_obj_fadc	:= $(my_obj_fadc)
-my_lib_fadc	:= libmyfadc.so
-$(eval $(call make-lib,$(my_lib_fadc),$(my_obj_fadc)))
-$(eval $(call make-nogui-target,$(my_tgt_fadc),$(my_lib_fadc)))
-
-#_______________________________________________________________________________
-my_obj_beam2	:= $(addprefix $(my_dir)/src/,$(my_obj_beam2))
-my_obj_beam2	:= $(my_obj_beam2)
-my_lib_beam2	:= libmybeam2.so
-$(eval $(call make-lib,$(my_lib_beam2),$(my_obj_beam2)))
-$(eval $(call make-nogui-target,$(my_tgt_beam2),$(my_lib_beam2)))
-
-#_______________________________________________________________________________
-my_obj_sdd	:= $(addprefix $(my_dir)/src/,$(my_obj_sdd))
-my_obj_sdd	:= $(my_obj_sdd)
-my_lib_sdd	:= libmysdd.so
-$(eval $(call make-lib,$(my_lib_sdd),$(my_obj_sdd)))
-$(eval $(call make-nogui-target,$(my_tgt_sdd),$(my_lib_sdd)))
-
-#_______________________________________________________________________________
-my_obj_cds	:= $(addprefix $(my_dir)/src/,$(my_obj_cds))
-my_obj_cds	:= $(my_obj_cds)
-my_lib_cds	:= libmycds.so
-$(eval $(call make-lib,$(my_lib_cds),$(my_obj_cds)))
-$(eval $(call make-nogui-target,$(my_tgt_cds),$(my_lib_cds)))
-
-#_______________________________________________________________________________
-my_obj_raw	:= $(addprefix $(my_dir)/src/,$(my_obj_raw))
-my_obj_raw	:= $(my_obj_raw)
-my_lib_raw	:= libmyraw.so
-$(eval $(call make-lib,$(my_lib_raw),$(my_obj_raw)))
-$(eval $(call make-nogui-target,$(my_tgt_raw),$(my_lib_raw)))
-
-#_______________________________________________________________________________
 my_obj_scaler	:= $(addprefix $(my_dir)/src/,$(my_obj_scaler))
 my_obj_scaler	:= $(my_obj_scaler)
 my_lib_scaler	:= libmyscaler.so
 $(eval $(call make-lib,$(my_lib_scaler),$(my_obj_scaler)))
 $(eval $(call make-nogui-target,$(my_tgt_scaler),$(my_lib_scaler)))
-
-#_______________________________________________________________________________
-my_obj_bpc	:= $(addprefix $(my_dir)/src/,$(my_obj_bpc))
-my_obj_bpc	:= $(my_obj_bpc)
-my_lib_bpc	:= libmybpc.so
-$(eval $(call make-lib,$(my_lib_bpc),$(my_obj_bpc)))
-$(eval $(call make-nogui-target,$(my_tgt_bpc),$(my_lib_bpc)))
-
-#_______________________________________________________________________________
-my_obj_tof	:= $(addprefix $(my_dir)/src/,$(my_obj_tof))
-my_obj_tof	:= $(my_obj_tof)
-my_lib_tof	:= libmytof.so
-$(eval $(call make-lib,$(my_lib_tof),$(my_obj_tof)))
-$(eval $(call make-nogui-target,$(my_tgt_tof),$(my_lib_tof)))
 
 #_______________________________________________________________________________
 my_obj_rm	:= $(addprefix $(my_dir)/src/,$(my_obj_rm))

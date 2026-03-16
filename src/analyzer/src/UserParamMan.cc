@@ -98,6 +98,13 @@ UserParamMan::Initialize( const std::string& filename )
 };
 
 //______________________________________________________________________________
+Bool_t
+UserParamMan::IsInRange(const std::string& key, Double_t val) const
+{
+  return GetParameter(key, 0) < val && val < GetParameter(key, 1);
+}
+
+//______________________________________________________________________________
 int
 UserParamMan::GetSize( const std::string& key ) const
 {

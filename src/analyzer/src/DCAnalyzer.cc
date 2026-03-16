@@ -1,32 +1,34 @@
-/**
- *  file: DCAnalyzer.cc
- *  date: 2017.04.10
- *
- */
-
+// -*- C++ -*-
 #include "DCAnalyzer.hh"
 
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
+#include <map>
 #include <set>
 #include <sstream>
-#include <stdexcept>
 #include <string>
+#include <vector>
 
-#include "ConfMan.hh"
+#include <TString.h>
+
+#include "DCDriftParamMan.hh"
+#include "DCGeomMan.hh"
 #include "DCHit.hh"
 #include "DCLocalTrack.hh"
-#include "DCTrackSearch.hh"
 #include "DCRawHit.hh"
+#include "DCTrackSearch.hh"
 #include "DebugCounter.hh"
-#include "Hodo2Hit.hh"
-#include "HodoAnalyzer.hh"
-#include "MathTools.hh"
+#include "DeleteUtility.hh"
+#include "DetectorID.hh"
+#include "Exception.hh"
+#include "FuncName.hh"
 #include "RawData.hh"
 #include "UserParamMan.hh"
-#include "DCGeomMan.hh"
-#include "DeleteUtility.hh"
+
+#include <UnpackerConfig.hh>
+#include <UnpackerXMLReadDigit.hh>
 
 #define DefStatic
 #include "DCParameters.hh"
@@ -34,259 +36,291 @@
 
 // Tracking routine selection __________________________________________________
 /* BcInTracking */
-#define UseBcIn    0 // not supported
+// #define UseBcIn    0 // not supported
 /* BcOutTracking */
 #define BcOut_XUV  0 // XUV Tracking (slow but accerate)
 #define BcOut_Pair 1 // Pair plane Tracking (fast but bad for large angle track)
+
 namespace
 {
-  // using namespace ;
-  const std::string& class_name("DCAnalyzer");
-  const UserParamMan& gUser = UserParamMan::GetInstance();
-  const DCGeomMan&    gGeom = DCGeomMan::GetInstance();
-  //______________________________________________________________________________
+const auto& gGeom   = DCGeomMan::GetInstance();
+const auto& gUser   = UserParamMan::GetInstance();
 }
 
-//______________________________________________________________________________
-DCAnalyzer::DCAnalyzer( void )
-  : m_is_decoded(n_type),
-    m_much_combi(n_type),
-    m_BLC1aHC(8+1),
-    m_BLC1bHC(8+1),
-    m_BLC2aHC(8+1),
-    m_BLC2bHC(8+1),
-    m_BPC1HC(8+1),
-    m_BPC2HC(8+1)
+//_____________________________________________________________________________
+DCAnalyzer::DCAnalyzer(const RawData& raw_data)
+  : m_raw_data(&raw_data),
+    m_dc_hit_collection(),
+    m_TempBcInHC(NumOfLayersBcIn+1),
+
+    m_BcInHC(NumOfLayersBcIn+1),
+    m_BcOutHC(),
+    m_BcInTC(),
+    m_BcOutTC()
 {
-  for( int i=0; i<n_type; ++i ){
-    m_is_decoded[i] = false;
-    m_much_combi[i] = 0;
-  }
-  debug::ObjectCounter::increase(class_name);
+  debug::ObjectCounter::increase(ClassName().Data());
 }
 
-DCAnalyzer::~DCAnalyzer( void )
+//_____________________________________________________________________________
+DCAnalyzer::DCAnalyzer()
+  : m_raw_data(nullptr),
+    m_dc_hit_collection(),
+    m_TempBcInHC(NumOfLayersBcIn+1),
+
+    m_BcInHC(NumOfLayersBcIn+1),
+    m_BcOutHC(),
+    m_BcInTC(),
+    m_BcOutTC()
 {
-  ClearDCHits(DetIdBLC1a);
-  ClearDCHits(DetIdBLC1b);
-  ClearDCHits(DetIdBLC2a);
-  ClearDCHits(DetIdBLC2b);
-  ClearDCHits(DetIdBPC1);
-  ClearDCHits(DetIdBPC2);
-  debug::ObjectCounter::decrease(class_name);
+  debug::ObjectCounter::increase(ClassName().Data());
 }
-//______________________________________________________________________________
-//______________________________________________________________________________
-bool
-DCAnalyzer::DecodeRawHits( RawData *rawData, e_type k_det, const int &detid )
+
+//_____________________________________________________________________________
+DCAnalyzer::~DCAnalyzer()
 {
-  static const std::string func_name("["+class_name+"::"+__func__+"()]");
-  if( m_is_decoded[k_det] ){
-    hddaq::cout << "#D " << func_name << " "
-		<< "already decoded" << std::endl;
-    return true;
-  }
-  ClearDCHits(detid);
-  for( int layer=1; layer<=8; ++layer ){
-    const DCRHitContainer &RHitCont=rawData->GetDCRawHC(detid,layer-1);
-    int nh = RHitCont.size();
-    // if(detid==DetIdBPC)
-    //    std::cout<<func_name<<"  "<<detid<<"  "<<nh<<std::endl;
-    for( int i=0; i<nh; ++i ){
-      DCRawHit *rhit  = RHitCont[i];
-      DCHit    *hit   = new DCHit( detid, rhit->PlaneId(), rhit->WireId() );
-      int       nhtdc = rhit->GetTdcSize();
-      if(!hit) continue;
-      for( int j=0; j<nhtdc; ++j ){
-	hit->SetTdcVal( rhit->GetTdc(j) );
-      }      
-      if( hit->CalcDCObservables() ){
-	switch(detid){
-	case DetIdBPC1:
-	    m_BPC1HC[layer].push_back(hit);
-	    break;
-	case DetIdBPC2:
-	    m_BPC2HC[layer].push_back(hit);
-	    break;
-	case DetIdBLC1a:
-	    m_BLC1aHC[layer].push_back(hit);
-	    break;
-	case DetIdBLC1b:
-	    m_BLC1bHC[layer].push_back(hit);
-	    break;
-	case DetIdBLC2a:
-	    m_BLC2aHC[layer].push_back(hit);
-	    break;
-	case DetIdBLC2b:
-	    m_BLC2bHC[layer].push_back(hit);
-	    break;
-	default:
-	  std::cout<<"E# invalid detector id "<< detid<<std::endl;
-	  return false;
-	}
-      }
-      else
-	delete hit;
+  for(auto& elem: m_dc_hit_collection)
+    del::ClearContainer(elem.second);
+
+  ClearTracksBcIn();
+  ClearTracksBcOut();
+  ClearDCHits();
+  debug::ObjectCounter::decrease(ClassName().Data());
+}
+
+//_____________________________________________________________________________
+Bool_t
+DCAnalyzer::DecodeBcInHits()
+{
+  static const auto& digit_info =
+    hddaq::unpacker::GConfig::get_instance().get_digit_info();
+  m_BcInHC.clear();
+  Int_t plane_offset = 0;
+  for(const auto& name: DCNameList.at("BcIn")){
+    Int_t id = digit_info.get_device_id(name.Data());
+    Int_t n_plane = digit_info.get_n_plane(id);
+    m_BcInHC.resize(n_plane + m_BcInHC.size());
+    DecodeHits(name);
+    for(const auto& hit: m_dc_hit_collection.at(name)){
+      m_BcInHC[hit->PlaneId() + plane_offset].push_back(hit);
     }
+    plane_offset += n_plane;
   }
-  m_is_decoded[k_det] = true;
   return true;
 }
 
+//_____________________________________________________________________________
+Bool_t
+DCAnalyzer::DecodeBcOutHits()
+{
+  static const auto& digit_info =
+    hddaq::unpacker::GConfig::get_instance().get_digit_info();
+  m_BcOutHC.clear();
+  Int_t plane_offset = 0;
+  for(const auto& name: DCNameList.at("BcOut")){
+    Int_t id = digit_info.get_device_id(name.Data());
+    Int_t n_plane = digit_info.get_n_plane(id);
+    m_BcOutHC.resize(n_plane + m_BcOutHC.size());
+    DecodeHits(name);
+    for(const auto& hit: m_dc_hit_collection.at(name)){
+      m_BcOutHC[hit->PlaneId() + plane_offset].push_back(hit);
+    }
+    plane_offset += n_plane;
+  }
+  return true;
+}
 
-//______________________________________________________________________________
-bool
-DCAnalyzer::DecodeRawHits( RawData *rawData )
+//_____________________________________________________________________________
+void
+DCAnalyzer::DecodeHits(const TString& name)
+{
+  if(m_dc_hit_collection.find(name) != m_dc_hit_collection.end()){
+    std::cerr << "Warning: " << FUNC_NAME.Data() 
+              << " " << name.Data() 
+              << " is already decoded" << std::endl;
+    return;
+  }
+  auto& HitCont = m_dc_hit_collection[name];
+  del::ClearContainer(HitCont);
+  for(const auto& rhit: m_raw_data->GetDCRawHitContainer(name)){
+    auto hit = new DCHit(rhit);
+    if(hit && hit->CalcDCObservables()){
+      HitCont.push_back(hit);
+    }else{
+      delete hit;
+    }
+  }
+  std::sort(HitCont.begin(), HitCont.end(), DCHit::Compare);
+}
+
+//_____________________________________________________________________________
+Bool_t
+DCAnalyzer::DecodeRawHits()
 {
   ClearDCHits();
-#if E73_2024
-  DecodeRawHits( rawData, k_BPC1, DetIdBPC1 );
-  DecodeRawHits( rawData, k_BPC2, DetIdBPC2 );
+  DecodeBcInHits();
+  DecodeBcOutHits();
+  return true;
+}
+
+//_____________________________________________________________________________
+Bool_t
+DCAnalyzer::TrackSearchBcIn(Int_t T0Seg)
+{
+  static const Int_t MinLayer = gUser.GetParameter("MinLayerBcIn");
+
+  Int_t ntrack = track::LocalTrackSearch(m_BcInHC, PPInfoBcIn, NPPInfoBcIn,
+                                         m_BcInTC, MinLayer, T0Seg);
+
+  return ntrack == -1 ? false : true;
+}
+
+
+//_____________________________________________________________________________
+Bool_t
+DCAnalyzer::TrackSearchBcOut(Int_t T0Seg)
+{
+  static const Int_t MinLayer = gUser.GetParameter("MinLayerBcOut");
+
+#if BcOut_Pair //Pair Plane Tracking Routine for BcOut
+  Int_t ntrack = track::LocalTrackSearch(m_BcOutHC, PPInfoBcOut, NPPInfoBcOut,
+                                         m_BcOutTC, MinLayer, T0Seg);
+  return ntrack == -1 ? false : true;
 #endif
-  DecodeRawHits( rawData, k_BLC1a, DetIdBLC1a );
-  DecodeRawHits( rawData, k_BLC1b, DetIdBLC1b );
-  DecodeRawHits( rawData, k_BLC2a, DetIdBLC2a );
-  DecodeRawHits( rawData, k_BLC2b, DetIdBLC2b );
-  DecodeBcOutHits( rawData );
-  return true;
+
+#if BcOut_XUV  //XUV Tracking Routine for BcOut
+  Int_t ntrack = track::LocalTrackSearchVUX(m_BcOutHC, PPInfoBcOut, NPPInfoBcOut,
+                                            m_BcOutTC, MinLayer, T0Seg);
+  return ntrack == -1 ? false : true;
+#endif
+
+  return false;
 }
 
-//______________________________________________________________________________
-bool
-DCAnalyzer::DecodeBcOutHits( RawData *rawData )
-{
-  static const std::string func_name("["+class_name+"::"+__func__+"()]");
-
-  if( m_is_decoded[k_BcOut] ){
-    hddaq::cout << "#D " << func_name << " "
-		<< "already decoded" << std::endl;
-    return true;
-  }
-
-  ClearBcOutHits();
-
-  for( int layer=0; layer<NumOfLayersBcOut; ++layer ){
-    const DCRHitContainer &RHitCont=rawData->GetBcOutRawHC(layer);
-    int nh = RHitCont.size();
-    for( int i=0; i<nh; ++i ){
-      DCRawHit *rhit  = RHitCont[i];
-      DCHit    *hit   = new DCHit( rhit->PlaneId()+PlOffsBc, rhit->WireId() );
-      int       nhtdc      = rhit->GetTdcSize();
-      int       nhtrailing = rhit->GetTrailingSize();
-      if(!hit) continue;
-      for( int j=0; j<nhtdc; ++j ){
-	hit->SetTdcVal( rhit->GetTdc(j) );
-      }
-      for( int j=0; j<nhtrailing; ++j ){
-	hit->SetTdcTrailing( rhit->GetTrailing(j) );
-      }
-
-      if( hit->CalcDCObservables() )
-	m_BcOutHC[layer].push_back(hit);
-      else
-	delete hit;
-    }
-  }
-
-  m_is_decoded[k_BcOut] = true;
-  return true;
-}
-
-//______________________________________________________________________________
+//_____________________________________________________________________________
 void
-DCAnalyzer::ClearDCHits( const int &detid )
+DCAnalyzer::ClearDCHits()
 {
-  switch(detid){
-  case DetIdBPC1:
-    del::ClearContainerAll( m_BPC1HC );
-  case DetIdBPC2:
-    del::ClearContainerAll( m_BPC2HC );
-  case DetIdBLC1a:
-    del::ClearContainerAll( m_BLC1aHC );
-  case DetIdBLC1b:
-    del::ClearContainerAll( m_BLC1bHC );
-  case DetIdBLC2a:
-    del::ClearContainerAll( m_BLC2aHC );
-  case DetIdBLC2b:
-    del::ClearContainerAll( m_BLC2bHC );
-  }
+#if UseBcIn
+  ClearBcInHits();
+#endif
 }
 
-//______________________________________________________________________________
+//_____________________________________________________________________________
+#if UseBcIn
 void
-DCAnalyzer::ClearDCHits( void)
+DCAnalyzer::ClearBcInHits()
 {
-  del::ClearContainerAll( m_BPC1HC );
-  del::ClearContainerAll( m_BPC2HC );
-  del::ClearContainerAll( m_BLC1aHC );
-  del::ClearContainerAll( m_BLC1bHC );
-  del::ClearContainerAll( m_BLC2aHC );
-  del::ClearContainerAll( m_BLC2bHC );
-  
-  ClearBcOutHits();
+  del::ClearContainerAll(m_TempBcInHC);
+  del::ClearContainerAll(m_BcInHC);
 }
+#endif
 
-//______________________________________________________________________________
+//_____________________________________________________________________________
 void
-DCAnalyzer::ClearBcOutHits( void )
+DCAnalyzer::ClearBcOutHits()
 {
-  del::ClearContainerAll( m_BcOutHC );
+  del::ClearContainerAll(m_BcOutHC);
 }
 
-//______________________________________________________________________________
-bool
-DCAnalyzer::ReCalcDCHits( std::vector<DCHitContainer>& cont,
-			  bool applyRecursively )
+
+//_____________________________________________________________________________
+void
+DCAnalyzer::ClearTracksBcIn()
 {
-  const std::size_t n = cont.size();
-  for( std::size_t l=0; l<n; ++l ){
-    const std::size_t m = cont[l].size();
-    for( std::size_t i=0; i<m; ++i ){
+  del::ClearContainer(m_BcInTC);
+}
+
+//_____________________________________________________________________________
+void
+DCAnalyzer::ClearTracksBcOut()
+{
+  del::ClearContainer(m_BcOutTC);
+}
+
+//_____________________________________________________________________________
+Bool_t
+DCAnalyzer::ReCalcDCHits(std::vector<DCHC>& cont,
+                         Bool_t applyRecursively)
+{
+  const Int_t n = (Int_t)cont.size();
+  for(Int_t l=0; l<n; ++l){
+    const Int_t m = (Int_t)cont[l].size();
+    for(Int_t i=0; i<m; ++i){
       DCHit *hit = (cont[l])[i];
-      if( !hit ) continue;
+      if(!hit) continue;
       hit->ReCalcDC(applyRecursively);
     }
   }
   return true;
 }
 
-//______________________________________________________________________________
-bool
-DCAnalyzer::ReCalcDCHits( bool applyRecursively )
+//_____________________________________________________________________________
+Bool_t
+DCAnalyzer::ReCalcDCHits(Bool_t applyRecursively)
 {
+
+  ReCalcDCHits(m_BcOutHC, applyRecursively);
+
   return true;
 }
 
-//______________________________________________________________________________
-bool
-DCAnalyzer::ReCalcTrack( DCLocalTrackContainer& cont,
-			 bool applyRecursively )
+//_____________________________________________________________________________
+Bool_t
+DCAnalyzer::ReCalcTrack(DCLocalTC& cont,
+                        Bool_t applyRecursively)
 {
-  const std::size_t n = cont.size();
-  for( std::size_t i=0; i<n; ++i ){
+  const Int_t n = (Int_t)cont.size();
+  for(Int_t i=0; i<n; ++i){
     DCLocalTrack *track = cont[i];
-    if( track ) track->ReCalc( applyRecursively );
+    if(track) track->ReCalc(applyRecursively);
   }
   return true;
 }
 
-//______________________________________________________________________________
-bool
-DCAnalyzer::ReCalcAll( void )
+//_____________________________________________________________________________
+#if UseBcIn
+Bool_t
+DCAnalyzer::ReCalcTrackBcIn(Bool_t applyRecursively)
+{
+  return ReCalcTrack(m_BcInTC, applyRecursively);
+}
+#endif
+
+//_____________________________________________________________________________
+Bool_t
+DCAnalyzer::ReCalcTrackBcOut(Bool_t applyRecursively)
+{
+  return ReCalcTrack(m_BcOutTC, applyRecursively);
+}
+
+//_____________________________________________________________________________
+Bool_t
+DCAnalyzer::ReCalcAll()
 {
   ReCalcDCHits();
+#if UseBcIn
+  ReCalcTrackBcIn();
+#endif
+  ReCalcTrackBcOut();
+
   return true;
 }
-//______________________________________________________________________________
+
+//_____________________________________________________________________________
 void
-DCAnalyzer::ChiSqrCut( DCLocalTrackContainer& TrackCont,
-		       double chisqr )
+DCAnalyzer::ChiSqrCutBcOut(Double_t chisqr)
 {
-  DCLocalTrackContainer DeleteCand;
-  DCLocalTrackContainer ValidCand;
-  int NofTrack = TrackCont.size();
-  for(int i = NofTrack-1; i>=0; --i){
-    DCLocalTrack* tempTrack = TrackCont.at(i);
+  ChiSqrCut(m_BcOutTC, chisqr);
+}
+
+//_____________________________________________________________________________
+void
+DCAnalyzer::ChiSqrCut(DCLocalTC& TrackCont,
+                      Double_t chisqr)
+{
+  DCLocalTC ValidCand;
+  DCLocalTC DeleteCand;
+  for(auto& tempTrack : TrackCont){
     if(tempTrack->GetChiSquare() > chisqr){
       DeleteCand.push_back(tempTrack);
     }else{
@@ -294,40 +328,97 @@ DCAnalyzer::ChiSqrCut( DCLocalTrackContainer& TrackCont,
     }
   }
 
-  del::ClearContainer( DeleteCand );
+  del::ClearContainer(DeleteCand);
 
   TrackCont.clear();
-  TrackCont.resize( ValidCand.size() );
-  std::copy( ValidCand.begin(), ValidCand.end(), TrackCont.begin() );
+  TrackCont.resize(ValidCand.size());
+  std::copy(ValidCand.begin(), ValidCand.end(), TrackCont.begin());
   ValidCand.clear();
 }
 
-//______________________________________________________________________________
-bool
-DCAnalyzer::TrackSearchBcOut( void )
+//_____________________________________________________________________________
+void
+DCAnalyzer::EraseEmptyHits(std::vector<DCHC>& HitCont)
 {
-  static const Int_t MinLayer = gUser.GetParameter("MinLayerBcOut");
-
-  ClearTracksBcOut();
-
-#if BcOut_Pair //Pair Plane Tracking Routine for BcOut
-  track::LocalTrackSearch( m_BcOutHC, PPInfoBcOut, NPPInfoBcOut,
-			   m_BcOutTC, MinLayer );
-  return true;
-#endif
-
-#if BcOut_XUV  //XUV Tracking Routine for BcOut
-  track::LocalTrackSearchVUX( m_BcOutHC, PPInfoBcOut, NPPInfoBcOut,
-			      m_BcOutTC, MinLayer );
-  return true;
-#endif
-
-  return false;
+  for(auto& hc: HitCont){
+    for(auto it = hc.begin(); it != hc.end(); ){
+      if((*it)->IsEmpty()) it = hc.erase(it);
+      else ++it;
+    }
+  }
 }
 
-//______________________________________________________________________________
+//_____________________________________________________________________________
 void
-DCAnalyzer::ClearTracksBcOut( void )
+DCAnalyzer::EraseEmptyHits(const TString& name)
 {
-  del::ClearContainer( m_BcOutTC );
+  for(const auto& dcname: DCNameList){
+    if(std::find(dcname.second.begin(), dcname.second.end(), name)
+       != dcname.second.end()){
+      if(dcname.first == "BcOut") EraseEmptyHits(m_BcOutHC);
+    }
+  }
+}
+
+//_____________________________________________________________________________
+void
+DCAnalyzer::TotCutBCOut(Double_t min_tot)
+{
+  for(const auto& name: DCNameList.at("BcOut")){
+    TotCut(name, min_tot, true);
+  }
+}
+
+//_____________________________________________________________________________
+void
+DCAnalyzer::TotCut(const TString& name)
+{
+  Double_t min_tot = gUser.Get(Form("%s_TOT", name.Data()));
+  TotCut(name, min_tot);
+}
+
+//_____________________________________________________________________________
+void
+DCAnalyzer::TotCut(const TString& name, Double_t min_tot, Bool_t keep_nan)
+{
+  try {
+    auto& HitCont = m_dc_hit_collection.at(name);
+    for(auto& hit: HitCont){
+      hit->TotCut(min_tot, keep_nan);
+    }
+    EraseEmptyHits(name);
+  } catch (const std::out_of_range&) {
+    std::cerr << "Error: " << FUNC_NAME.Data()
+              << " " << name.Data()
+              << " is not listed in dc_hit_collection"
+              << std::endl;
+  }
+}
+
+//_____________________________________________________________________________
+void
+DCAnalyzer::DriftTimeCut(const TString& name)
+{
+  Double_t min_dt = gUser.Get(Form("%s_DT", name.Data()), 0);
+  Double_t max_dt = gUser.Get(Form("%s_DT", name.Data()), 1);
+  DriftTimeCut(name, min_dt, max_dt, false);
+}
+
+//_____________________________________________________________________________
+void
+DCAnalyzer::DriftTimeCut(const TString& name,
+                         Double_t min_dt, Double_t max_dt, Bool_t select_1st)
+{
+  try {
+    auto& HitCont = m_dc_hit_collection.at(name);
+    for(auto& hit: HitCont){
+      hit->DriftTimeCut(min_dt, max_dt, select_1st);
+    }
+    EraseEmptyHits(name);
+  } catch (const std::out_of_range&) {
+    std::cerr << "Error: " << FUNC_NAME.Data()
+              << " " << name.Data()
+              << " is not listed in dc_hit_collection"
+              << std::endl;
+  }
 }

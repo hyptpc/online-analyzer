@@ -1,4 +1,4 @@
-/*a*
+/**
  *  file: DCParameters.hh
  *  date: 2017.04.10
  *

@@ -1,104 +1,117 @@
-/**
- *  file: DCAnalyzer.hh
- *  date: 2017.04.10
- *
- */
+// -*- C++ -*-
 
 #ifndef DC_ANALYZER_HH
 #define DC_ANALYZER_HH
 
-#include "DetectorID.hh"
-#include "ThreeVector.hh"
+#include <map>
 #include <vector>
+
+#include <TString.h>
+
+#include "DetectorID.hh"
 
 class DCHit;
 class DCLocalTrack;
 class RawData;
-class HodoCluster;
 
-class Hodo1Hit;
-class Hodo2Hit;
-class HodoAnalyzer;
+using DCHC = std::vector<DCHit*>;
+using DCLocalTC = std::vector<DCLocalTrack*>;
 
-typedef std::vector<DCHit*>        DCHitContainer;
-typedef std::vector<DCLocalTrack*> DCLocalTrackContainer;
-
-//______________________________________________________________________________
+//_____________________________________________________________________________
 class DCAnalyzer
 {
 public:
-  DCAnalyzer( void );
-  ~DCAnalyzer( void );
+  static const TString& ClassName();
+  DCAnalyzer();
+  DCAnalyzer(const RawData& raw_data);
+  ~DCAnalyzer();
 
 private:
-  DCAnalyzer( const DCAnalyzer& );
-  DCAnalyzer& operator =( const DCAnalyzer& );
+  DCAnalyzer(const DCAnalyzer&);
+  DCAnalyzer& operator =(const DCAnalyzer&);
 
 private:
-  enum e_type { k_BLC1a, k_BLC1b, k_BLC2a, k_BLC2b, k_BPC1, k_BPC2, k_BcIn, k_BcOut,
-		n_type };
-  std::vector<bool>     m_is_decoded;
-  std::vector<int>      m_much_combi;
-  std::vector<DCHitContainer>       m_BLC1aHC;
-  std::vector<DCHitContainer>       m_BLC1bHC;
-  std::vector<DCHitContainer>       m_BLC2aHC;
-  std::vector<DCHitContainer>       m_BLC2bHC;
-  std::vector<DCHitContainer>       m_BPC1HC;
-  std::vector<DCHitContainer>       m_BPC2HC;
-  std::vector<DCHitContainer>       m_BcOutHC;
-
-  DCLocalTrackContainer m_BcOutTC;
+  template <typename T> using map_t = std::map<TString, T>;
+  const RawData*         m_raw_data;
+  map_t<DCHC>            m_dc_hit_collection;
+  std::vector<DCHC>      m_TempBcInHC;
+  std::vector<DCHC>      m_BcInHC;
+  std::vector<DCHC>      m_BcOutHC;
+  DCLocalTC              m_BcInTC;
+  DCLocalTC              m_BcOutTC;
 
 public:
-  bool DecodeRawHits( RawData* rawData );
-  // bool DecodeFiberHits( FiberCluster* FiberCl, int layer );
-  bool DecodeRawHits( RawData* rawData, e_type k_type,const int &detid );
-  bool DecodeDCHits( RawData* rawData , const int &detid);
-  bool DecodeBcOutHits( RawData* rawData );
+  // __ Hit Decoding ________________________________________________________
+  void   DecodeHits(const TString& name);
+  Bool_t DecodeRawHits();
+  Bool_t DecodeBcInHits();
+  Bool_t DecodeBcOutHits();
+
+  // __ Hit Container Access ________________________________________________
+  const DCHC& GetTempBcInHC(Int_t l) const { return m_TempBcInHC.at(l); }
+  const DCHC& GetBcInHC(Int_t l)     const { return m_BcInHC.at(l); }
+  const DCHC& GetBcOutHC(Int_t l)    const { return m_BcOutHC.at(l); }
+
+  // __ Track Searching _____________________________________________________
+  Bool_t TrackSearchBcIn(Int_t T0Seg=-1);
+  Bool_t TrackSearchBcOut(Int_t T0Seg=-1);
+
+  // __ Track Container Access ______________________________________________
+  const DCLocalTC& GetBcInTrackContainer()  const { return m_BcInTC; }
+  const DCLocalTC& GetBcOutTrackContainer() const { return m_BcOutTC; }
+
+  Int_t GetNtracksBcIn() const { return m_BcInTC.size(); }
+  Int_t GetNtracksBcOut() const { return m_BcOutTC.size(); }
+
+  const DCLocalTrack* GetTrackBcIn(Int_t l) const { return m_BcInTC.at(l); }
+  const DCLocalTrack* GetTrackBcOut(Int_t l) const { return m_BcOutTC.at(l); }
+
+  // __ Cuts and Filters ____________________________________________________
+  void ChiSqrCutBcOut(Double_t chisqr);
   
+  void TotCutBCOut(Double_t min_tot);
+  void TotCut(const TString& name);
+  
+  void DriftTimeCut(const TString& name);
 
-  inline const DCHitContainer& GetDCHC( const int &detid, int layer ) const;
+  // __ Recalculation _______________________________________________________
+  Bool_t ReCalcDCHits(std::vector<DCHC>& cont,
+                      Bool_t applyRecursively=false);
+  Bool_t ReCalcDCHits(Bool_t applyRecursively=false);
+  Bool_t ReCalcTrackBcIn(Bool_t applyRecursively=false);
+  Bool_t ReCalcTrackBcOut(Bool_t applyRecursively=false);
+  Bool_t ReCalcAll();
 
-  bool ReCalcDCHits( std::vector<DCHitContainer>& cont,
-		     bool applyRecursively=false );
-  bool ReCalcDCHits( bool applyRecursively=false );
+  // __ Clear and Reset _____________________________________________________
+  void ResetTracksBcIn()  { ClearTracksBcIn(); }
+  void ResetTracksBcOut() { ClearTracksBcOut();}
 
-  bool ReCalcTrack( DCLocalTrackContainer& cont, bool applyRecursively=false );
+private:
+  // __ Internal Helpers ____________________________________________________
+  void ChiSqrCut(DCLocalTC& cont, Double_t chisqr);
+  void EraseEmptyHits(const TString& name);
+  void EraseEmptyHits(std::vector<DCHC>& HitCont);
+  void TotCut(const TString& name, Double_t min_tot, Bool_t keep_nan=true);
+  void DriftTimeCut(const TString& name, Double_t min_dt, Double_t max_dt, Bool_t select_1st);
+  Bool_t ReCalcTrack(DCLocalTC& cont, Bool_t applyRecursively=false);
 
-  bool ReCalcAll( void );
+  // __ Clear (Internal) ____________________________________________________
+  void ClearDCHits();
+  void ClearBcInHits();
+  void ClearBcOutHits();
 
-  bool TrackSearchBcOut (void);
-  int GetNtracksBcOut( void )  const { return m_BcOutTC.size(); }
-
-protected:
-  void ClearDCHits( void );
-  void ClearDCHits( const int &detid );
-  void ChiSqrCut( DCLocalTrackContainer& cont, double chisqr );
-  void ClearBcOutHits( void );
-  void ClearTracksBcOut( void );
+  void ClearTracksBcIn();
+  void ClearTracksBcOut();
 };
 
-//______________________________________________________________________________
-inline const DCHitContainer&
-DCAnalyzer::GetDCHC( const int &detid,int layer ) const
+
+
+//_____________________________________________________________________________
+inline const TString&
+DCAnalyzer::ClassName()
 {
-  if( layer>8 ) layer=0;
-  switch(detid){
-  case DetIdBPC1:
-    return m_BPC1HC[layer];
-  case DetIdBPC2:
-    return m_BPC2HC[layer];
-  case DetIdBLC1a:
-    return m_BLC1aHC[layer];
-  case DetIdBLC1b:
-    return m_BLC1bHC[layer];
-  case DetIdBLC2a:
-    return m_BLC2aHC[layer];
-  case DetIdBLC2b:
-    return m_BLC2bHC[layer];
-  default:
-    std::cout<<"E# invalid detector id "<< detid<<std::endl;
-    exit(0);
-  }
+  static TString s_name("DCAnalyzer");
+  return s_name;
 }
+
 #endif

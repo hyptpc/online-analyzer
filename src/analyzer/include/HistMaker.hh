@@ -36,7 +36,7 @@ enum DetectorType {
   kTimeStamp, kDCEff,kAna, 
   kHRTDC1,kHRTDC2,kHRTDC3, kHRTDC4,kHRTDC5,kHRTDC6, 
   kMHTDC,
-  kBcOutTracking,
+  kBcOutTracking, kBcInTracking,
   sizeDetectorType,
   factorDetectorType = 10000000
 };
@@ -154,6 +154,7 @@ public:
   TList* createCorrelation(bool flag_ps=true);
   TList* createEventDisplay(bool flag_ps=true);
 
+  TList* createBcInTracking(bool flag_ps=true);  
   TList* createBcOutTracking(bool flag_ps=true);  
 
   TList* createTimeStamp(bool flag_ps=true);

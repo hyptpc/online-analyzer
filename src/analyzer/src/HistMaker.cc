@@ -506,6 +506,37 @@ HistMaker::createT2(Bool_t flag_ps)
 
 //_____________________________________________________________________________
 TList*
+HistMaker::createBcInTracking(Bool_t flag_ps)
+{
+  const std::string strDet("BcInTracking");
+  name_created_detectors_.push_back(strDet);
+  if(flag_ps) name_ps_files_.push_back(strDet);
+  const char* nameDetector = strDet.c_str();
+  TList *top_dir = new TList;
+  top_dir->SetName(nameDetector);
+  TString title;
+  { 
+    Int_t target_id = getUniqueID(kBcInTracking, 0, 0, 0);
+    title = Form("%s_X", nameDetector);
+    top_dir->Add(createTH1(++target_id, title,
+			   300, -300, 300,
+			   "X [mm]", ""));
+
+    title = Form("%s_Y", nameDetector);
+    top_dir->Add(createTH1(++target_id, title,
+			   300, -300, 300,
+			   "Y [mm]", ""));
+    title = Form("%s_2D", nameDetector);
+    top_dir->Add( createTH2(++target_id, title,
+                           300, -300, 300,
+			   300, -300, 300,
+			   "X [mm]", "Y [mm]" ) );
+  }
+  return top_dir;
+}
+
+//_____________________________________________________________________________
+TList*
 HistMaker::createBcOutTracking(Bool_t flag_ps)
 {
   const std::string strDet("BcOutTracking");
@@ -514,12 +545,23 @@ HistMaker::createBcOutTracking(Bool_t flag_ps)
   const char* nameDetector = strDet.c_str();
   TList *top_dir = new TList;
   top_dir->SetName(nameDetector);
-  { // TDC
+  TString title;
+  { 
     Int_t target_id = getUniqueID(kBcOutTracking, 0, 0, 0);
-    TString title = Form("%s_X", nameDetector);
+    title = Form("%s_X", nameDetector);
     top_dir->Add(createTH1(++target_id, title,
-			   1000, 0, 1000,
-			   "TDC [ch]", ""));
+			   300, -300, 300,
+			   "X [mm]", ""));
+
+    title = Form("%s_Y", nameDetector);
+    top_dir->Add(createTH1(++target_id, title,
+			   300, -300, 300,
+			   "Y [mm]", ""));
+    title = Form("%s_2D", nameDetector);
+    top_dir->Add( createTH2(++target_id, title,
+                           300, -300, 300,
+			   300, -300, 300,
+			   "X [mm]", "Y [mm]" ) );
   }
   return top_dir;
 }
