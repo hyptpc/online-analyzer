@@ -19,6 +19,8 @@
 #include <TDirectory.h>
 #include <TString.h>
 #include <TH2Poly.h>
+#include <TGraph.h>
+#include <TMultiGraph.h>
 
 #include "TpcPadHelper.hh"
 
@@ -188,7 +190,7 @@ TH2* HistMaker::createTH2Poly( Int_t unique_id, const TString& title,
                                Double_t xmin, Double_t xmax,
                                Double_t ymin, Double_t ymax )
 {
-
+  
   static const std::string MyFunc = "createTH2Poly ";
   Int_t sequential_id = current_hist_id_++;
   TypeRetInsert ret =
@@ -214,6 +216,7 @@ TH2* HistMaker::createTH2Poly( Int_t unique_id, const TString& title,
   }
   return h;
 }
+
 
 //_____________________________________________________________________
 TList*
@@ -561,7 +564,7 @@ HistMaker::createBcOutTracking(Bool_t flag_ps)
     top_dir->Add( createTH2(++target_id, title,
                            300, -300, 300,
 			   300, -300, 300,
-			   "X [mm]", "Y [mm]" ) );
+			    "X [mm]", "Y [mm]" ) );
   }
   return top_dir;
 }
@@ -756,7 +759,6 @@ HistMaker::createCorrelation(Bool_t flag_ps)
 TList*
 HistMaker::createEventDisplay(Bool_t flag_ps)
 {
-  
   double c_x_min = -700.;
   double c_x_max = 700.;
   double c_y_min = -500.;
@@ -777,6 +779,8 @@ HistMaker::createEventDisplay(Bool_t flag_ps)
   if(flag_ps) name_ps_files_.push_back(strDet);
   const char* nameDetector = strDet.c_str();
   TList *top_dir = new TList;
+  top_dir->SetName("EventDisplay");
+
   top_dir->SetName(nameDetector);
   Int_t target_id = getUniqueID(kEventDisplay, 0, kHitPoly, 0);
 
@@ -785,6 +789,8 @@ HistMaker::createEventDisplay(Bool_t flag_ps)
   
   
   TString title;
+
+  
   //HTOF
   {
     title = Form("%s_HTOF_HitPatternPoly", nameDetector);
@@ -881,6 +887,16 @@ HistMaker::createEventDisplay(Bool_t flag_ps)
     top_dir->Add( h_pattern_poly );
     top_dir->Add( h_count_poly );
     
+  }
+
+  //BcOut
+  {
+    title = Form("%s_BcOut", nameDetector);
+    top_dir->Add(createTH2(++target_id,title,
+			   500,-900,0,
+			   500,-500,0,
+			   "Z [mm]","X [mm]"));
+
   }
   
   return top_dir;

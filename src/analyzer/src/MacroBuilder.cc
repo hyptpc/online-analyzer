@@ -14,12 +14,16 @@
 #include <TArc.h>
 #include <TLine.h>
 #include <TPolyLine.h>
+#include <TMultiGraph.h>
+#include <TGraph.h>
 
 #include "DetectorID.hh"
 #include "Main.hh"
 #include "HistHelper.hh"
 #include "HistMaker.hh"
-
+namespace{
+  HistMaker&   gHist   = HistMaker::getInstance();
+}
 namespace analyzer
 {
 
@@ -1081,7 +1085,8 @@ SHS2D( void )
 {
   auto c1 = new TCanvas( __func__, __func__ );
   c1->cd();
-
+  
+  
   for(int i=0;i<sizeof(EvtDis_Det_name)/sizeof(EvtDis_Det_name[0]);i++){
     auto id_det = HistMaker::getUniqueID(kEventDisplay, 0, kHitPoly, i*2+1);
     auto h_det = GHist::get(id_det);
@@ -1095,7 +1100,10 @@ SHS2D( void )
     
     
   }
+
   
+  
+
   auto id_tpc = HistMaker::getUniqueID( kTPC, 0, kADC2D, 3);
   auto h = GHist::get( id_tpc );
   if( h ){
@@ -1103,9 +1111,9 @@ SHS2D( void )
     h->GetXaxis()->SetRangeUser(-400,400);
     h->GetYaxis()->SetRangeUser(-400,400);
     //h->SetMaximum( 200 );
-    h->Draw( "col same" );
+    h->Draw( "same col" );
   }
-
+  
   Double_t l = (500./2.)/(1+sqrt(2.));
   Double_t px[9]={-l*(1+sqrt(2.)),-l,l,l*(1+sqrt(2.)),
     l*(1+sqrt(2.)),l,-l,-l*(1+sqrt(2.)),
@@ -1119,6 +1127,9 @@ SHS2D( void )
   pLine->Draw();
   c1->cd( 1 )->SetLogz();
 
+
+  
+    
   //Target
   TEllipse *LH2_Target = new TEllipse(-143,0,40);
   LH2_Target->SetLineColor(kRed);
@@ -1133,11 +1144,17 @@ SHS2D( void )
 
   LH2_Target->Draw("same");
   LH2_Target_holder->Draw("same");
+
+  auto id_bcout = HistMaker::getUniqueID(kEventDisplay, 0, kHitPoly, 9);
+  auto h_bcout = GHist::get(id_bcout);
+  h_bcout->SetFillColor(kRed);
+  h_bcout->Draw("box same");
+  
   c1->SetTitle("E72 Hit Pattern");
   c1->SetName("E72 Hit Pattern");
   c1->Modified();
   c1->Update();
-
+  
   return c1;
 }
 

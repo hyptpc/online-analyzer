@@ -9,6 +9,7 @@
 
 #include<TROOT.h>
 #include "DetectorID.hh"
+#include <TMultiGraph.h>
 
 
 //For EventDisplay
@@ -95,6 +96,7 @@ std::string getStr_FromEnum(const char* c);
 class TH1;
 class TH2;
 class TList;
+class TMultiGraph;
 
 class HistMaker {
   // Declaration of the private parameters ---------------------------------
@@ -144,7 +146,7 @@ public:
   TH2*   createTH2Poly( Int_t unique_id, const TString& title,
                         Double_t xmin, Double_t xmax,
                         Double_t ymin, Double_t ymax );
-  
+  TMultiGraph* createMG( Int_t unique_id, const TString& title);
   TList* createTriggerFlag(bool flag_ps=true);
   TList* createBVH(bool flag_ps=true);
   TList* createT1(bool flag_ps=true);
