@@ -470,14 +470,11 @@ process_event( void )
     int mul=0;
     for(int seg = 0; seg<nsegs[i]; ++seg){
       int ntdc[2]={0,0};
+      bool bh2_u_pass = false;
+      bool bh2_d_pass = false;
       for(int ud=0; ud<nud[i]; ++ud){	  
         for(int idata=0; idata<ndata; ++idata){
           int nhit = gUnpacker.get_entries(k_device, 0, seg, ud, data[idata]);
-          if( ud==2 && data[idata]==k_leading && nhit>0){
-            //hid = gHist.getSequentialID(kDET, 0, kHitPat, ud+1);
-            //hptr_array[hid]->Fill(seg);
-            // mul=1;
-          }
           for( int m=0; m<nhit; ++m ){
             int val = gUnpacker.get(k_device, 0, seg, ud, data[idata] , m);
             hid = gHist.getSequentialID(kDET, ud, type[idata], seg+1);
@@ -486,18 +483,27 @@ process_event( void )
                gUnpacker.get_entries(k_device, 0, seg, ud, k_leading)){
               hid = gHist.getSequentialID(kDET, ud, kADCwTDC, seg+1);
               hptr_array[hid]->Fill(val);
-            } 
-            if (ud==2 && data[idata]==k_leading) {
-	      if (tdc_min < val && val < tdc_max) {
-		hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
-		hptr_array[hid]->Fill(seg);
-		hit_seg_map[k_device].push_back(seg);
-		mul++;
+            }
+	    
+	    if(ud==0 && data[idata]==k_leading){
+	      if(tdc_min < val && val < tdc_max){
+		bh2_u_pass = true;
+	      }
+	    }
+	    else if(ud==1 && data[idata]==k_leading){
+	      if(tdc_min < val && val < tdc_max){
+		bh2_d_pass = true;
 	      }
 	    }
           } // nhit
         } // data
       }//ud
+      if(bh2_u_pass && bh2_d_pass){
+	hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
+	hptr_array[hid]->Fill(seg);
+	hit_seg_map[k_device].push_back(seg);
+	mul++;
+      }
     }//seg	    
     hid  = gHist.getSequentialID(kDET, 0, kMulti, 0);
     hptr_array[hid]->Fill(mul);	    	    

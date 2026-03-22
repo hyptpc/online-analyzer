@@ -172,7 +172,7 @@ process_begin( const std::vector<std::string>& argv )
   
   gHttp.Register(gHist.createTriggerFlag());
 
-
+  gHttp.Register(gHist.createDAQ(true));
   // TPC
   gHttp.Register(gHist.createTPC(true));
 
@@ -187,6 +187,7 @@ process_begin( const std::vector<std::string>& argv )
   if(0 != gHist.setHistPtr(hptr_array)){ return -1; }
   
   // Macro for HttpServer
+  /*
   // BHT
   gHttp.Register(http::MHTDCTDC(kBHT,"_BHT_U",0,63,8,8),"BHT");
   gHttp.Register(http::MHTDCTDC(kBHT,"_BHT_D",1,63,8,8),"BHT");
@@ -225,7 +226,9 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::COBO());
   gHttp.Register(http::HitPat());
   gHttp.Register(http::Multiplicity());
-  
+  */
+
+  gHttp.Register(http::TPC2D());
   gHttp.Register(http::SHS2D());
 
 
@@ -273,6 +276,73 @@ process_event( void )
     h->SetTitle(h->GetName() + TString(Form(" run%05d", run_number)));
   }
 
+  UInt_t cobo_data_size = 0;
+#if FLAG_DAQ
+  { ///// DAQ
+    //___ node id
+    static const Int_t k_eb = gUnpacker.get_fe_id("k18breb");
+    std::vector<Int_t> vme_fe_id;
+    std::vector<Int_t> hul_fe_id;
+    std::vector<Int_t> ea0c_fe_id;
+    std::vector<Int_t> cobo_fe_id;
+    for(auto&& c : gUnpacker.get_root()->get_child_list()){
+      if(!c.second) continue;
+      TString n = c.second->get_name();
+      auto id = c.second->get_id();
+      if(n.Contains("vme"))
+	vme_fe_id.push_back(id);
+      if(n.Contains("hul"))
+	hul_fe_id.push_back(id);
+      if(n.Contains("easiroc"))
+	ea0c_fe_id.push_back(id);
+      if(n.Contains("cobo"))
+	cobo_fe_id.push_back(id);
+    }
+
+    //___ sequential id
+    static const Int_t eb_hid = gHist.getSequentialID(kDAQ, kEB, kHitPat);
+    static const Int_t vme_hid = gHist.getSequentialID(kDAQ, kVME, kHitPat2D);
+    static const Int_t hul_hid = gHist.getSequentialID(kDAQ, kHUL, kHitPat2D);
+    static const Int_t ea0c_hid = gHist.getSequentialID(kDAQ, kEASIROC, kHitPat2D);
+    static const Int_t cobo_hid = gHist.getSequentialID(kDAQ, kCoBo, kHitPat2D);
+
+    { //___ EB
+      auto data_size = gUnpacker.get_node_header(k_eb, DAQNode::k_data_size);
+      hptr_array[eb_hid]->Fill(data_size);
+    }
+
+    { //___ VME
+      for(Int_t i=0, n=vme_fe_id.size(); i<n; ++i){
+	auto data_size = gUnpacker.get_node_header(vme_fe_id[i], DAQNode::k_data_size);
+        hptr_array[vme_hid]->Fill(i, data_size);
+      }
+    }
+
+    { // EASIROC & VMEEASIROC node
+      for(Int_t i=0, n=ea0c_fe_id.size(); i<n; ++i){
+        auto data_size = gUnpacker.get_node_header(ea0c_fe_id[i], DAQNode::k_data_size);
+        hptr_array[ea0c_hid]->Fill(i, data_size);
+      }
+    }
+
+    { //___ HUL node
+      for(Int_t i=0, n=hul_fe_id.size(); i<n; ++i){
+        auto data_size = gUnpacker.get_node_header(hul_fe_id[i], DAQNode::k_data_size);
+        hptr_array[hul_hid]->Fill(i, data_size);
+      }
+    }
+
+    { //___ CoBo node
+      for(Int_t i=0, n=cobo_fe_id.size(); i<n; ++i){
+        auto data_size = gUnpacker.get_node_header(cobo_fe_id[i], DAQNode::k_data_size);
+        hptr_array[cobo_hid]->Fill(i, data_size);
+	cobo_data_size += data_size;
+      }
+    }
+  }
+
+#endif
+
   std::map<int, std::vector<Int_t>> hit_seg_map; 
 
 
@@ -293,14 +363,11 @@ process_event( void )
     int mul=0;
     for(int seg = 0; seg<nsegs[i]; ++seg){
       int ntdc[2]={0,0};
+      bool bh2_u_pass = false;
+      bool bh2_d_pass = false;
       for(int ud=0; ud<nud[i]; ++ud){	  
         for(int idata=0; idata<ndata; ++idata){
           int nhit = gUnpacker.get_entries(k_device, 0, seg, ud, data[idata]);
-          if( ud==2 && data[idata]==k_leading && nhit>0){
-            //hid = gHist.getSequentialID(kDET, 0, kHitPat, ud+1);
-            //hptr_array[hid]->Fill(seg);
-            // mul=1;
-          }
           for( int m=0; m<nhit; ++m ){
             int val = gUnpacker.get(k_device, 0, seg, ud, data[idata] , m);
             hid = gHist.getSequentialID(kDET, ud, type[idata], seg+1);
@@ -309,18 +376,26 @@ process_event( void )
                gUnpacker.get_entries(k_device, 0, seg, ud, k_leading)){
               hid = gHist.getSequentialID(kDET, ud, kADCwTDC, seg+1);
               hptr_array[hid]->Fill(val);
-            } 
-            if (ud==2 && data[idata]==k_leading) {
-	      if (tdc_min < val && val < tdc_max) {
-		hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
-		hptr_array[hid]->Fill(seg);
-		hit_seg_map[k_device].push_back(seg);
-		mul++;
+            }
+	    if(ud==0 && data[idata]==k_leading){
+	      if(tdc_min < val && val < tdc_max){
+		bh2_u_pass = true;
+	      }
+	    }
+	    else if(ud==1 && data[idata]==k_leading){
+	      if(tdc_min < val && val < tdc_max){
+		bh2_d_pass = true;
 	      }
 	    }
           } // nhit
         } // data
       }//ud
+      if(bh2_u_pass && bh2_d_pass){
+	hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
+	hptr_array[hid]->Fill(seg);
+	hit_seg_map[k_device].push_back(seg);
+	mul++;
+      }
     }//seg	    
     hid  = gHist.getSequentialID(kDET, 0, kMulti, 0);
     hptr_array[hid]->Fill(mul);	    	    
@@ -497,6 +572,7 @@ process_event( void )
     static const Int_t tpcfa_id   = gHist.getSequentialID( kTPC, 0, kFADC );
     static const Int_t tpca2d_id = gHist.getSequentialID( kTPC, 0, kADC2D );
     static const Int_t tpcmul_id = gHist.getSequentialID( kTPC, 0, kMulti );
+    static const Int_t tpcbp_id   = gHist.getSequentialID( kTPC, 2, kTDC );
     static const Int_t agetmul_id = gHist.getSequentialID( kTPC, 3, kMulti );
     static const Int_t amulmax_id = gHist.getSequentialID( kTPC, 4, kMulti );
       
@@ -564,6 +640,12 @@ process_event( void )
 	if( max_adc - mean > 0 ){
 	  ++n_active_pad;
 	  hptr_array[tpca2d_id+3]->Fill( pad_z, pad_x );
+	  if( max_tb >= 60 && max_tb < 100
+	      && pad_z >= -250 && pad_z <= -200
+	      && max_adc - mean > 300
+	      ){
+	    hptr_array[tpcbp_id]->Fill( pad_x );
+	  }
 	}
       }
     }

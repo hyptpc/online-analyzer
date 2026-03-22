@@ -24,6 +24,9 @@
 
 #include "TpcPadHelper.hh"
 
+#include <Unpacker.hh>
+#include <UnpackerManager.hh>
+
 ClassImp(HistMaker)
 
 // getStr_FromEnum ----------------------------------------------------------
@@ -39,6 +42,8 @@ namespace
   const std::string& MyName("HistMaker::");
   const DCGeomMan& gGeom  = DCGeomMan::GetInstance();
   const DetSizeMan& gSize = DetSizeMan::GetInstance();
+  using hddaq::unpacker::GUnpacker;
+  const auto& gUnpacker = GUnpacker::get_instance();
 }
 
 // Constructor -------------------------------------------------------------
@@ -1805,44 +1810,84 @@ TList* HistMaker::createDAQ(bool flag_ps)
   TList *top_dir = new TList;
   top_dir->SetName(nameDetector);
 
+  std::vector<Int_t> vme_fe_id;
+  std::vector<Int_t> hul_fe_id;
+  std::vector<Int_t> ea0c_fe_id;
+  std::vector<Int_t> cobo_fe_id;
+  for( auto&& c : gUnpacker.get_root()->get_child_list() ){
+    if( !c.second )
+      continue;
+    TString n = c.second->get_name();
+    auto id = c.second->get_id();
+    if(n.Contains("vme"))
+      vme_fe_id.push_back(id);
+    if(n.Contains("hul"))
+      hul_fe_id.push_back(id);
+    if(n.Contains("easiroc"))
+      ea0c_fe_id.push_back(id);
+    if(n.Contains("cobo"))
+      cobo_fe_id.push_back(id);
+  }
+
   // DAQ infomation --------------------------------------------------
   {
     // Event builder infomation
-    int target_id = getUniqueID(kDAQ, kEB, kHitPat, 0);
-    top_dir->Add(createTH1(target_id + 1, "Data size EB", // 1 origin
-			   5000, 0, 5000,
-			   "Data size [words]", ""));
-
+    int target_id;
+    {
+      target_id = getUniqueID(kDAQ, kEB, kHitPat, 0);
+      top_dir->Add(createTH1(target_id + 1, "Data size EB", // 1 origin
+			     8000, 0, 80000,
+			     "Data size [words]", ""));
+    }
     // Node information
-    target_id = getUniqueID(kDAQ, kVME, kHitPat2D, 0);
-    top_dir->Add(createTH2(target_id + 1, "Data size VME nodes", // 1 origin
-			   15, 0, 15,
-			   100, 0, 1200,
-			   "VME node ID", "Data size [words]"));
+    {
+      target_id = getUniqueID(kDAQ, kVME, kHitPat2D, 0);
+      auto h = createTH2(target_id + 1, "Data size VME nodes", // 1 origin
+			 vme_fe_id.size(), 0, vme_fe_id.size(),
+			 100, 0, 1200,
+			 "VME node ID", "Data size [words]");
+      for(Int_t i=0, n=vme_fe_id.size(); i<n; ++i){
+	h->GetXaxis()->SetBinLabel( i+1, "0x"+TString::Itoa(vme_fe_id[i], 16));
+      }
+      top_dir->Add(h);
+    }
 
-    target_id = getUniqueID(kDAQ, kCLite, kHitPat2D, 0);
-    top_dir->Add(createTH2(target_id + 1, "Data size CLite nodes", // 1 origin
-			   15, 0, 15,
-			   200, 0, 400,
-			   "CLite node ID", "Data size [words]"));
+    //Easiroc
+    {
+      target_id = getUniqueID(kDAQ, kEASIROC, kHitPat2D, 0);
+      top_dir->Add(createTH2(target_id + 1, "Data size EASIROC nodes", // 1 origin
+			     20, 0, 20,
+			     50, 0, 100,
+			     "EASIROC node ID", "Data size [words]"));
 
-    target_id = getUniqueID(kDAQ, kEASIROC, kHitPat2D, 0);
-    top_dir->Add(createTH2(target_id + 1, "Data size EASIROC nodes", // 1 origin
-			   20, 0, 20,
-			   50, 0, 100,
-			   "EASIROC node ID", "Data size [words]"));
+    }
 
-    target_id = getUniqueID(kDAQ, kCAMAC, kHitPat2D, 0);
-    top_dir->Add(createTH2(target_id + 1, "Data size CAMAC nodes", // 1 origin
-			   3, 0, 3,
-			   100, 0, 200,
-			   "CAMAC node ID", "Data size [words]"));
+    //HUL
+    {
+      target_id = getUniqueID(kDAQ, kHUL, kHitPat2D, 0);
+      auto h = createTH2(target_id + 1, "Data size HUL nodes", // 1 origin
+			 hul_fe_id.size(),0,hul_fe_id.size(),
+			 200, 0, 400,
+			 "HUL node ID", "Data size [words]");
+      for(Int_t i=0, n=hul_fe_id.size(); i<n; ++i){
+	h->GetXaxis()->SetBinLabel(i+1, "0x"+TString::Itoa(hul_fe_id[i], 16));
+      }
+      top_dir->Add(h);
+    }
 
-    target_id = getUniqueID(kDAQ, kMiscNode, kHitPat2D, 0);
-    top_dir->Add(createTH2(target_id + 1, "Data size Misc nodes", // 1 origin
-			   5, 0, 5,
-			   100, 0, 200,
-			   "Misc node ID", "Data size [words]"));
+    //Cobo
+    {
+      target_id = getUniqueID(kDAQ, kCoBo, kHitPat2D, 0);
+      auto h = createTH2(target_id + 1, "Data size CoBo nodes",
+			 cobo_fe_id.size(),0, cobo_fe_id.size(),
+			 100, 0, 200000,
+			 "CoBo node ID", "Data size [words]");
+      for(Int_t i=0, n=cobo_fe_id.size(); i<n; ++i){
+	h->GetXaxis()->SetBinLabel(i+1, "0x"+TString::Itoa(cobo_fe_id[i], 16));
+      }
+      top_dir->Add(h);
+    }
+    
   }
   return top_dir;
 }
