@@ -1126,7 +1126,7 @@ process_event( void )
 
   gSystem->ProcessEvents();
 
-  //std::cout << "\a" << std::endl;
+  std::cout << "\a" << std::endl;
 
   return 0;
 }
