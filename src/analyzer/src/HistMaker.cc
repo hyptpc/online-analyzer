@@ -523,22 +523,30 @@ HistMaker::createBcInTracking(Bool_t flag_ps)
   TList *top_dir = new TList;
   top_dir->SetName(nameDetector);
   TString title;
-  { 
-    Int_t target_id = getUniqueID(kBcInTracking, 0, 0, 0);
-    title = Form("%s_X", nameDetector);
-    top_dir->Add(createTH1(++target_id, title,
-			   300, -300, 300,
-			   "X [mm]", ""));
 
-    title = Form("%s_Y", nameDetector);
-    top_dir->Add(createTH1(++target_id, title,
-			   300, -300, 300,
-			   "Y [mm]", ""));
-    title = Form("%s_2D", nameDetector);
-    top_dir->Add( createTH2(++target_id, title,
-                           300, -300, 300,
-			   300, -300, 300,
-			   "X [mm]", "Y [mm]" ) );
+  std::vector<std::pair<DataType, std::string>> particle_types = {
+    {kPi, "Pi"},
+    {kKaon, "K"},
+    {kAll, "All"}
+  };
+  {
+    for (auto& [type, particle] : particle_types) {
+      Int_t target_id = getUniqueID(kBcInTracking, 0, type, 0);
+      title = Form("%s_X_%s", nameDetector,particle.c_str());
+      top_dir->Add(createTH1(++target_id, title,
+			     300, -300, 300,
+			     "X [mm]", ""));
+
+      title = Form("%s_Y_%s", nameDetector,particle.c_str());
+      top_dir->Add(createTH1(++target_id, title,
+			     300, -300, 300,
+			     "Y [mm]", ""));
+      title = Form("%s_2D_%s", nameDetector,particle.c_str());
+      top_dir->Add( createTH2(++target_id, title,
+			      100, -300, 300,
+			      100, -300, 300,
+			      "X [mm]", "Y [mm]" ) );
+    }
   }
   return top_dir;
 }
@@ -554,22 +562,42 @@ HistMaker::createBcOutTracking(Bool_t flag_ps)
   TList *top_dir = new TList;
   top_dir->SetName(nameDetector);
   TString title;
-  { 
-    Int_t target_id = getUniqueID(kBcOutTracking, 0, 0, 0);
-    title = Form("%s_X", nameDetector);
-    top_dir->Add(createTH1(++target_id, title,
-			   300, -300, 300,
-			   "X [mm]", ""));
+  std::vector<std::pair<DataType, std::string>> particle_types = {
+    {kPi, "Pi"},
+    {kKaon, "K"},
+    {kAll, "All"}
+  };
+  {
+    for (auto& [type, particle] : particle_types) {
+      Int_t target_id = getUniqueID(kBcOutTracking, 0, type, 0);
+      title = Form("%s_X_%s", nameDetector,particle.c_str());
+      top_dir->Add(createTH1(++target_id, title,
+			     200, -200, 200,
+			     "X [mm]", ""));
 
-    title = Form("%s_Y", nameDetector);
-    top_dir->Add(createTH1(++target_id, title,
-			   300, -300, 300,
-			   "Y [mm]", ""));
-    title = Form("%s_2D", nameDetector);
-    top_dir->Add( createTH2(++target_id, title,
-                           300, -300, 300,
-			   300, -300, 300,
-			    "X [mm]", "Y [mm]" ) );
+      title = Form("%s_Y_%s", nameDetector,particle.c_str());
+      top_dir->Add(createTH1(++target_id, title,
+			     200, -200, 200,
+			     "Y [mm]", ""));
+      title = Form("%s_BH2_%s", nameDetector,particle.c_str());
+      top_dir->Add( createTH2(++target_id, title,
+			      100, -200, 200,
+			      100, -200, 200,
+			      "X [mm]", "Y [mm]" ) );
+
+      title = Form("%s_HTOF_window_%s", nameDetector,particle.c_str());
+      top_dir->Add( createTH2(++target_id, title,
+			      100, -200, 200,
+			      100, -200, 200,
+			      "X [mm]", "Y [mm]" ) );
+
+      title = Form("%s_Target_%s", nameDetector,particle.c_str());
+      top_dir->Add( createTH2(++target_id, title,
+			      100, -200, 200,
+			      100, -200, 200,
+			      "X [mm]", "Y [mm]" ) );
+
+    }
   }
   return top_dir;
 }
@@ -644,7 +672,7 @@ HistMaker::createTPC(Bool_t flag_ps)
     top_dir->Add( h_hit );
   }
   // ADC
-  top_dir->Add( createTH1( getUniqueID( kTPC, 0, kADC ),
+  top_dir->Add( createTH1( getUniqueID( kTPC, 0, kADC, 1 ),
                            "TPC_ADC", 4000, 0, 4000 ) );
   top_dir->Add( createTH1( getUniqueID( kTPC, 0, kPede ),
                            "TPC_RMS", 1000, 0, 1000 ) );
@@ -668,11 +696,22 @@ HistMaker::createTPC(Bool_t flag_ps)
 			   NumOfTimeBucket, 0, NumOfTimeBucket,
 			   "x [mm]", "tb" ) );
   // FADC
-  top_dir->Add( createTH2( getUniqueID( kTPC, 0, kFADC ),
+  top_dir->Add( createTH2( getUniqueID( kTPC, 0, kFADC,1 ),
                            "TPC_FADC",
                            NumOfTimeBucket, 0, NumOfTimeBucket,
 			   200, 0, 0x1000,
                            "Time bucket", "ADC" ) );
+
+  // FADC per AGET
+  for(int n_asad=0;n_asad < NumOfAsadTPC;n_asad++){
+    for(int n_aget = 0;n_aget<4;n_aget++){
+      top_dir->Add( createTH1( getUniqueID( kTPC, 0, kFADC, 2+n_asad*4+n_aget),
+			       Form("TPC_FADC_AsAd%d_AGET%d",n_asad+1,n_aget),
+			       NumOfTimeBucket, 0, NumOfTimeBucket));
+    }
+  }
+
+  
   // Multiplicity
   top_dir->Add( createTH1( getUniqueID( kTPC, 0, kMulti ),
                            "TPC_multiplicity", 600, 0, 6000 ) );
@@ -681,6 +720,14 @@ HistMaker::createTPC(Bool_t flag_ps)
 			   "AsAdID#times4+AGETID", "Multiplicity/AGET/Event" ) );
   top_dir->Add( createTH1( getUniqueID( kTPC, 4, kMulti ),
                            "TPC_AGET_multiplicity_Max", 64, 0, 64 ) );
+
+  top_dir->Add( createTH1( getUniqueID( kTPC, 1, kADC),
+                           "TPC_AGET_ADC", 124, 0,124,
+			   "AsAdID#times4+AGETID", "Mean ADC" ) );
+  top_dir->Add( createTH1( getUniqueID( kTPC, 2, kADC),
+                           "TPC_AGET_RMS", 124, 0,124,
+			   "AsAdID#times4+AGETID", "Mean RMS" ) );
+  
   // ClusterSize
   top_dir->Add( createTH2( getUniqueID( kTPC, 2, kMulti ),
                            "TPC_ClusterSize", 42, -10, 32, 10, 0, 10,

@@ -636,7 +636,7 @@ LocalTrackSearch(const std::vector<DCHC>& HC,
 
   Bool_t status = true;
   std::vector<IndexList> CombiIndex = MakeIndex(npp, nCombi, status);
-  if (!status) DebugPrint(nCombi, CandCont, FUNC_NAME);
+  //if (!status) DebugPrint(nCombi, CandCont, FUNC_NAME);
 
   for(Int_t i=0, n=CombiIndex.size(); i<n; ++i){
     DCLocalTrack *track = MakeTrack(CandCont, CombiIndex[i]);

@@ -916,7 +916,7 @@ TCanvas*
 TPC( void )
 {
   std::vector<Int_t> id = {
-    HistMaker::getUniqueID( kTPC, 0, kADC ),
+    HistMaker::getUniqueID( kTPC, 0, kADC, 1 ),
     HistMaker::getUniqueID( kTPC, 0, kTDC ),
     HistMaker::getUniqueID( kTPC, 0, kPede ),
     HistMaker::getUniqueID( kTPC, 0, kMulti )
@@ -939,7 +939,7 @@ TPC2D( void )
   std::vector<Int_t> id = {
     HistMaker::getUniqueID( kTPC, 0, kADC2D, 3 ),
     HistMaker::getUniqueID( kTPC, 0, kADC2D, 4 ),
-    HistMaker::getUniqueID( kTPC, 0, kFADC ),
+    HistMaker::getUniqueID( kTPC, 0, kFADC,1 ),
     HistMaker::getUniqueID( kTPC, 2, kTDC )
   };
 
@@ -976,6 +976,33 @@ TPC3D( void )
   }
   return c1;
 }
+
+//_____________________________________________________________________________
+TCanvas*
+TPCAGETCond( void )
+{
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->Divide(2,2);
+  c1->cd(1);
+  auto id = HistMaker::getUniqueID(kTPC, 3, kMulti);
+  auto h = GHist::get( id );
+  if( h )h->Draw();
+  
+  c1->cd(2)->SetLogy();
+  id = HistMaker::getUniqueID(kTPC, 1, kADC);
+  h = GHist::get( id );
+  h->GetYaxis()->SetRangeUser(0,4000);
+  if( h ) h->Draw();
+
+  c1->cd(3)->SetLogy();
+  id = HistMaker::getUniqueID(kTPC, 2, kADC);
+  h = GHist::get( id );
+  h->GetYaxis()->SetRangeUser(0,500);
+  if( h ) h->Draw();
+  return c1;
+}
+  
+
 //_____________________________________________________________________________
 TCanvas*
 TPCADCPAD( void )
@@ -1071,12 +1098,47 @@ TPCTDCPAD( void )
 TCanvas*
 TPCFADC( void )
 {
-  auto id = HistMaker::getUniqueID( kTPC, 0, kFADC );
+  auto id = HistMaker::getUniqueID( kTPC, 0, kFADC, 1 );
   auto c1 = new TCanvas( __func__, __func__ );
   c1->cd()->SetLogz();
   auto h = GHist::get( id );
   if( h ) h->Draw( "colz" );
   return c1;
+}
+
+//_____________________________________________________________________________
+TCanvas*
+TPCFADCAGET( void )
+{
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->Divide(8,4);
+  for(int n_asad = 0;n_asad < NumOfAsadTPC;n_asad++){
+    c1->cd(n_asad+1);
+    for(int n_aget = 0;n_aget<4;n_aget++){
+      auto id = HistMaker::getUniqueID(kTPC, 0, kFADC, 2+n_asad*4+n_aget);
+      auto h = GHist::get(id);
+      if(h){
+	h->SetLineColor(n_aget+1);
+	h->GetYaxis()->SetRangeUser(0,3000);
+	h->Draw("same");
+      }
+	
+    }
+  }
+
+  c1->cd(32);
+  TText *text[4];
+  for(int i=0;i<4;i++){
+    text[i] = new TText(0.2, 0.8-i*0.15, Form("AGET %d",i));
+    text[i]->SetNDC();
+    text[i]->SetTextColor(i+1);
+    text[i]->SetTextSize(0.1);
+    text[i]->Draw();
+    
+  }
+
+  return c1;
+  
 }
 
 
@@ -1151,14 +1213,130 @@ SHS2D( void )
   h_bcout->SetFillColor(kRed);
   h_bcout->Draw("box same");
   
-  c1->SetTitle("E72 Hit Pattern");
-  c1->SetName("E72 Hit Pattern");
+  c1->SetTitle("EventDisplay");
+  c1->SetName("EventDisplay");
   c1->Modified();
   c1->Update();
   
   return c1;
 }
 
+//_____________________________________________________________________________
+TCanvas*
+SHS2D_wotpc( void )
+{
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->cd();
+  
+  
+  for(int i=0;i<sizeof(EvtDis_Det_name)/sizeof(EvtDis_Det_name[0]);i++){
+    auto id_det = HistMaker::getUniqueID(kEventDisplay, 0, kHitPoly, i*2+2);
+    auto h_det = GHist::get(id_det);
+    if(h_det){
+      h_det->SetTitle("E72 2D Event Display");
+      h_det->Draw("colz same");
+    }
+
+    else
+      {std::cout<<"No "<<EvtDis_Det_name[i]<<" Hist"<<std::endl; getchar();}
+    
+    
+  }
+
+  c1->SetTitle("HitPattern");
+  c1->SetName("HitPattern");
+  c1->Modified();
+  c1->Update();
+  
+  return c1;
+}
+
+//_____________________________________________________________________________
+TCanvas*
+BcInOut1D( void )
+{
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->cd();
+  c1->Divide(4,2);
+  
+  int bcinout = 0;
+  int p_type = 0;
+  std::string p_str = "Pi";
+  
+      
+  for(int i=0;i<2;i++){ //bcinout
+    if(i==0)bcinout = kBcInTracking;
+    else{bcinout = kBcOutTracking;}
+    
+    for(int j=0;j<2;j++){ //particle type
+      if(j==0){
+	p_type = kPi;
+	p_str = "Pi";
+      }
+      else if(j==1){
+	p_type = kKaon;
+	p_str = "K";
+      }
+      for(int k=0;k<2;k++){ //X,Y
+	auto h_id_p = HistMaker::getUniqueID(bcinout, 0, p_type, k+1);
+	auto h_id_all = HistMaker::getUniqueID(bcinout, 0, kAll, k+1);
+	auto h_bc_p = GHist::get(h_id_p);
+	auto h_bc_all = GHist::get(h_id_all);
+	c1->cd(i*4+j*2+k+1);
+	h_bc_p->SetFillColor(kRed);
+	h_bc_p->SetLineColor(kRed);
+	h_bc_all->SetLineColor(kBlack);
+	h_bc_all->Draw();
+	h_bc_p->Draw("same");
+	auto text = new TText;
+	text->SetNDC();
+	text->SetTextSize(0.080);
+	text->SetText(0.800,0.700,p_str.c_str());
+	text->SetTextColor(kRed);
+	text->Draw();
+      }
+    }
+  }
+
+  return c1;
+}
+
+
+//_____________________________________________________________________________
+TCanvas*
+BcIn2D( void )
+{
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->cd();
+  c1->Divide(2,2);
+  for(int i=0;i<3;i++){
+    c1->cd(i+1);
+    auto h_id = HistMaker::getUniqueID(kBcInTracking, 0, kPi+i, 3);
+    auto h_bcin = GHist::get(h_id);
+    h_bcin->Draw("colz");
+  }
+  return c1;
+  
+}
+
+//_____________________________________________________________________________
+TCanvas*
+BcOut2D( void )
+{
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->cd();
+  c1->Divide(3,3);
+  for(int i=0;i<3;i++){
+    for(int j=0;j<3;j++){
+      c1->cd(i*3+j+1);
+      auto h_id = HistMaker::getUniqueID(kBcOutTracking, 0, kPi+j, 3+i);
+      auto h_bcout = GHist::get(h_id);
+      h_bcout->Draw("colz");
+    }
+  }
+  return c1;
+  
+}
 
 //____________________________________________________________________________
 TCanvas*

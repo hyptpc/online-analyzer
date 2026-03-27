@@ -89,13 +89,21 @@ TCanvas*  AC(int type, std::string strTrig);
 TCanvas* TPC( void );
 TCanvas* TPC2D( void );
 TCanvas* TPC3D( void );
+TCanvas* TPCAGETCond( void );
 TCanvas* TPCADCPAD( void );
 TCanvas* TPCTDCPAD( void );
 TCanvas* TPCHTOFPAD( void );
 TCanvas* TPCFADC( void );
+TCanvas* TPCFADCAGET( void );
+
+//BcInOut
+TCanvas* BcInOut1D( void );
+TCanvas* BcIn2D( void );
+TCanvas* BcOut2D( void );
 
 //Event Display
 TCanvas* SHS2D( void );
+TCanvas* SHS2D_wotpc( void );
 
 
 void      UpdateBLDCEfficiency();

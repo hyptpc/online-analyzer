@@ -27,7 +27,9 @@
 
 #include "user_analyzer.hh"
 #include "Unpacker.hh"
+#include "UnpackerConfig.hh"
 #include "UnpackerManager.hh"
+#include "UnpackerXMLReadDigit.hh"
 #include "DAQNode.hh"
 #include "filesystem_util.hh"
 
@@ -40,6 +42,11 @@
 #include "HodoParamMan.hh"
 #include "DCGeomMan.hh"
 #include "DetSizeMan.hh"
+#include "DCRawHit.hh"
+#include "DCAnalyzer.hh"
+#include "DCLocalTrack.hh"
+#include "EventAnalyzer.hh"
+#include "RawData.hh"
 
 #include "HistMaker.hh"
 
@@ -60,6 +67,7 @@ HttpServer&    gHttp = HttpServer::GetInstance();
 const auto& gUser    = UserParamMan::GetInstance();
 const auto& gGeom    = DCGeomMan::GetInstance();
 const auto& gSize    = DetSizeMan::GetInstance();
+const auto& gUConf   = hddaq::unpacker::GConfig::get_instance();
 
 TText text;
 TText end;
@@ -116,6 +124,8 @@ process_begin( const std::vector<std::string>& argv )
   ConfMan::getInstance().initializeUserParamMan();
   ConfMan::getInstance().initializeHodoParamMan();
   ConfMan::getInstance().initializeDCGeomMan();
+  ConfMan::getInstance().initializeDCTdcCalibMan();
+  ConfMan::getInstance().initializeDCDriftParamMan();
   ConfMan::getInstance().initializeDetSizeMan();
   // gROOT->SetBatch(kTRUE);
   gStyle->SetOptStat(1110);
@@ -143,7 +153,6 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Open();
 
   // Hodoscopes
-  //  gHttp.Register(gHist.createHodo(kBHD		,"BHT"  ,16, 2, nbinsqdc,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createBHT(kBHT, "BHT"  ,63, 2, nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kT0 ,"T0"   , 5, 2, nbinsqdc/4,-0.5,511.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kBH2, "BH2", 15, 3, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
@@ -166,10 +175,13 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(gHist.createBLDC(kBLC1b,"BLC1b",8,32,true));
   gHttp.Register(gHist.createBLDC(kBLC2a,"BLC2a",8,32,true));
   gHttp.Register(gHist.createBLDC(kBLC2b,"BLC2b",8,32,true));
+  gHttp.Register(gHist.createBcInTracking(true));
+  gHttp.Register(gHist.createBcOutTracking(true));
 
   // BTOF
   gHttp.Register(gHist.createBTOF(true));
   gHttp.Register(gHist.createCorrelation());
+  
   gHttp.Register(gHist.createEventDisplay());
 
   
@@ -214,6 +226,11 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::COBO());
   gHttp.Register(http::HitPat());
   gHttp.Register(http::Multiplicity());
+  gHttp.Register(http::BcInOut1D());
+  gHttp.Register(http::BcIn2D());
+  gHttp.Register(http::BcOut2D());
+  gHttp.Register(http::SHS2D_wotpc());
+  
   
   
   // Chambers except for CDC
@@ -282,7 +299,6 @@ process_event( void )
 #if DEBUG
   std::cout << __FILE__ << " " << __LINE__ << std::endl;
 #endif
-  //  std::cout << "Start-1 " <<std::endl;
 
   static Int_t run_number = -1;
   if(run_number != gUnpacker.get_run_number()){
@@ -292,11 +308,15 @@ process_event( void )
     run_number = gUnpacker.get_run_number();
   }
   auto event_number = gUnpacker.get_event_number();
-  //  std::cout << "Start-2 " <<std::endl;
 
+  
+  hptr_array[gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 2)]->SetName("Hit Pattern");
+  
   for (auto& h : hptr_array){
     h->SetTitle(h->GetName() + TString(Form(" run%05d", run_number)));
   }
+
+  
 
   std::map<int, std::vector<Int_t>> hit_seg_map;
 
@@ -951,7 +971,8 @@ process_event( void )
       //------------------------------------------------------------------
     // BTOF
     //------------------------------------------------------------------
-  
+
+  double btof0 = -9999.;
     {
       // Unpacker
       static const Int_t k_d_bht  = gUnpacker.get_device_id("BHT");
@@ -1044,6 +1065,7 @@ process_event( void )
 	    hodoMan.GetTime(cid_bht, plid, seg, kD, tdcd, bhttd);
 	    Double_t mt = (bhttu+bhttd)/2.;
 	    Double_t btof = mt-(t0+ofs);
+	    btof0 = btof;
 	    hptr_array[btof_id]->Fill(btof);
 	    hptr_array[btof_id+1]->Fill(btof,adc_bac);
 	    
@@ -1109,6 +1131,117 @@ process_event( void )
       }
     }
   }
+
+
+  //BcInOut
+  RawData rawData;
+  for (const auto& name : DCNameList.at("BcIn")) rawData.DecodeHits(name);
+  for (const auto& name : DCNameList.at("BcOut")) rawData.DecodeHits(name);
+
+  EventAnalyzer evAna;
+  evAna.DCRawHit("BcIn", rawData);
+  evAna.DCRawHit("BcOut", rawData);
+  
+  DCAnalyzer dcAna(rawData);
+  
+  //BcInTracking
+  dcAna.DecodeBcInHits();
+  dcAna.TotCut("BLC1a");
+  dcAna.TotCut("BLC1b");
+  dcAna.DriftTimeCut("BLC1a");
+  dcAna.DriftTimeCut("BLC1b");
+  evAna.DCHit("BcIn", dcAna);
+  dcAna.TrackSearchBcIn();
+  evAna.BcInTracking(dcAna);
+
+  //BcOutTracking
+  dcAna.DecodeBcOutHits();
+  dcAna.TotCut("BLC2a");
+  dcAna.TotCut("BLC2b");
+  dcAna.DriftTimeCut("BLC2a");
+  dcAna.DriftTimeCut("BLC2b");
+  evAna.DCHit("BcOut", dcAna);
+  dcAna.TrackSearchBcOut();
+  evAna.BcOutTracking(dcAna);
+
+  double ff_offset = -150.; //TPC center = 0, BcOut FF(z=0) : 150.
+  const int bh2_id = gGeom.GetDetectorId("BH2");
+  const double bh2_z = gGeom.GetGlobalPosition(bh2_id).z();
+
+  const double htof_window_z = -337.;
+    
+  std::vector<DataType> particle_type = {kPi, kKaon, kAll};
+  const double btof_cut = gUser.GetParameter("BTOF_Cut", 0);
+
+  int btof_p = kAll;
+  if(btof0 > btof_cut){
+    btof_p = kPi;
+  }
+  else if(btof0 < btof_cut && btof0 > -20.){
+    btof_p = kKaon;
+  }
+  
+
+  int hist_bcin_x_p_id = gHist.getSequentialID(kBcInTracking,0,btof_p,1);
+  int hist_bcin_y_p_id = gHist.getSequentialID(kBcInTracking,0,btof_p,2);
+  int hist_bcin_2d_p_id = gHist.getSequentialID(kBcInTracking,0,btof_p,3);
+  
+  int hist_bcin_x_id = gHist.getSequentialID(kBcInTracking,0,kAll,1);
+  int hist_bcin_y_id = gHist.getSequentialID(kBcInTracking,0,kAll,2);
+  int hist_bcin_2d_id = gHist.getSequentialID(kBcInTracking,0,kAll,3);
+  
+  for(const auto& track : dcAna.GetBcInTrackContainer()){
+    if(btof_p != kAll){
+      hptr_array[hist_bcin_x_p_id]->Fill(track->GetX0());
+      hptr_array[hist_bcin_y_p_id]->Fill(track->GetY0());
+      hptr_array[hist_bcin_2d_p_id]->Fill(track->GetX0(),track->GetY0());
+    }
+    
+    hptr_array[hist_bcin_x_id]->Fill(track->GetX0());
+    hptr_array[hist_bcin_y_id]->Fill(track->GetY0());
+    hptr_array[hist_bcin_2d_id]->Fill(track->GetX0(),track->GetY0());
+  
+  }
+
+
+  //BcOut
+  int hist_bcout_x_p_id = gHist.getSequentialID(kBcOutTracking,0,btof_p,1);
+  int hist_bcout_y_p_id = gHist.getSequentialID(kBcOutTracking,0,btof_p,2);
+  int hist_bcout_bh2_p_id = gHist.getSequentialID(kBcOutTracking,0,btof_p,3);
+  int hist_bcout_htof_p_id = gHist.getSequentialID(kBcOutTracking,0,btof_p,4);
+  int hist_bcout_target_p_id = gHist.getSequentialID(kBcOutTracking,0,btof_p,5);
+
+  int hist_bcout_x_id = gHist.getSequentialID(kBcOutTracking,0,kAll,1);
+  int hist_bcout_y_id = gHist.getSequentialID(kBcOutTracking,0,kAll,2);
+  int hist_bcout_bh2_id = gHist.getSequentialID(kBcOutTracking,0,kAll,3);
+  int hist_bcout_htof_id = gHist.getSequentialID(kBcOutTracking,0,kAll,4);
+  int hist_bcout_target_id = gHist.getSequentialID(kBcOutTracking,0,kAll,5);
+
+    
+  
+  for(const auto& track : dcAna.GetBcOutTrackContainer()){
+    double x0 = track->GetX0();
+    double y0 = track->GetY0();
+    double u0 = track->GetU0();
+    double v0 = track->GetV0();
+
+    if(btof_p != kAll){
+      hptr_array[hist_bcout_x_p_id]->Fill(x0);
+      hptr_array[hist_bcout_y_p_id]->Fill(y0);
+      hptr_array[hist_bcout_bh2_p_id]->Fill(x0+(ff_offset+bh2_z)*u0,y0+(ff_offset+bh2_z)*v0);
+      hptr_array[hist_bcout_htof_p_id]->Fill(x0+(ff_offset+htof_window_z)*u0,y0+(ff_offset+htof_window_z)*v0);
+      hptr_array[hist_bcout_target_p_id]->Fill(x0+(ff_offset)*u0,y0+(ff_offset)*v0);
+    }
+    hptr_array[hist_bcout_x_id]->Fill(x0);
+    hptr_array[hist_bcout_y_id]->Fill(y0);
+    hptr_array[hist_bcout_bh2_id]->Fill(x0+(ff_offset+bh2_z)*u0,y0+(ff_offset+bh2_z)*v0);
+    hptr_array[hist_bcout_htof_id]->Fill(x0+(ff_offset+htof_window_z)*u0,y0+(ff_offset+htof_window_z)*v0);
+    hptr_array[hist_bcout_target_id]->Fill(x0+(ff_offset)*u0,y0+(ff_offset)*v0);
+    
+  }
+  
+
+  
   
 
   //update
