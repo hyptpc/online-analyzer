@@ -276,6 +276,7 @@ process_event( void )
   auto event_number = gUnpacker.get_event_number();
 
   hptr_array[gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 1)]->SetName(Form("EventDisplay evt%d",event_number));
+  hptr_array[gHist.getSequentialID(kTPC, 0, kADC2D)]->SetName(Form("TPC_ADC2D evt%d",event_number));
   
   for (auto& h : hptr_array){
     h->SetTitle(h->GetName() + TString(Form(" run%05d", run_number)));
@@ -510,6 +511,55 @@ process_event( void )
     hptr_array[hid]->Fill(multiplicity);
   } //hodo
 
+    Bool_t has_hit_T2 = false;
+  { // T2
+    DetectorType kDET=kT2;
+    const int k_device = gUnpacker.get_device_id("T2");
+    const int k_adc = gUnpacker.get_data_id("T2", "adc");
+    const int k_tdc = gUnpacker.get_data_id("T2", "leading");
+    const UInt_t tdc_min = gUser.GetParameter("T2_TDC", 0);
+    const UInt_t tdc_max = gUser.GetParameter("T2_TDC", 1);
+    const Int_t n_seg = 1;
+    const Int_t n_ch = 1;
+    Int_t multiplicity = 0;
+    for(int seg = 0; seg<n_seg; ++seg){
+      for(int ch=0; ch<n_ch; ++ch){
+	Bool_t has_hit = false;
+	{ // TDC
+	  Int_t n = gUnpacker.get_entries(k_device, 0, seg, ch, k_tdc);
+          for(Int_t m=0; m<n; ++m){
+            UInt_t tdc = gUnpacker.get(k_device, 0, seg, ch, k_tdc, m);
+            hid = gHist.getSequentialID(kDET, ch, kTDC, seg+1);
+            hptr_array[hid]->Fill(tdc);
+	    if (tdc_min < tdc && tdc < tdc_max){
+	      has_hit    = true;
+	      hit_seg_map[k_device].push_back(0);
+	      has_hit_T2 = true;
+	    }
+	  }
+	}
+	{ // ADC
+	  Int_t n = gUnpacker.get_entries(k_device, 0, seg, ch, k_adc);
+          for(Int_t m=0; m<n; ++m){
+            UInt_t adc = gUnpacker.get(k_device, 0, seg, ch, k_adc, m);
+            hid = gHist.getSequentialID(kDET, ch, kADC, seg+1);
+            hptr_array[hid]->Fill(adc);
+            if(has_hit){
+              hid = gHist.getSequentialID(kDET, ch, kADCwTDC, seg+1);
+              hptr_array[hid]->Fill(adc);
+            } 
+          } // nhit
+	}
+	if(has_hit){
+	  hid = gHist.getSequentialID(kDET, 0, kHitPat, 0);
+	  hptr_array[hid]->Fill(seg);
+	  multiplicity++;
+	}
+      }
+    }//seg
+    hid = gHist.getSequentialID(kDET, 0, kMulti, 0);
+    hptr_array[hid]->Fill(multiplicity);
+  } //hodo
   
 
   { // KVC
@@ -559,11 +609,64 @@ process_event( void )
     hptr_array[hid]->Fill(multiplicity[0]);
   } //hodo
 
+      // SCH ------------------------------------------------------------
+  {
+    // data type    
+    DetectorType kDET=kSCH;
+    const int k_l=0;
+    const int k_t=1;
+    const int k_device = gUnpacker.get_device_id("SCH");
+    const UInt_t tdc_min = gUser.GetParameter("SCH_TDC", 0);
+    const UInt_t tdc_max = gUser.GetParameter("SCH_TDC", 1);
+    int multiplicity=0;
+    for(int seg = 0; seg<NumOfSegSCH; ++seg){
+      int ntdc = 0;
+      int nhit = gUnpacker.get_entries(k_device, 0, seg, 0, k_l);
+      if( nhit==0 ) continue;
+      ++multiplicity;
+      ntdc = 0;
+      std::vector< int > leading_array;
+      int leading_size = nhit;
+      for( int m=0; m<nhit; ++m ){
+	int tdc = gUnpacker.get(k_device, 0, seg, 0, k_l, m);
+	hid=gHist.getSequentialID(kDET,0,kTDC,seg+1);
+	hptr_array[hid]->Fill(tdc);
+	leading_array.push_back(tdc);
+	if (tdc_min < tdc && tdc < tdc_max) {
+	  hid = gHist.getSequentialID(kDET,0,kHitPat,1);
+	  hptr_array[hid]->Fill(seg);
+	  ntdc++;
+	}
+      }	
+      // traling
+      nhit = gUnpacker.get_entries(k_device, 0, seg, 0, k_t);
+      if( nhit==0 ) continue;
+      for( int m=0; m<nhit; ++m ){
+	int tdc = gUnpacker.get(k_device, 0, seg, 0, k_t , m);
+	hid=gHist.getSequentialID(kDET,0,kTDC2D,seg+1);
+	hptr_array[hid]->Fill(tdc);
+	// for TOT
+	if(m<leading_size){
+	  hid=gHist.getSequentialID(kDET,0,kTOT,seg+1);
+	  hptr_array[hid]->Fill(leading_array.at(m) - tdc);
+	  hid=gHist.getSequentialID(kDET,0,kADC2D,seg+1);
+	  hptr_array[hid]->Fill(leading_array.at(m), leading_array.at(m) - tdc);
+	}
+      }
+      if(ntdc>0){
+	hid  = gHist.getSequentialID(kDET, 0, kHitPat, 0);
+	hptr_array[hid]->Fill(seg);
+	hit_seg_map[k_device].push_back(seg);
+	multiplicity++;
+      }
+    }//seg
+    hid  = gHist.getSequentialID(kDET, 0, kMulti, 0);
+    hptr_array[hid]->Fill(multiplicity);	    
+  } //SCH
   
 
   // TPC -----------------------------------------------------------
 
-  //UInt_t cobo_data_size = 0;
   {
     //if(cobo_data_size > 0){
     static const Int_t k_device   = gUnpacker.get_device_id( "TPC" );
@@ -682,7 +785,7 @@ process_event( void )
       for(int n_aget = 0;n_aget<4;n_aget++){
 	hptr_array[tpcfa_id+n_asad*4+n_aget+1]->Reset();
 	for(int i=0;i<NumOfTimeBucket;++i){
-	  hptr_array[tpcfa_id+n_asad*4+n_aget+1]->SetBinContent(i,max_rms_fadc[n_asad][n_aget][i]+(3-n_aget)*700);
+	  hptr_array[tpcfa_id+n_asad*4+n_aget+1]->SetBinContent(i+1,max_rms_fadc[n_asad][n_aget][i]+(3-n_aget)*700);
 	}
       }
     }
@@ -896,7 +999,7 @@ process_event( void )
     double step = (z_end-z_start) / (double)bcout_count;
       
 
-    int hist_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 9);
+    int hist_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 13);
     auto h2 = dynamic_cast<TH2*>(hptr_array[hist_id]);
     h2->Reset();
 

@@ -16,6 +16,7 @@
 #include <TPolyLine.h>
 #include <TMultiGraph.h>
 #include <TGraph.h>
+#include <TStyle.h>
 
 #include "DetectorID.hh"
 #include "Main.hh"
@@ -395,10 +396,10 @@ HTOFTDC2()
 
 //____________________________________________________________________________
 TCanvas*
-T1()
+T1T2T3()
 {
   TCanvas *c1 = new TCanvas(__func__, __func__);
-  c1->Divide(2, 1);
+  c1->Divide(3, 2);
   c1->cd(1)->SetLogy();
   TH1 *h = GHist::get( HistMaker::getUniqueID(kT1, 0, kADC, 1 ) );
   if( !h ) return c1;
@@ -408,11 +409,62 @@ T1()
   h->SetLineColor(kRed+1);
   h->Draw("same");
 
-  c1->cd(2)->SetLogy();
+  c1->cd(4)->SetLogy();
   h = GHist::get( HistMaker::getUniqueID(kT1, 0, kTDC, 1 ) );
   if( !h ) return c1;
   h->Draw();
+
+  c1->cd(2)->SetLogy();
+  h = GHist::get( HistMaker::getUniqueID(kT2, 0, kADC, 1 ) );
+  if( !h ) return c1;
+  h->Draw();
+  h = GHist::get( HistMaker::getUniqueID(kT2, 0, kADCwTDC, 1 ) );
+  if( !h ) return c1;
+  h->SetLineColor(kRed+1);
+  h->Draw("same");
+
+  c1->cd(5)->SetLogy();
+  h = GHist::get( HistMaker::getUniqueID(kT2, 0, kTDC, 1 ) );
+  if( !h ) return c1;
+  h->Draw();
+
+  c1->cd(6)->SetLogy();
+  h = GHist::get( HistMaker::getUniqueID(kT3, 0, kTDC, 1 ) );
+  if( !h ) return c1;
+  h->Draw();
   
+  return c1;
+}
+
+//____________________________________________________________________________
+TCanvas*
+SCHTOT()
+{
+  TCanvas *c1 = new TCanvas(__func__, __func__);
+  c1->Divide(8, 8);
+  const Int_t n_seg = 64;
+  for(Int_t seg=0; seg<n_seg; ++seg){
+    c1->cd(seg+1)->SetLogy();
+    auto h = GHist::get(HistMaker::getUniqueID(kSCH, 0, kTOT, seg+1));
+    if(!h) continue;
+    h->Draw();
+  }
+  return c1;
+}
+
+//____________________________________________________________________________
+TCanvas*
+SCHTDC()
+{
+  TCanvas *c1 = new TCanvas(__func__, __func__);
+  c1->Divide(8,8);
+  const Int_t n_seg = 64;
+  for(Int_t seg=0; seg<n_seg; ++seg){
+    c1->cd(seg+1)->SetLogy();
+    auto h = GHist::get(HistMaker::getUniqueID(kSCH, 0, kTDC, seg+1));
+    if(!h) continue;
+    h->Draw();
+  }
   return c1;
 }
 
@@ -538,37 +590,6 @@ BVHTDCTOT()
   return c1;
 }
 
-//_____________________________________________________________________________
-TCanvas*
-T1T2()
-{
-  auto c1 = new TCanvas(__func__, __func__);
-  c1->Divide(4, 2);
-  const Int_t n_ch = 2;
-  std::vector<Int_t> device_id = { kT1, kT2 };
-  for (Int_t i=0, n=device_id.size(); i<n; ++i) {
-    for (Int_t ch=0; ch<n_ch; ++ch) {
-      c1->cd(i*n_ch+ch+1)->SetLogy();
-      auto h1 = GHist::get(HistMaker::getUniqueID(device_id[i], 0, kADC, ch+1));
-      if(!h1) continue;
-      h1->Draw();
-      auto h2 = GHist::get(HistMaker::getUniqueID(device_id[i], 0, kADCwTDC, ch+1));
-      if(!h2) continue;
-      h2->SetLineColor(kRed+1);
-      h2->Draw("same");
-    }
-  }
-  for (Int_t i=0, n=device_id.size(); i<n; ++i) {
-    for (Int_t ch=0; ch<n_ch; ++ch) {
-      c1->cd(i*n_ch+ch+5)->SetLogy();
-      auto h1 = GHist::get(HistMaker::getUniqueID(device_id[i], 0, kTDC, ch+1));
-      if(!h1) continue;
-      h1->Draw();
-    }
-  }
-  return c1;
-}
-
 //____________________________________________________________________________
 TCanvas*
 Multiplicity()
@@ -581,11 +602,12 @@ Multiplicity()
     HistMaker::getUniqueID(kHTOF, 0, kMulti, 0),
     HistMaker::getUniqueID(kKVC, 0, kMulti, 0),
     HistMaker::getUniqueID(kKVC, 0, kMulti, 1),
+    HistMaker::getUniqueID(kSCH, 0, kMulti, 0),
     HistMaker::getUniqueID(kCVC, 0, kMulti, 0),
     HistMaker::getUniqueID(kSAC3, 0, kMulti, 1),
     HistMaker::getUniqueID(kSFV, 0, kMulti, 0),
   };
-  c1->Divide(3, 3);
+  c1->Divide(4, 3);
   for(Int_t i=0, n=hid_list.size(); i<n; ++i){
     c1->cd(i+1);
     auto h1 = GHist::get(hid_list[i]);
@@ -609,6 +631,8 @@ HitPat()
     HistMaker::getUniqueID(kHTOF, 0, kHitPat, 3),
     HistMaker::getUniqueID(kKVC, 0, kHitPat, 0),
     HistMaker::getUniqueID(kT1, 0, kHitPat, 0),
+    HistMaker::getUniqueID(kT2, 0, kHitPat, 0),
+    HistMaker::getUniqueID(kSCH, 0, kHitPat, 0),
     HistMaker::getUniqueID(kCVC, 0, kHitPat, 0),
     HistMaker::getUniqueID(kCVC, 0, kHitPat, 1),
     HistMaker::getUniqueID(kCVC, 0, kHitPat, 2),
@@ -1208,13 +1232,12 @@ SHS2D( void )
   LH2_Target->Draw("same");
   LH2_Target_holder->Draw("same");
 
-  auto id_bcout = HistMaker::getUniqueID(kEventDisplay, 0, kHitPoly, 9);
+  auto id_bcout = HistMaker::getUniqueID(kEventDisplay, 0, kHitPoly, 13);
   auto h_bcout = GHist::get(id_bcout);
   h_bcout->SetFillColor(kRed);
   h_bcout->Draw("box same");
   
-  c1->SetTitle("EventDisplay");
-  c1->SetName("EventDisplay");
+  gStyle->SetPalette(kBird);
   c1->Modified();
   c1->Update();
   
@@ -1243,8 +1266,7 @@ SHS2D_wotpc( void )
     
   }
 
-  c1->SetTitle("HitPattern");
-  c1->SetName("HitPattern");
+  gStyle->SetPalette(kBird);
   c1->Modified();
   c1->Update();
   

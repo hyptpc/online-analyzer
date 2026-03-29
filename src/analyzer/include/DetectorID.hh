@@ -12,6 +12,7 @@ const Int_t NumOfSegBH2 = 15;
 const Int_t NumOfSegBVH = 4;
 const Int_t NumOfSegT1  = 1;
 const Int_t NumOfSegT2  = 1;
+const Int_t NumOfSegSCH = 64;
 
 const Int_t NumOfSegHTOF = 34;
 const Int_t NumOfSegKVC = 8;

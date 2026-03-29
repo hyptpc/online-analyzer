@@ -13,8 +13,8 @@
 
 
 //For EventDisplay
-const TString EvtDis_Det_name[] = {"HTOF","BH2","BAC","KVC"};
-const int NumOfSeg[] = {NumOfSegHTOF, NumOfSegBH2, NumOfSegBAC, NumOfSegKVC};
+const TString EvtDis_Det_name[] = {"HTOF","BH2","BAC","KVC","T2","SCH"};
+const int NumOfSeg[] = {NumOfSegHTOF, NumOfSegBH2, NumOfSegBAC, NumOfSegKVC, NumOfSegT2, NumOfSegSCH};
 
 enum DetectorType {
   kDetectorZero,
@@ -30,7 +30,7 @@ enum DetectorType {
   kCVC, kNC, kVFT, //31
   kBAC, kKVC1, kKVC2, kSAC, kBH2, kCOBO, //34 for E72
   kHTOF, kSAC3, kKVC,
-  kBVH, kBVH2, kT1, kT2, kSFV,
+  kBVH, kBVH2, kT1, kT2, kSFV, kSCH, kT3,
   kTPC, kPede,
   kQDC, kQDC1, kQDC2, //37
   kTriggerFlag, kDAQ, kCorrelation, kMisc, kEventDisplay,
@@ -150,9 +150,6 @@ public:
                         Double_t ymin, Double_t ymax );
   TMultiGraph* createMG( Int_t unique_id, const TString& title);
   TList* createTriggerFlag(bool flag_ps=true);
-  TList* createBVH(bool flag_ps=true);
-  TList* createT1(bool flag_ps=true);
-  TList* createT2(bool flag_ps=true);
   TList* createTPC( Bool_t flag_ps=true);
   TList* createBTOF( Bool_t flag_ps=true);
   TList* createCorrelation(bool flag_ps=true);
@@ -162,26 +159,15 @@ public:
   TList* createBcOutTracking(bool flag_ps=true);  
 
   TList* createTimeStamp(bool flag_ps=true);
-  TList* createPbF2(DetectorType kDET, std::string strDet, int nsegments, bool flag_ps=true); 
   TList* createHodo(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins, double xmin, double xmax, int nbins2, double xmin2, double xmax2, bool flag_ps=true); 
   TList* createBHT(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins2, double xmin2, double xmax2, bool flag_ps=true); 
   TList* createHTOF(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins, double xmin, double xmax, int nbins2, double xmin2, double xmax2, bool flag_ps=true); 
   TList* createQDC(DetectorType kDET, std::string strDet, int nsegments, int nbins, double xmin, double xmax, bool flag_ps=true); 
-  TList* createSDD(DetectorType kDET, std::string strDet, int nports, int nunits, bool flag_ps=true); 
   TList* createMHTDC(DetectorType kDET, std::string strDet, int nsegments, double xmax=1024., bool flag_ps=true);
   TList* createBLDC(DetectorType kDET, std::string strDet, int nlayers, int nwires, 
                     bool WIRE_RAW = false, bool ANA=false,bool flag_ps=true);
   
-#if 1
-  TList* createCDC(bool flag_ps=true);
-#endif
   TList* createDAQ(bool flag_ps=true);
-
-  TList* createAnaTOF(int type=1, bool flag_ps=true);
-  TList* createAnaDeuteron(int type=1, bool flag_ps=true);
-  TList* createAnaTrack(int type=1, bool flag_ps=true);
-  
-  TList* createT98Hist(DetectorType kDET, std::string strDet, int nch,  int nbin, bool flag_ps=true);
 
 
 private:
