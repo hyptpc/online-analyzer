@@ -96,6 +96,7 @@ TCanvas* TPCTDCPAD( void );
 TCanvas* TPCHTOFPAD( void );
 TCanvas* TPCFADC( void );
 TCanvas* TPCFADCAGET( void );
+TCanvas* TPCTHRE( void );
 
 //BcInOut
 TCanvas* BcInOut1D( void );
@@ -103,7 +104,8 @@ TCanvas* BcIn2D( void );
 TCanvas* BcOut2D( void );
 
 //Event Display
-TCanvas* SHS2D( void );
+TCanvas* SHS2D_EVT( void );
+TCanvas* SHS2D_HITPATTERN( void );
 TCanvas* SHS2D_wotpc( void );
 
 

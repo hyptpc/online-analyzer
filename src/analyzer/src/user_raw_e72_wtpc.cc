@@ -232,7 +232,9 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::TPCADCPAD());
   gHttp.Register(http::TPCAGETCond());
   gHttp.Register(http::TPCFADCAGET());
-  gHttp.Register(http::SHS2D());
+  gHttp.Register(http::TPCTHRE());
+  gHttp.Register(http::SHS2D_EVT());
+  gHttp.Register(http::SHS2D_HITPATTERN());
 
 
   //=== set directory ===//
@@ -240,7 +242,9 @@ process_begin( const std::vector<std::string>& argv )
     hptr_array[i]->SetDirectory(0);
   }
   //=== set directory ===//
-
+  for(int i=0;i<NumOfPadTPC;i++){
+    hptr_array[gHist.getSequentialID(kTPC, 0, kADC2D, 5)]->SetBinContent(i+1,2000.);
+  }
 
   gHttp.Begin();  
   return 0;
@@ -269,6 +273,8 @@ process_event( void )
   static Int_t run_number = -1;
   if(run_number != gUnpacker.get_run_number()){
     for(Int_t i=0, n=hptr_array.size(); i<n; ++i){
+      if((i == gHist.getSequentialID(kTPC,0,kADC2D,5))||
+	 (i == gHist.getSequentialID(kTPC, 1, kADC)))continue;
       hptr_array[i]->Reset();
     }
     run_number = gUnpacker.get_run_number();
@@ -277,6 +283,7 @@ process_event( void )
 
   hptr_array[gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 1)]->SetName(Form("EventDisplay evt%d",event_number));
   hptr_array[gHist.getSequentialID(kTPC, 0, kADC2D)]->SetName(Form("TPC_ADC2D evt%d",event_number));
+  
   
   for (auto& h : hptr_array){
     h->SetTitle(h->GetName() + TString(Form(" run%05d", run_number)));
@@ -675,21 +682,19 @@ process_event( void )
     // static const Int_t k_tdc_low  = gUnpacker.get_data_id( "TPC", "tdc_low" );
     // sequential id
     static const Int_t tpca_id   = gHist.getSequentialID( kTPC, 0, kADC, 1 );
-    static const Int_t tpcaget_a_id   = gHist.getSequentialID( kTPC, 1, kADC);
-    static const Int_t tpcaget_rms_id   = gHist.getSequentialID( kTPC, 2, kADC);
+    static const Int_t tpcaget_count_id   = gHist.getSequentialID( kTPC, 1, kADC);
     static const Int_t tpct_id   = gHist.getSequentialID( kTPC, 0, kTDC );
     static const Int_t rms_id    = gHist.getSequentialID( kTPC, 0, kPede );
     static const Int_t tpcfa_id   = gHist.getSequentialID( kTPC, 0, kFADC, 1 );
-    static const Int_t tpca2d_id = gHist.getSequentialID( kTPC, 0, kADC2D );
+    static const Int_t tpca2d_id = gHist.getSequentialID( kTPC, 0, kADC2D, 1 );
     static const Int_t tpcmul_id = gHist.getSequentialID( kTPC, 0, kMulti );
     static const Int_t tpcbp_id   = gHist.getSequentialID( kTPC, 2, kTDC );
     static const Int_t agetmul_id = gHist.getSequentialID( kTPC, 3, kMulti );
     static const Int_t amulmax_id = gHist.getSequentialID( kTPC, 4, kMulti );
       
-    hptr_array[tpca2d_id]->Reset();
-    hptr_array[tpca2d_id+1]->Reset();
-    hptr_array[tpca2d_id+2]->Reset();
-    hptr_array[tpca2d_id+4]->Reset();
+    hptr_array[tpca2d_id]->Reset(); //adc2d
+    hptr_array[tpca2d_id+1]->Reset(); //rms2d
+    hptr_array[tpca2d_id+2]->Reset(); // tdc2d
     hptr_array[agetmul_id]->Reset();
       
     // FADC before
@@ -698,8 +703,6 @@ process_event( void )
     
     std::vector<std::vector<std::vector<double>>> max_rms_fadc(NumOfAsadTPC,std::vector<std::vector<double>>(4,std::vector<double>(NumOfTimeBucket)));
     double aget_max_rms[NumOfAsadTPC][4]={0.};
-    double aget_max_adc[NumOfAsadTPC][4]={0.};
-    double aget_rms_mean[NumOfAsadTPC][4]={0.};
     int aget_count[NumOfAsadTPC][4] = {0};
     
     Int_t max_adc = -1;
@@ -740,16 +743,15 @@ process_event( void )
 	// Maximum RMS per AGET
 	Int_t aget = gTpcPad.GetParam( layer, ch )->AGetId();
 	Int_t asad = gTpcPad.GetParam( layer, ch )->AsAdId();
-	aget_count[asad][aget]++;
-	aget_max_adc[asad][aget]+=max_adc;
-	aget_max_adc[asad][aget]/=(double)aget_count[asad][aget];
-	aget_rms_mean[asad][aget]+=rms;
-	aget_rms_mean[asad][aget]/=(double)aget_count[asad][aget];
+	
 	if(aget_max_rms[asad][aget] < rms){
 	  aget_max_rms[asad][aget] = rms;
 	  max_rms_fadc[asad][aget] = fadc;
 	}
-	
+
+	if(max_adc < hptr_array[tpca2d_id+4]->GetBinContent(pad+1)){
+	  hptr_array[tpca2d_id+4]->SetBinContent( pad+1, max_adc );
+	}
 	
 
 	if( max_adc - mean <= 0 ) continue;
@@ -757,9 +759,11 @@ process_event( void )
 	hptr_array[agetmul_id]->Fill( asad*4+aget );
 
 	hptr_array[tpca_id]->Fill( max_adc - mean );
+	double aget_count;
+	if(max_adc - mean > 100)
+	  aget_count = hptr_array[tpcaget_count_id]->GetBinContent(asad*4+aget+1)+1;
 	
-	hptr_array[tpcaget_a_id]->SetBinContent(asad*4+aget,aget_max_adc[asad][aget]);
-	hptr_array[tpcaget_rms_id]->SetBinContent(asad*4+aget,aget_rms_mean[asad][aget]);
+	hptr_array[tpcaget_count_id]->SetBinContent(asad*4+aget+1,aget_count);
 
 	hptr_array[tpct_id]->Fill( loc_max );
 	hptr_array[rms_id]->Fill( rms );
@@ -789,6 +793,7 @@ process_event( void )
 	}
       }
     }
+    
     
     
     std::cout << "run# " << run_number << "  ev# " << event_number

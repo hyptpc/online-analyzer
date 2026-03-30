@@ -1006,23 +1006,17 @@ TCanvas*
 TPCAGETCond( void )
 {
   auto c1 = new TCanvas( __func__, __func__ );
-  c1->Divide(2,2);
+  c1->Divide(2,1);
   c1->cd(1);
   auto id = HistMaker::getUniqueID(kTPC, 3, kMulti);
   auto h = GHist::get( id );
   if( h )h->Draw();
   
-  c1->cd(2)->SetLogy();
+  c1->cd(2);
   id = HistMaker::getUniqueID(kTPC, 1, kADC);
   h = GHist::get( id );
-  h->GetYaxis()->SetRangeUser(0,4000);
   if( h ) h->Draw();
 
-  c1->cd(3)->SetLogy();
-  id = HistMaker::getUniqueID(kTPC, 2, kADC);
-  h = GHist::get( id );
-  h->GetYaxis()->SetRangeUser(0,500);
-  if( h ) h->Draw();
   return c1;
 }
   
@@ -1165,10 +1159,22 @@ TPCFADCAGET( void )
   
 }
 
+//_____________________________________________________________________________
+TCanvas*
+TPCTHRE( void )
+{
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->cd();
+  auto id = HistMaker::getUniqueID(kTPC, 0, kADC2D, 5);
+  auto h = GHist::get(id);
+  h->GetZaxis()->SetRangeUser(300,700);
+  h->Draw("colz");
+  return c1;
+}
 
 //_____________________________________________________________________________
 TCanvas*
-SHS2D( void )
+SHS2D_EVT( void )
 {
   auto c1 = new TCanvas( __func__, __func__ );
   c1->cd();
@@ -1237,6 +1243,78 @@ SHS2D( void )
   h_bcout->SetFillColor(kRed);
   h_bcout->Draw("box same");
   
+  gStyle->SetPalette(kBird);
+  c1->Modified();
+  c1->Update();
+  
+  return c1;
+}
+
+//_____________________________________________________________________________
+TCanvas*
+SHS2D_HITPATTERN( void )
+{
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->cd();
+  
+  
+  for(int i=0;i<sizeof(EvtDis_Det_name)/sizeof(EvtDis_Det_name[0]);i++){
+    auto id_det = HistMaker::getUniqueID(kEventDisplay, 0, kHitPoly, i*2+2);
+    auto h_det = GHist::get(id_det);
+    if(h_det){
+      h_det->Draw("colz same");
+    }
+
+    else
+      {std::cout<<"No "<<EvtDis_Det_name[i]<<" Hist"<<std::endl; getchar();}
+    
+    
+  }
+
+  
+  
+
+  auto id_tpc = HistMaker::getUniqueID( kTPC, 0, kADC2D, 4);
+  auto h = GHist::get( id_tpc );
+  if( h ){
+    h->SetLineWidth( 0 );
+    h->GetXaxis()->SetRangeUser(-400,400);
+    h->GetYaxis()->SetRangeUser(-400,400);
+    //h->SetMaximum( 200 );
+    h->Draw( "same col" );
+  }
+  
+  Double_t l = (500./2.)/(1+sqrt(2.));
+  Double_t px[9]={-l*(1+sqrt(2.)),-l,l,l*(1+sqrt(2.)),
+    l*(1+sqrt(2.)),l,-l,-l*(1+sqrt(2.)),
+    -l*(1+sqrt(2.))};
+  Double_t py[9]={l,l*(1+sqrt(2.)),l*(1+sqrt(2.)),l,
+    -l,-l*(1+sqrt(2.)),-l*(1+sqrt(2.)),-l,
+    l};
+  TPolyLine* pLine = new TPolyLine( 9, px, py );
+  pLine->SetLineColor(1);
+  pLine->SetFillColorAlpha(kWhite, 0);
+  pLine->Draw();
+  c1->cd( 1 )->SetLogz();
+
+
+  
+    
+  //Target
+  TEllipse *LH2_Target = new TEllipse(-143,0,40);
+  LH2_Target->SetLineColor(kRed);
+  LH2_Target->SetLineWidth(2);
+  LH2_Target->SetFillStyle(0);
+
+  //Target holder
+  TEllipse *LH2_Target_holder = new TEllipse(-143,0,113./2.);
+  LH2_Target_holder->SetLineColor(kGreen+1);
+  LH2_Target_holder->SetLineWidth(2);
+  LH2_Target_holder->SetFillStyle(0);
+
+  LH2_Target->Draw("same");
+  LH2_Target_holder->Draw("same");
+
   gStyle->SetPalette(kBird);
   c1->Modified();
   c1->Update();

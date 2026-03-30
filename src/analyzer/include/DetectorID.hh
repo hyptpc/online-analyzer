@@ -70,6 +70,7 @@ const Int_t DetIdTPC       = 70;
 const Int_t NumOfLayersTPC = 32;
 const Int_t NumOfTimeBucket = 170;
 const Int_t NumOfAsadTPC    = 31;
+const Int_t NumOfPadTPC     = 5768;
 
 // 
 const int DetIdVmeRm=91;
