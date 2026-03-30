@@ -760,7 +760,7 @@ process_event( void )
 
 	hptr_array[tpca_id]->Fill( max_adc - mean );
 	double aget_count;
-	if(max_adc - mean > 100)
+	if(max_adc - mean > 200)
 	  aget_count = hptr_array[tpcaget_count_id]->GetBinContent(asad*4+aget+1)+1;
 	
 	hptr_array[tpcaget_count_id]->SetBinContent(asad*4+aget+1,aget_count);
@@ -971,7 +971,7 @@ process_event( void )
 	  else{
 	    binid = seg + 1;
 	  }
-	  hptr_array[det_hist_pat_id]->SetBinContent(binid,100.);
+	  hptr_array[det_hist_pat_id]->SetBinContent(binid,166.);
 	  double bin_cont = hptr_array[det_hist_count_id]->GetBinContent(binid);
 	  hptr_array[det_hist_count_id]->SetBinContent(binid, bin_cont+1);
 	}

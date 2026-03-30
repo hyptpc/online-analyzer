@@ -1218,7 +1218,7 @@ SHS2D_EVT( void )
   pLine->SetLineColor(1);
   pLine->SetFillColorAlpha(kWhite, 0);
   pLine->Draw();
-  c1->cd( 1 )->SetLogz();
+  c1->cd( 1 );
 
 
   

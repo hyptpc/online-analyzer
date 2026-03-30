@@ -598,7 +598,7 @@ TList*
 HistMaker::createEventDisplay(Bool_t flag_ps)
 {
   double c_x_min = -700.;
-  double c_x_max = 820.;
+  double c_x_max = 1800.;
   double c_y_min = -500.;
   double c_y_max = 750.;
 
@@ -709,7 +709,7 @@ HistMaker::createEventDisplay(Bool_t flag_ps)
     Double_t det_z = det_pos.z() - tpc_z;
     if(name == "SCH"){
       t*=4;
-      det_z = 800;
+      //det_z = 800;
     }
     
     double zmin = det_z - t/2.;
