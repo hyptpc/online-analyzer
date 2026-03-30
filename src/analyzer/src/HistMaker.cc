@@ -42,6 +42,7 @@ namespace
   const std::string& MyName("HistMaker::");
   const DCGeomMan& gGeom  = DCGeomMan::GetInstance();
   const DetSizeMan& gSize = DetSizeMan::GetInstance();
+  const auto& gTpcPad  = TpcPadHelper::GetInstance();
   using hddaq::unpacker::GUnpacker;
   const auto& gUnpacker = GUnpacker::get_instance();
 }
@@ -423,17 +424,30 @@ HistMaker::createTPC(Bool_t flag_ps)
       Double_t cRad    = TpcPadHelper::PadParameter[i][2];
       Int_t    nPad    = TpcPadHelper::PadParameter[i][1];
       for( Int_t j=0; j<nPad; j++ ){
-        X[1] = (cRad+(pLength/2.))*TMath::Cos(j*dTheta+sTheta);
-        X[2] = (cRad+(pLength/2.))*TMath::Cos((j+1)*dTheta+sTheta);
-        X[3] = (cRad-(pLength/2.))*TMath::Cos((j+1)*dTheta+sTheta);
-        X[4] = (cRad-(pLength/2.))*TMath::Cos(j*dTheta+sTheta);
-        X[0] = X[4];
-        Y[1] = (cRad+(pLength/2.))*TMath::Sin(j*dTheta+sTheta);
-        Y[2] = (cRad+(pLength/2.))*TMath::Sin((j+1)*dTheta+sTheta);
-        Y[3] = (cRad-(pLength/2.))*TMath::Sin((j+1)*dTheta+sTheta);
-        Y[4] = (cRad-(pLength/2.))*TMath::Sin(j*dTheta+sTheta);
-        Y[0] = Y[4];
-        for( Int_t ii=0; ii<5; ii++ ) X[ii] -=143;
+	Bool_t dead = false;
+	/*
+	for(int k=0;k<sizeof(TpcPadHelper::padOnCenterFrame)/sizeof(*TpcPadHelper::padOnCenterFrame);k++){
+	  if(gTpcPad.GetPadId(i,j) == TpcPadHelper::padOnCenterFrame[k]){
+	    dead = true;
+	    std::cout<<"dead"<<std::endl;
+	    break;
+	  }
+	}
+	*/
+	
+	if(!dead){
+	  X[1] = (cRad+(pLength/2.))*TMath::Cos(j*dTheta+sTheta);
+	  X[2] = (cRad+(pLength/2.))*TMath::Cos((j+1)*dTheta+sTheta);
+	  X[3] = (cRad-(pLength/2.))*TMath::Cos((j+1)*dTheta+sTheta);
+	  X[4] = (cRad-(pLength/2.))*TMath::Cos(j*dTheta+sTheta);
+	  X[0] = X[4];
+	  Y[1] = (cRad+(pLength/2.))*TMath::Sin(j*dTheta+sTheta);
+	  Y[2] = (cRad+(pLength/2.))*TMath::Sin((j+1)*dTheta+sTheta);
+	  Y[3] = (cRad-(pLength/2.))*TMath::Sin((j+1)*dTheta+sTheta);
+	  Y[4] = (cRad-(pLength/2.))*TMath::Sin(j*dTheta+sTheta);
+	  Y[0] = Y[4];
+	  for( Int_t ii=0; ii<5; ii++ ) X[ii] -=143;
+	}
         h_adc->AddBin( 5, X, Y );
         h_rms->AddBin( 5, X, Y );
         h_loc->AddBin( 5, X, Y );

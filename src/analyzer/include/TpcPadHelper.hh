@@ -74,6 +74,7 @@ public:
     NPadParameter
   };
   static const Double_t PadParameter[NumOfLayersTPC][NPadParameter];
+  static const Int_t padOnCenterFrame[633];
 
 private:
   typedef std::map<Int_t,TpcPadParam*> TpcGeomMap;
