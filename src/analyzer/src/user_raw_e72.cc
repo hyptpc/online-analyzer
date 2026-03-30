@@ -200,11 +200,13 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::MHTDCHitPatMulti(kBHT,"_BHT"),"BHT");
 
   // Hodoscopes
+  /*
   gHttp.Register(http::QDC(kT0,"_T0_U",0,0,5,3,2,0,1000),"T0");
   gHttp.Register(http::QDC(kT0,"_T0_D",1,0,5,3,2,0,1000),"T0");
   gHttp.Register(http::MHTDCTDC(kT0,"_T0_U",0,5,3,2),"T0");
   gHttp.Register(http::MHTDCTDC(kT0,"_T0_D",1,5,3,2),"T0");
   gHttp.Register(http::MHTDCHitPatMulti(kT0,"_T0"),"T0");
+  */
 
   gHttp.Register(http::BH2ADCU());
   gHttp.Register(http::BH2ADCD());

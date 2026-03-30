@@ -187,46 +187,6 @@ process_begin( const std::vector<std::string>& argv )
   if(0 != gHist.setHistPtr(hptr_array)){ return -1; }
   
   // Macro for HttpServer
-  /*
-  // BHT
-  gHttp.Register(http::MHTDCTDC(kBHT,"_BHT_U",0,63,8,8),"BHT");
-  gHttp.Register(http::MHTDCTDC(kBHT,"_BHT_D",1,63,8,8),"BHT");
-  gHttp.Register(http::BHTTOT(kBHT,"_U",63,0,8,8), "BHT");
-  gHttp.Register(http::BHTTOT(kBHT,"_D",63,1,8,8), "BHT");
-  gHttp.Register(http::BHTTDCvsTOT(kBHT,"_U",63,0,8,8), "BHT");
-  gHttp.Register(http::BHTTDCvsTOT(kBHT,"_D",63,1,8,8), "BHT");
-  gHttp.Register(http::MHTDCHitPatMulti(kBHT,"_BHT"),"BHT");
-
-  // Hodoscopes
-  gHttp.Register(http::QDC(kT0,"_T0_U",0,0,5,3,2,0,1000),"T0");
-  gHttp.Register(http::QDC(kT0,"_T0_D",1,0,5,3,2,0,1000),"T0");
-  gHttp.Register(http::MHTDCTDC(kT0,"_T0_U",0,5,3,2),"T0");
-  gHttp.Register(http::MHTDCTDC(kT0,"_T0_D",1,5,3,2),"T0");
-  gHttp.Register(http::MHTDCHitPatMulti(kT0,"_T0"),"T0");
-
-  gHttp.Register(http::BH2ADCU());
-  gHttp.Register(http::BH2ADCD());
-  gHttp.Register(http::BH2TDCU());
-  gHttp.Register(http::BH2TDCD());
-  gHttp.Register(http::BH2TDCMT());
-  gHttp.Register(http::BAC());
-  gHttp.Register(http::HTOFADCU());
-  gHttp.Register(http::HTOFADCD());
-  gHttp.Register(http::HTOFADCSUM());
-  gHttp.Register(http::HTOFTDCU());
-  gHttp.Register(http::HTOFTDCD());
-  gHttp.Register(http::HTOFTDCHT());
-  // gHttp.Register(http::HTOFThreshold());
-  gHttp.Register(http::KVC());
-  gHttp.Register(http::T1());
-  gHttp.Register(http::CVCADC());
-  gHttp.Register(http::CVCTDC());
-  gHttp.Register(http::SAC3());
-  gHttp.Register(http::SFV());
-  gHttp.Register(http::COBO());
-  gHttp.Register(http::HitPat());
-  gHttp.Register(http::Multiplicity());
-  */
 
   gHttp.Register(http::TPC2D());
   gHttp.Register(http::TPCADCPAD());
@@ -242,9 +202,7 @@ process_begin( const std::vector<std::string>& argv )
     hptr_array[i]->SetDirectory(0);
   }
   //=== set directory ===//
-  for(int i=0;i<NumOfPadTPC;i++){
-    hptr_array[gHist.getSequentialID(kTPC, 0, kADC2D, 5)]->SetBinContent(i+1,2000.);
-  }
+  
 
   gHttp.Begin();  
   return 0;
@@ -273,21 +231,27 @@ process_event( void )
   static Int_t run_number = -1;
   if(run_number != gUnpacker.get_run_number()){
     for(Int_t i=0, n=hptr_array.size(); i<n; ++i){
-      if((i == gHist.getSequentialID(kTPC,0,kADC2D,5))||
-	 (i == gHist.getSequentialID(kTPC, 1, kADC)))continue;
       hptr_array[i]->Reset();
     }
     run_number = gUnpacker.get_run_number();
   }
   auto event_number = gUnpacker.get_event_number();
 
-  hptr_array[gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 1)]->SetName(Form("EventDisplay evt%d",event_number));
-  hptr_array[gHist.getSequentialID(kTPC, 0, kADC2D)]->SetName(Form("TPC_ADC2D evt%d",event_number));
-  
-  
   for (auto& h : hptr_array){
-    h->SetTitle(h->GetName() + TString(Form(" run%05d", run_number)));
+    
+    if(h == hptr_array[gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 1)]){
+      h->SetTitle(TString(Form("EventDisplay run%05d evt%d", run_number,event_number)));
+    }
+    else if(h == hptr_array[gHist.getSequentialID(kTPC, 0, kADC2D)]){
+      h->SetTitle(TString(Form("TPC_ADC2D run%05d evt%d", run_number,event_number)));
+    }
+    else{
+      h->SetTitle(h->GetName() + TString(Form(" run%05d", run_number)));
+    }
+  
   }
+  
+  
 
   UInt_t cobo_data_size = 0;
 #if FLAG_DAQ
@@ -748,11 +712,15 @@ process_event( void )
 	  aget_max_rms[asad][aget] = rms;
 	  max_rms_fadc[asad][aget] = fadc;
 	}
-
-	if(max_adc < hptr_array[tpca2d_id+4]->GetBinContent(pad+1)){
+	
+	if(hptr_array[tpca2d_id+4]->GetBinContent(pad+1) == 0){
 	  hptr_array[tpca2d_id+4]->SetBinContent( pad+1, max_adc );
 	}
-	
+	else{
+	  if(max_adc < hptr_array[tpca2d_id+4]->GetBinContent(pad+1)){
+	    hptr_array[tpca2d_id+4]->SetBinContent( pad+1, max_adc );
+	  }
+	}
 
 	if( max_adc - mean <= 0 ) continue;
 	
