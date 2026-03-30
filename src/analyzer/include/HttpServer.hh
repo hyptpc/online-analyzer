@@ -12,13 +12,13 @@ class TObject;
 class HttpServer
 {
 public:
-  static HttpServer& GetInstance( void );
-  ~HttpServer( void );
+  static HttpServer& GetInstance();
+  ~HttpServer();
 
 private:
-  HttpServer( void );
-  HttpServer( const HttpServer& );
-  HttpServer& operator =( const HttpServer& );
+  HttpServer();
+  HttpServer(const HttpServer&);
+  HttpServer& operator =(const HttpServer&);
 
 private:
   THttpServer           *m_server;
@@ -28,22 +28,22 @@ private:
 public:
   void CreateItem(TString name, TString desc);
   void Hide(TString dir);
-  void Open( void );
-  void MakePs(void);
-  void Begin( void );
-  void Register( TObject *obj, TString subdir="/");
-  void Register( TList *list, TList *parent=nullptr );
-  void Register( TMacro *macro );
-  void Register( TString dir, TString command );
-  void ResetAll( void );
-  void SetPort( Int_t port ){ m_port = port; }
+  void Open();
+  void MakePs(Int_t run_number);
+  void Begin();
+  void Register(TObject *obj, TString subdir="/");
+  void Register(TList *list, TList *parent=nullptr);
+  void Register(TMacro *macro);
+  void Register(TString dir, TString command);
+  void ResetAll();
+  void SetPort(Int_t port){ m_port = port; }
   void SetItemField(TString dir, TString key, TString val);
 
 };
 
 //______________________________________________________________________________
 inline HttpServer&
-HttpServer::GetInstance( void )
+HttpServer::GetInstance()
 {
   static HttpServer g_instance;
   return g_instance;
