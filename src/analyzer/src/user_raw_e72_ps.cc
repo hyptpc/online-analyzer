@@ -305,7 +305,7 @@ process_event( void )
 
   static Int_t run_number = -1;
   if(run_number != gUnpacker.get_run_number()){
-    gHttp.MakePs(run_number);
+    if(run_number>0)gHttp.MakePs(run_number);
     for(Int_t i=0, n=hptr_array.size(); i<n; ++i){
       hptr_array[i]->Reset();
     }
