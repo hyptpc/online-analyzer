@@ -247,9 +247,6 @@ process_begin( const std::vector<std::string>& argv )
     gHttp.Register(http::BLDCTDC(chm[i],tmpstr,8), chm_name[i]);
     gHttp.Register(http::BLDCTOT(chm[i],tmpstr,8), chm_name[i]);
     gHttp.Register(http::BLDCTDCvsTOT(chm[i],tmpstr,8), chm_name[i]);
-    for(int l=0;l<8;l++){ 
-      gHttp.Register(http::BLDCWIRE(chm[i],tmpstr,l,nwires[i],8,4), chm_name[i]);
-    }
   }
 
   //=== set directory ===//
@@ -308,7 +305,7 @@ process_event( void )
 
   static Int_t run_number = -1;
   if(run_number != gUnpacker.get_run_number()){
-    //gHttp.MakePs(run_number);
+    gHttp.MakePs(run_number);
     for(Int_t i=0, n=hptr_array.size(); i<n; ++i){
       hptr_array[i]->Reset();
     }
