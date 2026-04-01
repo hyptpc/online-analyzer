@@ -1169,10 +1169,10 @@ TList* HistMaker::createBLDC(DetectorType kDET, std::string strDet, int nlayers,
   TList *top_dir = new TList;
   top_dir->SetName(nameDetector);
 
-  // double nbins=2000;
-  double nbins=4096;
+  
   
   double xmax=2000;
+  double nbins=xmax;
   double ntot=500;
   // if(kDET==kVFT){
   //   nbins=1024;
@@ -1228,7 +1228,7 @@ TList* HistMaker::createBLDC(DetectorType kDET, std::string strDet, int nlayers,
       int target_id = getUniqueID(kDET, 0, kADC2D, 0);
       const char* title = Form("%s_%s_%d", nameDetector, nameSubDir, j);
       sub_dir->Add(createTH2(target_id + j+1, title,
-                             nbins/10,0,xmax,100,0,ntot,
+                             100,0,xmax,100,0,ntot,
                              "TDC [ch]", "TOT [ch]") );
     }
   }

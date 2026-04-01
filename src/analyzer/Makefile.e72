@@ -58,6 +58,9 @@ my_tgt_tpc	:= $(bin_dir)/e72_tpc
 my_obj_beam	:= $(core_obj) user_beam_e72.o
 my_tgt_beam	:= $(bin_dir)/e72_beam
 
+my_obj_ps	:= $(core_obj) user_raw_e72_ps.o
+my_tgt_ps	:= $(bin_dir)/e72_ps
+
 #_______________________________________________________________________________
 all::	$(my_tgt_rm) \
 	$(my_tgt_e72) \
@@ -66,6 +69,7 @@ all::	$(my_tgt_rm) \
 	$(my_tgt_scaler) \
 	$(my_tgt_udebug) \
 	$(my_tgt_tpc) \
+	$(my_tgt_ps) \
 	$(core_dict_lib)
 
 beam::	$(my_tgt_beam)
@@ -152,6 +156,13 @@ my_obj_tpc	:= $(my_obj_tpc)
 my_lib_tpc	:= libmytpc.so
 $(eval $(call make-lib,$(my_lib_tpc),$(my_obj_tpc)))
 $(eval $(call make-nogui-target,$(my_tgt_tpc),$(my_lib_tpc)))
+
+#_______________________________________________________________________________
+my_obj_ps	:= $(addprefix $(my_dir)/src/,$(my_obj_ps))
+my_obj_ps	:= $(my_obj_ps)
+my_lib_ps	:= libmyps.so
+$(eval $(call make-lib,$(my_lib_ps),$(my_obj_ps)))
+$(eval $(call make-nogui-target,$(my_tgt_ps),$(my_lib_ps)))
 
 #_______________________________________________________________________________
 my_obj_scaler	:= $(addprefix $(my_dir)/src/,$(my_obj_scaler))
