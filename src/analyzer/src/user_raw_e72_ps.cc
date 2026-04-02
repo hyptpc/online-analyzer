@@ -165,7 +165,7 @@ process_begin( const std::vector<std::string>& argv )
 				  nbinshrtdc, hrtdcmin, hrtdcmax));
   gHttp.Register(gHist.createHodo(kT1, "T1", 1, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kT2, "T2", 1, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
-  gHttp.Register(gHist.createHodo(kSCH, "SCH", 64, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
+   gHttp.Register(gHist.createHodo(kSCH, "SCH", 64, 1, 150,0,150,1000,0,1000));
   gHttp.Register(gHist.createHodo(kCVC, "CVC", 8, 3, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kSAC3, "SAC3", 1, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kSFV, "SFV", 1, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
