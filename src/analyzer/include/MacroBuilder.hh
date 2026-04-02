@@ -89,7 +89,9 @@ TCanvas*  AC(int type, std::string strTrig);
 //TPC
 TCanvas* TPC( void );
 TCanvas* TPC2D( void );
+TCanvas* TPCMulti( void );
 TCanvas* TPC3D( void );
+TCanvas* TPC3DEvt( void );
 TCanvas* TPCAGETCond( void );
 TCanvas* TPCADCPAD( void );
 TCanvas* TPCTDCPAD( void );

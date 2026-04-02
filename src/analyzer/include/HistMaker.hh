@@ -10,11 +10,17 @@
 #include<TROOT.h>
 #include "DetectorID.hh"
 #include <TMultiGraph.h>
+#include <TH3.h>
 
 
 //For EventDisplay
 const TString EvtDis_Det_name[] = {"HTOF","BH2","BAC","KVC","T2","SCH"};
 const int NumOfSeg[] = {NumOfSegHTOF, NumOfSegBH2, NumOfSegBAC, NumOfSegKVC, NumOfSegT2, NumOfSegSCH};
+
+const double c_x_min = -700.;
+const double c_x_max = 1800.;
+const double c_y_min = -500.;
+const double c_y_max = 750.;
 
 enum DetectorType {
   kDetectorZero,
@@ -56,6 +62,7 @@ enum DataType{
   // Usual data type
   kADC,   kTDC,   kHitPat,   kMulti, //4
   kADC2D, kTDC2D, kHitPat2D, kMulti2D, //8
+  kTDC3D,
   kHitPoly, 
   kADCwTDC, kFADC, kTOT, //11
   kDeltaE, kCTime, kDeltaE2D, kCTime2D, //15
@@ -148,6 +155,11 @@ public:
   TH2*   createTH2Poly( Int_t unique_id, const TString& title,
                         Double_t xmin, Double_t xmax,
                         Double_t ymin, Double_t ymax );
+  TH3*   createTH3( Int_t unique_id, const TString& title,
+		    int nbinx, Double_t xmin, Double_t xmax,
+                    int nbiny, Double_t ymin, Double_t ymax,
+		    int nbinz, Double_t zmin, Double_t zmax);
+ 
   TMultiGraph* createMG( Int_t unique_id, const TString& title);
   TList* createTriggerFlag(bool flag_ps=true);
   TList* createTPC( Bool_t flag_ps=true);

@@ -11,6 +11,7 @@
 #include <TGFileBrowser.h>
 #include <TH1.h>
 #include <TH2.h>
+#include <TH3.h>
 #include <THttpServer.h>
 #include <TKey.h>
 #include <TMath.h>
@@ -52,6 +53,7 @@
 #define DEBUG    0
 #define FLAG_DAQ 1
 #define WIRE 1 // for Canvas only
+const Bool_t TPCDeadCh=false;
 
 namespace analyzer
 {
@@ -189,6 +191,8 @@ process_begin( const std::vector<std::string>& argv )
   // Macro for HttpServer
 
   gHttp.Register(http::TPC2D());
+  gHttp.Register(http::TPCMulti());
+  gHttp.Register(http::TPC3DEvt());
   gHttp.Register(http::TPCADCPAD());
   gHttp.Register(http::TPCAGETCond());
   gHttp.Register(http::TPCFADCAGET());
@@ -637,151 +641,174 @@ process_event( void )
   
 
   // TPC -----------------------------------------------------------
-
+  
   {
-    //if(cobo_data_size > 0){
-    static const Int_t k_device   = gUnpacker.get_device_id( "TPC" );
-    static const Int_t k_adc      = gUnpacker.get_data_id( "TPC", "adc" );
-    // static const Int_t k_tdc_high = gUnpacker.get_data_id( "TPC", "tdc_high" );
-    // static const Int_t k_tdc_low  = gUnpacker.get_data_id( "TPC", "tdc_low" );
-    // sequential id
-    static const Int_t tpca_id   = gHist.getSequentialID( kTPC, 0, kADC, 1 );
-    static const Int_t tpcaget_count_id   = gHist.getSequentialID( kTPC, 1, kADC);
-    static const Int_t tpct_id   = gHist.getSequentialID( kTPC, 0, kTDC );
-    static const Int_t rms_id    = gHist.getSequentialID( kTPC, 0, kPede );
-    static const Int_t tpcfa_id   = gHist.getSequentialID( kTPC, 0, kFADC, 1 );
-    static const Int_t tpca2d_id = gHist.getSequentialID( kTPC, 0, kADC2D, 1 );
-    static const Int_t tpcmul_id = gHist.getSequentialID( kTPC, 0, kMulti );
-    static const Int_t tpcbp_id   = gHist.getSequentialID( kTPC, 2, kTDC );
-    static const Int_t agetmul_id = gHist.getSequentialID( kTPC, 3, kMulti );
-    static const Int_t amulmax_id = gHist.getSequentialID( kTPC, 4, kMulti );
+    if(cobo_data_size > 0){
+      static const Int_t k_device   = gUnpacker.get_device_id( "TPC" );
+      static const Int_t k_adc      = gUnpacker.get_data_id( "TPC", "adc" );
+      // static const Int_t k_tdc_high = gUnpacker.get_data_id( "TPC", "tdc_high" );
+      // static const Int_t k_tdc_low  = gUnpacker.get_data_id( "TPC", "tdc_low" );
+      // sequential id
+      static const Int_t tpca_id   = gHist.getSequentialID( kTPC, 0, kADC, 1 );
+      static const Int_t tpcaget_count_id   = gHist.getSequentialID( kTPC, 1, kADC);
+      static const Int_t tpct_id   = gHist.getSequentialID( kTPC, 0, kTDC );
+      static const Int_t rms_id    = gHist.getSequentialID( kTPC, 0, kPede );
+      static const Int_t tpcfa_id   = gHist.getSequentialID( kTPC, 0, kFADC, 1 );
+      static const Int_t tpca2d_id = gHist.getSequentialID( kTPC, 0, kADC2D, 1 );
+      static const Int_t tpcmul_id = gHist.getSequentialID( kTPC, 0, kMulti );
+      static const Int_t tpcbp_id   = gHist.getSequentialID( kTPC, 2, kTDC );
+      static const Int_t agetmul_id = gHist.getSequentialID( kTPC, 3, kMulti );
+      static const Int_t amulmax_id = gHist.getSequentialID( kTPC, 4, kMulti );
+      static const Int_t tpct3d_id = gHist.getSequentialID( kTPC, 0, kTDC3D );
       
-    hptr_array[tpca2d_id]->Reset(); //adc2d
-    hptr_array[tpca2d_id+1]->Reset(); //rms2d
-    hptr_array[tpca2d_id+2]->Reset(); // tdc2d
-    hptr_array[agetmul_id]->Reset();
-      
-    // FADC before
-    Int_t n_active_pad = 0;
-    std::vector<Double_t> max_fadc( NumOfTimeBucket );
+      hptr_array[tpca2d_id]->Reset(); //adc2d
+      hptr_array[tpca2d_id+1]->Reset(); //rms2d
+      hptr_array[tpca2d_id+2]->Reset(); // tdc2d
+      hptr_array[agetmul_id]->Reset();
+      hptr_array[tpct3d_id]->Reset();
     
-    std::vector<std::vector<std::vector<double>>> max_rms_fadc(NumOfAsadTPC,std::vector<std::vector<double>>(4,std::vector<double>(NumOfTimeBucket)));
-    double aget_max_rms[NumOfAsadTPC][4]={0.};
-    int aget_count[NumOfAsadTPC][4] = {0};
-    
-    Int_t max_adc = -1;
-    Int_t max_tb  = -1;
-    Int_t max_pad = -1;
-    for( Int_t layer=0; layer<32; ++layer ){
-      for( Int_t ch=0; ch<272; ++ch ){
-	Int_t pad = gTpcPad.GetPadId( layer, ch );
-	if( pad < 0 ) continue;
-	Int_t nhit = gUnpacker.get_entries( k_device, layer, 0, ch, k_adc );
-	if( nhit == 0 ){
-	  hptr_array[tpca2d_id]->SetBinContent( pad+1, 0 );
-	  hptr_array[tpca2d_id+1]->SetBinContent( pad+1, 0 );
-	  hptr_array[tpca2d_id+2]->SetBinContent( pad+1, 0 );
-	  continue;
-	}
-	
-	std::vector<Double_t> fadc( nhit );
-	  
-	for( Int_t i=0; i<nhit; ++i ){
-	  Int_t adc = gUnpacker.get( k_device, layer, 0, ch, k_adc, i );
-	  fadc[i] = adc;
-	  if( max_adc < adc && nhit == NumOfTimeBucket ){
-	    max_adc = adc;
-	    max_tb  = i;
-	    max_pad = pad;
-	  }
-	}
-	if( max_pad == pad ){
-	  max_fadc = fadc;
-	}
-	
-	Double_t mean = TMath::Mean( nhit, fadc.data() );
-	Double_t rms = TMath::RMS( nhit, fadc.data() );
-	Double_t max_adc = TMath::MaxElement( nhit, fadc.data() );
-	Int_t loc_max = TMath::LocMax( nhit, fadc.data() );
+      std::vector<bool> isDeadPad(NumOfPadTPC + 1, false);
 
-	// Maximum RMS per AGET
-	Int_t aget = gTpcPad.GetParam( layer, ch )->AGetId();
-	Int_t asad = gTpcPad.GetParam( layer, ch )->AsAdId();
+      for (size_t k = 0; k < sizeof(TpcPadHelper::padOnCenterFrame)/sizeof(*TpcPadHelper::padOnCenterFrame); ++k) {
+	isDeadPad[TpcPadHelper::padOnCenterFrame[k]] = true;
+      }
+    
+      // FADC before
+      Int_t n_active_pad = 0;
+      std::vector<Double_t> max_fadc( NumOfTimeBucket );
+    
+      std::vector<std::vector<std::vector<double>>> max_rms_fadc(NumOfAsadTPC,std::vector<std::vector<double>>(4,std::vector<double>(NumOfTimeBucket)));
+      double aget_max_rms[NumOfAsadTPC][4]={0.};
+      int aget_count[NumOfAsadTPC][4] = {0};
+    
+      Int_t max_adc = -1;
+      Int_t max_tb  = -1;
+      Int_t max_pad = -1;
+      for( Int_t layer=0; layer<32; ++layer ){
+	Int_t nPad = TpcPadHelper::PadParameter[layer][1];
+	for( Int_t ch=0; ch<nPad; ++ch ){
+	  Int_t pad = gTpcPad.GetPadId( layer, ch ); //0 origin
+	  if( pad < 0 ) continue;
 	
-	if(aget_max_rms[asad][aget] < rms){
-	  aget_max_rms[asad][aget] = rms;
-	  max_rms_fadc[asad][aget] = fadc;
-	}
+	  if(TPCDeadCh){
+	    if (pad >= 0 && pad <= NumOfPadTPC && isDeadPad[pad]) continue;
+	  }
+	  Int_t nhit = gUnpacker.get_entries( k_device, layer, 0, ch, k_adc );
+	  if( nhit == 0 ){
+	    hptr_array[tpca2d_id]->SetBinContent( pad+1, 0 );
+	    hptr_array[tpca2d_id+1]->SetBinContent( pad+1, 0 );
+	    hptr_array[tpca2d_id+2]->SetBinContent( pad+1, 0 );
+	    continue;
+	  }
+	  std::vector<Double_t> fadc( nhit );
+	  
+	  for( Int_t i=0; i<nhit; ++i ){
+	    Int_t adc = gUnpacker.get( k_device, layer, 0, ch, k_adc, i );
+	    fadc[i] = adc;
+	    if( max_adc < adc && nhit == NumOfTimeBucket ){
+	      max_adc = adc;
+	      max_tb  = i;
+	      max_pad = pad;
+	    }
+	  }
+	  if( max_pad == pad ){
+	    max_fadc = fadc;
+	  }
 	
-	if(hptr_array[tpca2d_id+4]->GetBinContent(pad+1) == 0){
-	  hptr_array[tpca2d_id+4]->SetBinContent( pad+1, max_adc );
-	}
-	else{
-	  if(max_adc < hptr_array[tpca2d_id+4]->GetBinContent(pad+1)){
+	  Double_t mean = TMath::Mean( nhit, fadc.data() );
+	  Double_t rms = TMath::RMS( nhit, fadc.data() );
+	  Double_t max_adc = TMath::MaxElement( nhit, fadc.data() );
+	  Int_t loc_max = TMath::LocMax( nhit, fadc.data() );
+	  // Maximum RMS per AGET
+	  Int_t asad = gTpcPad.GetASADId( layer, ch);
+	  Int_t aget = gTpcPad.GetAGETId(asad, layer, ch);
+	  
+	  if(asad < 0 || asad > 31 || aget < 0 || aget > 4)continue;
+	  if(aget_max_rms[asad][aget] < rms){
+	    aget_max_rms[asad][aget] = rms;
+	    max_rms_fadc[asad][aget] = fadc;
+	  }
+	
+	  if(hptr_array[tpca2d_id+4]->GetBinContent(pad+1) == 0){
 	    hptr_array[tpca2d_id+4]->SetBinContent( pad+1, max_adc );
 	  }
-	}
+	  else{
+	    if(max_adc < hptr_array[tpca2d_id+4]->GetBinContent(pad+1)){
+	      hptr_array[tpca2d_id+4]->SetBinContent( pad+1, max_adc );
+	    }
+	  }
 
-	if( max_adc - mean <= 0 ) continue;
+	  if( max_adc - mean <= 0 ) continue;
 	
-	hptr_array[agetmul_id]->Fill( asad*4+aget );
+	  hptr_array[agetmul_id]->Fill( asad*4+aget );
 
-	hptr_array[tpca_id]->Fill( max_adc - mean );
-	double aget_count;
-	if(max_adc - mean > 200)
-	  aget_count = hptr_array[tpcaget_count_id]->GetBinContent(asad*4+aget+1)+1;
+	  hptr_array[tpca_id]->Fill( max_adc - mean );
+	  double aget_count;
+	  if(max_adc - mean > 200)
+	    aget_count = hptr_array[tpcaget_count_id]->GetBinContent(asad*4+aget+1)+1;
 	
-	hptr_array[tpcaget_count_id]->SetBinContent(asad*4+aget+1,aget_count);
+	  hptr_array[tpcaget_count_id]->SetBinContent(asad*4+aget+1,aget_count);
 
-	hptr_array[tpct_id]->Fill( loc_max );
-	hptr_array[rms_id]->Fill( rms );
-	hptr_array[tpca2d_id]->SetBinContent( pad+1, max_adc - mean );
-	hptr_array[tpca2d_id+1]->SetBinContent( pad+1, rms );
-	hptr_array[tpca2d_id+2]->SetBinContent( pad+1, loc_max );
-	Double_t pad_z = gTpcPad.GetPoint( pad ).Z();
-	Double_t pad_x = gTpcPad.GetPoint( pad ).X();
-	if( max_adc - mean > 0 ){
-	  ++n_active_pad;
-	  hptr_array[tpca2d_id+3]->Fill( pad_z, pad_x );
-	  if( max_tb >= 60 && max_tb < 100
-	      && pad_z >= -250 && pad_z <= -200
-	      && max_adc - mean > 300
-	      ){
-	    hptr_array[tpcbp_id]->Fill( pad_x );
+	  hptr_array[tpct_id]->Fill( loc_max );
+	  hptr_array[rms_id]->Fill( rms );
+	  hptr_array[tpca2d_id]->SetBinContent( pad+1, max_adc - mean );
+	  hptr_array[tpca2d_id+1]->SetBinContent( pad+1, rms );
+	  hptr_array[tpca2d_id+2]->SetBinContent( pad+1, loc_max );
+	  Double_t pad_z = gTpcPad.GetPoint( pad ).Z();
+	  Double_t pad_x = gTpcPad.GetPoint( pad ).X();
+
+	  
+	  auto h3 = dynamic_cast<TH3D*>(hptr_array[tpct3d_id]);
+	  if (h3 && loc_max > 30 && loc_max < 150) {
+	    double pad_y = (((double)loc_max-84)*80-1270)*0.055;
+	    h3->Fill((Double_t)pad_z, (Double_t)pad_x, pad_y, max_adc-mean);
+	  }
+
+	
+	  if( max_adc - mean > 0 ){
+	    ++n_active_pad;
+	    hptr_array[tpca2d_id+3]->Fill( pad_z, pad_x );
+	    if( max_tb >= 60 && max_tb < 100
+		&& pad_z >= -250 && pad_z <= -200
+		&& max_adc - mean > 300
+		){
+	      hptr_array[tpcbp_id]->Fill( pad_x );
+	    }
 	  }
 	}
       }
-    }
 
-    for(int n_asad = 0;n_asad<NumOfAsadTPC;n_asad++){
-      for(int n_aget = 0;n_aget<4;n_aget++){
-	hptr_array[tpcfa_id+n_asad*4+n_aget+1]->Reset();
-	for(int i=0;i<NumOfTimeBucket;++i){
-	  hptr_array[tpcfa_id+n_asad*4+n_aget+1]->SetBinContent(i+1,max_rms_fadc[n_asad][n_aget][i]+(3-n_aget)*700);
+      for(int n_asad = 0;n_asad<NumOfAsadTPC;n_asad++){
+	for(int n_aget = 0;n_aget<4;n_aget++){
+	  hptr_array[tpcfa_id+n_asad*4+n_aget+1]->Reset();
+	  for(int i=0;i<NumOfTimeBucket;++i){
+	    hptr_array[tpcfa_id+n_asad*4+n_aget+1]->SetBinContent(i+1,max_rms_fadc[n_asad][n_aget][i]+(3-n_aget)*700);
+	  }
 	}
       }
-    }
+        
     
     
+      std::cout << "run# " << run_number << "  ev# " << event_number
+		<< "  active pad = " << n_active_pad << std::endl;
+      hptr_array[tpcmul_id]->Fill( n_active_pad );
+      hptr_array[amulmax_id]->Fill( hptr_array[agetmul_id]->GetMaximum() );
     
-    std::cout << "run# " << run_number << "  ev# " << event_number
-	      << "  active pad = " << n_active_pad << std::endl;
-    hptr_array[tpcmul_id]->Fill( n_active_pad );
-    hptr_array[amulmax_id]->Fill( hptr_array[agetmul_id]->GetMaximum() );
-    if( max_adc > 0 ){
-      for( Int_t i=0; i<NumOfTimeBucket; ++i ){
-	hptr_array[tpcfa_id]->Fill( i, max_fadc[i] );
+      if( max_adc > 0 ){
+	for( Int_t i=0; i<NumOfTimeBucket; ++i ){
+	  hptr_array[tpcfa_id]->Fill( i, max_fadc[i] );
+	}
       }
-    }
-    // TDC (Time Stamp)
-    // UInt_t tdc_h = gUnpacker.get( k_device, 0, 0, 0, k_tdc_high );
-    // UInt_t tdc_l = gUnpacker.get( k_device, 0, 0, 0, k_tdc_low );
-    // std::cout << tdc_h << ", " << tdc_l << std::endl;
+      // TDC (Time Stamp)
+      // UInt_t tdc_h = gUnpacker.get( k_device, 0, 0, 0, k_tdc_high );
+      // UInt_t tdc_l = gUnpacker.get( k_device, 0, 0, 0, k_tdc_low );
+      // std::cout << tdc_h << ", " << tdc_l << std::endl;
 
 #if 0
-    // Debug, dump data relating this detector
-    gUnpacker.dump_data_device(k_device);
+      // Debug, dump data relating this detector
+      gUnpacker.dump_data_device(k_device);
 #endif
+    }
   }
   
 
@@ -814,9 +841,8 @@ process_event( void )
     static const UInt_t tdc_min_bh2 = gUser.GetParameter("BH2_TDC", 0);
     static const UInt_t tdc_max_bh2 = gUser.GetParameter("BH2_TDC", 1);
 
-
     //BAC
-      
+
     DetectorType kDET=kBAC;
     const int k_device = gUnpacker.get_device_id("BAC");
     const int k_adc = gUnpacker.get_data_id("BAC","adc");
@@ -839,7 +865,6 @@ process_event( void )
 	*/
       } // nhit
     }
-      
       
     // BH2
     Double_t t0  = 1e10;
@@ -865,7 +890,6 @@ process_event( void )
 	}
       }
     }
-
     // BHT
     for(Int_t seg=0; seg<NumOfSegBHT; ++seg) {
       Int_t nhitu = gUnpacker.get_entries(k_d_bht, 0, seg, kU, k_bht_tdc);
@@ -975,9 +999,9 @@ process_event( void )
     int hist_id = gHist.getSequentialID(kEventDisplay, 0, kHitPoly, 13);
     auto h2 = dynamic_cast<TH2*>(hptr_array[hist_id]);
     h2->Reset();
-
+    const auto& tracks = dcAna.GetBcOutTrackContainer();
     
-    for(const auto& track : dcAna.GetBcOutTrackContainer()){
+    for (const auto& track : tracks) {
       double x0 = track->GetX0();
       double u0 = track->GetU0();
       for(int n_bcout = 0;n_bcout<bcout_count;n_bcout++){
@@ -986,7 +1010,6 @@ process_event( void )
       }
     }
   }
-  
 
   //update
   if(gUnpacker.get_counter()%100 == 0){
@@ -1002,7 +1025,6 @@ process_event( void )
   }
 
   gSystem->ProcessEvents();
-
   //std::cout << "\a" << std::endl;
 
   return 0;

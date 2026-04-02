@@ -90,6 +90,8 @@ public:
   Int_t        GetPadId( Int_t layer, Int_t row ) const;
   Int_t        GetLayerId( Int_t asad, Int_t aget, Int_t ch ) const;
   Int_t        GetRowId( Int_t asad, Int_t aget, Int_t ch ) const;
+  Int_t        GetASADId(Int_t layer, Int_t row) const;
+  Int_t        GetAGETId(Int_t asad, Int_t layer, Int_t row) const;
   Bool_t       Initialize( void );
   Bool_t       Initialize( const std::string& file_name );
   void         SetFileName( std::string& name ) { m_file_name=name; }

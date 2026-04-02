@@ -7,16 +7,31 @@
 #include <TCanvas.h>
 #include <TH1.h>
 #include <TH2.h>
+#include <TH3.h>
 #include <TLegend.h>
 #include <TMacro.h>
 #include <TString.h>
 #include <TText.h>
 #include <TArc.h>
 #include <TLine.h>
+#include <TObject.h>
 #include <TPolyLine.h>
 #include <TMultiGraph.h>
 #include <TGraph.h>
 #include <TStyle.h>
+#include <TMath.h>
+#include <TH2Poly.h>
+
+#include <TGeoTube.h>
+#include <TGeoBBox.h>
+#include <TGeoTrd1.h>
+#include <TGeoMatrix.h>
+#include <TGeoManager.h>
+#include <TGeoMaterial.h>
+#include <TGeoXtru.h>
+#include <TPolyMarker3D.h>
+#include <TPolyLine3D.h>
+#include <TVirtualViewer3D.h>
 
 #include "DetectorID.hh"
 #include "Main.hh"
@@ -980,6 +995,25 @@ TPC2D( void )
 
 //_____________________________________________________________________________
 TCanvas*
+TPCMulti( void )
+{
+  
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->Divide( 2 );
+  auto id = HistMaker::getUniqueID(kTPC,0,kMulti);
+  auto h = GHist::get(id);
+  c1->cd(1);
+  if(h)h->Draw();
+  c1->cd(2);
+  id = HistMaker::getUniqueID(kTPC,3,kMulti);
+  h = GHist::get(id);
+  if(h)h->Draw();
+
+  return c1;
+}
+
+//_____________________________________________________________________________
+TCanvas*
 TPC3D( void )
 {
   std::vector<Int_t> id = {
@@ -1000,6 +1034,131 @@ TPC3D( void )
   }
   return c1;
 }
+
+//_____________________________________________________________________________
+TCanvas*
+TPC3DEvt( void ){
+  auto c1 = new TCanvas( __func__, __func__ );
+
+  auto id_tpc = HistMaker::getUniqueID( kTPC, 0, kTDC3D);
+
+  auto h = GHist::get( id_tpc );
+  auto h3d = dynamic_cast<TH3*>(h);
+  c1->cd();
+  h3d->SetMinimum(0);
+  h3d->SetMaximum(3000);
+  gStyle->SetPalette(kBird);
+  h3d->GetXaxis()->SetTickLength(0);
+  h3d->GetYaxis()->SetTickLength(0);
+  h3d->GetZaxis()->SetTickLength(0);
+  h3d->Draw("BOX2 Z");
+
+  const double flength = 586.0;
+  const double fheight = 550.0;
+  const double edge    = flength / (1.0 + std::sqrt(2.0));
+  const double tanv    = TMath::Tan(22.5 * TMath::Pi() / 180.0);
+  
+  double x[8] = {
+    -flength/2.0, -edge/2.0,  edge/2.0,  flength/2.0,
+    flength/2.0,  edge/2.0, -edge/2.0, -flength/2.0
+  };
+    
+  double z[8] = {
+    -tanv*flength/2.0, -flength/2.0, -flength/2.0, -tanv*flength/2.0,
+    tanv*flength/2.0,  flength/2.0,  flength/2.0,  tanv*flength/2.0
+  };
+    
+  const double y1 = -fheight/2.0;
+  const double y2 =  fheight/2.0;
+
+  TPolyLine3D* p1 = new TPolyLine3D(9);
+  TPolyLine3D* p2 = new TPolyLine3D(9);
+
+  for (int i = 0; i < 8; ++i) {
+    // (X,Y,Z) = (z,x,y)
+    p1->SetPoint(i, z[i], x[i], y1);
+    p2->SetPoint(i, z[i], x[i], y2);
+  }
+
+  p1->SetPoint(8, z[0], x[0], y1);
+  p2->SetPoint(8, z[0], x[0], y2);
+
+  p1->SetLineColor(kBlack);
+  p2->SetLineColor(kBlack);
+  p1->SetLineWidth(2);
+  p2->SetLineWidth(2);
+
+  p1->Draw("same");
+  p2->Draw("same");
+
+  for (int i = 0; i < 8; ++i) {
+    TPolyLine3D* s = new TPolyLine3D(2);
+
+    s->SetPoint(0, z[i], x[i], y1);
+    s->SetPoint(1, z[i], x[i], y2);
+
+    s->SetLineColor(kBlack);
+    s->SetLineWidth(2);
+    s->Draw("same");
+  }
+
+  const int nseg = 60;
+
+  double cx = 0.0;      //z
+  double cy = 0.0;   //x
+  double cz = -143.0;      //y
+
+  double radius = 40.0;
+  double length = 100.0;
+
+  double y_low  = cy - length / 2.0;
+  double y_high = cy + length / 2.0;
+
+  TPolyLine3D* cyl1 = new TPolyLine3D(nseg + 1);
+  TPolyLine3D* cyl2 = new TPolyLine3D(nseg + 1);
+
+  for (int i = 0; i <= nseg; i++) {
+    double phi = 2.0 * TMath::Pi() * i / nseg;
+
+    double x = cx + radius * cos(phi);
+    double z = cz + radius * sin(phi);
+
+    //cyl1->SetPoint(i, x, y_low,  z);
+    cyl1->SetPoint(i, z, x, y_low);
+    cyl2->SetPoint(i, z, x, y_high);
+  }
+
+  cyl1->SetLineColor(kRed+1);
+  cyl2->SetLineColor(kRed+1);
+  cyl1->SetLineWidth(2);
+  cyl2->SetLineWidth(2);
+
+  cyl1->Draw("same");
+  cyl2->Draw("same");
+
+  // side lines
+
+  for (int i = 0; i < 8; i++) {
+    double phi = 2.0 * TMath::Pi() * i / 8.0;
+
+    double x = cx + radius * cos(phi);
+    double z = cz + radius * sin(phi);
+
+    TPolyLine3D* side = new TPolyLine3D(2);
+    side->SetPoint(0, z,x , y_low);
+    side->SetPoint(1, z,x, y_high);
+
+    side->SetLineColor(kRed+1);
+    side->SetLineWidth(2);
+    side->Draw("same");
+  }
+
+  
+  c1->SetTheta(40);
+  c1->SetPhi(30);
+  return c1;
+}
+  
 
 //_____________________________________________________________________________
 TCanvas*
@@ -1176,8 +1335,10 @@ TPCTHRE( void )
 TCanvas*
 SHS2D_EVT( void )
 {
+  
   auto c1 = new TCanvas( __func__, __func__ );
   c1->cd();
+  
   
   
   for(int i=0;i<sizeof(EvtDis_Det_name)/sizeof(EvtDis_Det_name[0]);i++){
@@ -1193,10 +1354,7 @@ SHS2D_EVT( void )
     
     
   }
-
   
-  
-
   auto id_tpc = HistMaker::getUniqueID( kTPC, 0, kADC2D, 3);
   auto h = GHist::get( id_tpc );
   if( h ){
@@ -1219,10 +1377,23 @@ SHS2D_EVT( void )
   pLine->SetFillColorAlpha(kWhite, 0);
   pLine->Draw();
   c1->cd( 1 );
-
-
   
-    
+
+  //Magnet
+  double x_box[5] = {-600,  600,  600, -600, -600};
+  double y_box[5] = {c_y_min, c_y_min,  c_y_max,  c_y_max, c_y_min};
+
+  TPolyLine *pl_box = new TPolyLine(5, x_box, y_box);
+  pl_box->SetLineWidth(2);
+  pl_box->SetFillStyle(0);
+  pl_box->Draw("same");
+  
+  TEllipse *shs_e = new TEllipse(0., 0., 400.);
+  shs_e->SetFillStyle(0);
+  shs_e->SetLineWidth(2);
+  shs_e->Draw("same");
+  
+  
   //Target
   TEllipse *LH2_Target = new TEllipse(-143,0,40);
   LH2_Target->SetLineColor(kRed);
@@ -1245,6 +1416,7 @@ SHS2D_EVT( void )
   
   gStyle->SetPalette(kBird);
   c1->Modified();
+  gPad->RedrawAxis();
   c1->Update();
   
   return c1;
@@ -1298,6 +1470,19 @@ SHS2D_HITPATTERN( void )
   c1->cd( 1 )->SetLogz();
 
 
+  //Magnet
+  double x_box[5] = {-600,  600,  600, -600, -600};
+  double y_box[5] = {c_y_min, c_y_min,  c_y_max,  c_y_max, c_y_min};
+
+  TPolyLine *pl_box = new TPolyLine(5, x_box, y_box);
+  pl_box->SetLineWidth(2);
+  pl_box->SetFillStyle(0);
+  pl_box->Draw("same");
+  
+  TEllipse *shs_e = new TEllipse(0., 0., 400.);
+  shs_e->SetFillStyle(0);
+  shs_e->SetLineWidth(2);
+  shs_e->Draw("same");
   
     
   //Target
@@ -1343,6 +1528,20 @@ SHS2D_wotpc( void )
     
     
   }
+
+  //Magnet
+  double x_box[5] = {-600,  600,  600, -600, -600};
+  double y_box[5] = {c_y_min, c_y_min,  c_y_max,  c_y_max, c_y_min};
+
+  TPolyLine *pl_box = new TPolyLine(5, x_box, y_box);
+  pl_box->SetLineWidth(2);
+  pl_box->SetFillStyle(0);
+  pl_box->Draw("same");
+  
+  TEllipse *shs_e = new TEllipse(0., 0., 400.);
+  shs_e->SetFillStyle(0);
+  shs_e->SetLineWidth(2);
+  shs_e->Draw("same");
 
   gStyle->SetPalette(kBird);
   c1->Modified();

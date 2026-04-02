@@ -11,6 +11,7 @@
 
 class TH1;
 class TH2;
+class TH3;
 
 class GHist
 {
@@ -98,6 +99,17 @@ public:
 		 Double_t xip,
 		 Double_t ylow,
 		 Double_t yup);
+  static TH3* D3(Int_t id,
+		 const TString& title,
+		 Int_t nbinsx,
+		 Double_t xlow,
+		 Double_t xip,
+		 Int_t nbinsy,
+		 Double_t ylow,
+		 Double_t yup,
+		 Int_t nbinsz,
+		 Double_t zlow,
+		 Double_t zup);
   static Int_t  fill2(const TString& name,
 		    Double_t x,
 		    Double_t y,

@@ -15,6 +15,7 @@
 
 #include <TH1.h>
 #include <TH2.h>
+#include <TH3.h>
 #include <TList.h>
 #include <TDirectory.h>
 #include <TString.h>
@@ -223,6 +224,39 @@ TH2* HistMaker::createTH2Poly( Int_t unique_id, const TString& title,
   return h;
 }
 
+//_____________________________________________________________________________
+TH3* HistMaker::createTH3( Int_t unique_id, const TString& title,
+			   int nbinx, Double_t xmin, Double_t xmax,
+			   int nbiny, Double_t ymin, Double_t ymax,
+			   int nbinz, Double_t zmin, Double_t zmax)
+{
+  
+  static const std::string MyFunc = "createTH3 ";
+  Int_t sequential_id = current_hist_id_++;
+  TypeRetInsert ret =
+    idmap_seq_from_unique_.insert( std::make_pair( unique_id, sequential_id ) );
+  idmap_seq_from_name_.insert( std::make_pair( title, sequential_id ) );
+  idmap_unique_from_seq_.insert( std::make_pair( sequential_id, unique_id ) );
+  if( !ret.second ){
+    std::cerr << "#E " << MyName << MyFunc
+	      << " The unique id overlaps with other id"
+	      << std::endl;
+    std::cerr << " " << unique_id << " " << title << std::endl;
+    std::exit(-1);
+  }
+
+  TH3 *h = GHist::D3( unique_id, title, nbinx, xmin, xmax, nbiny, ymin, ymax, nbinz, zmin, zmax );
+  if( !h ){
+    std::cerr << "#E " << MyName << " Fail to create TH3" << std::endl
+	      << " " << unique_id << " " << title << std::endl;
+    std::exit(-1);
+    //    return h;
+  } else {
+    gDirectory->GetList()->Add( h );
+  }
+  return h;
+}
+
 
 //_____________________________________________________________________
 TList*
@@ -411,8 +445,11 @@ HistMaker::createTPC(Bool_t flag_ps)
     title = Form( "%s_Threshold2D", nameDetector );
     auto h_thre = dynamic_cast<TH2Poly*>
       ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
-    Double_t X[5];
-    Double_t Y[5];
+    top_dir->Add( createTH3( getUniqueID(kTPC, 0, kTDC3D), "TPC_TDC3D", 100,-300,300,100,-300,300,250,-250,250));
+
+
+    Double_t X[5]={};
+    Double_t Y[5]={};
     for( Int_t i=0; i<32; i++ ){
       Double_t pLength = TpcPadHelper::PadParameter[i][5];
       Double_t st      = ( 180. -
@@ -424,30 +461,17 @@ HistMaker::createTPC(Bool_t flag_ps)
       Double_t cRad    = TpcPadHelper::PadParameter[i][2];
       Int_t    nPad    = TpcPadHelper::PadParameter[i][1];
       for( Int_t j=0; j<nPad; j++ ){
-	Bool_t dead = false;
-	/*
-	for(int k=0;k<sizeof(TpcPadHelper::padOnCenterFrame)/sizeof(*TpcPadHelper::padOnCenterFrame);k++){
-	  if(gTpcPad.GetPadId(i,j) == TpcPadHelper::padOnCenterFrame[k]){
-	    dead = true;
-	    std::cout<<"dead"<<std::endl;
-	    break;
-	  }
-	}
-	*/
-	
-	if(!dead){
-	  X[1] = (cRad+(pLength/2.))*TMath::Cos(j*dTheta+sTheta);
-	  X[2] = (cRad+(pLength/2.))*TMath::Cos((j+1)*dTheta+sTheta);
-	  X[3] = (cRad-(pLength/2.))*TMath::Cos((j+1)*dTheta+sTheta);
-	  X[4] = (cRad-(pLength/2.))*TMath::Cos(j*dTheta+sTheta);
-	  X[0] = X[4];
-	  Y[1] = (cRad+(pLength/2.))*TMath::Sin(j*dTheta+sTheta);
-	  Y[2] = (cRad+(pLength/2.))*TMath::Sin((j+1)*dTheta+sTheta);
-	  Y[3] = (cRad-(pLength/2.))*TMath::Sin((j+1)*dTheta+sTheta);
-	  Y[4] = (cRad-(pLength/2.))*TMath::Sin(j*dTheta+sTheta);
-	  Y[0] = Y[4];
-	  for( Int_t ii=0; ii<5; ii++ ) X[ii] -=143;
-	}
+	X[1] = (cRad+(pLength/2.))*TMath::Cos(j*dTheta+sTheta);
+	X[2] = (cRad+(pLength/2.))*TMath::Cos((j+1)*dTheta+sTheta);
+	X[3] = (cRad-(pLength/2.))*TMath::Cos((j+1)*dTheta+sTheta);
+	X[4] = (cRad-(pLength/2.))*TMath::Cos(j*dTheta+sTheta);
+	X[0] = X[4];
+	Y[1] = (cRad+(pLength/2.))*TMath::Sin(j*dTheta+sTheta);
+	Y[2] = (cRad+(pLength/2.))*TMath::Sin((j+1)*dTheta+sTheta);
+	Y[3] = (cRad-(pLength/2.))*TMath::Sin((j+1)*dTheta+sTheta);
+	Y[4] = (cRad-(pLength/2.))*TMath::Sin(j*dTheta+sTheta);
+	Y[0] = Y[4];
+	for( Int_t ii=0; ii<5; ii++ ) X[ii] -=143;
         h_adc->AddBin( 5, X, Y );
         h_rms->AddBin( 5, X, Y );
         h_loc->AddBin( 5, X, Y );
@@ -472,6 +496,7 @@ HistMaker::createTPC(Bool_t flag_ps)
     top_dir->Add( h_loc );
     top_dir->Add( h_hit );
     top_dir->Add( h_thre );
+    
   }
   // ADC
   top_dir->Add( createTH1( getUniqueID( kTPC, 0, kADC, 1 ),
@@ -611,10 +636,7 @@ HistMaker::createCorrelation(Bool_t flag_ps)
 TList*
 HistMaker::createEventDisplay(Bool_t flag_ps)
 {
-  double c_x_min = -700.;
-  double c_x_max = 1800.;
-  double c_y_min = -500.;
-  double c_y_max = 750.;
+  
 
   //TargetID order (kEventDisplay, kHitPoly)
   //1  : HTOF Hit pattern
@@ -713,7 +735,7 @@ HistMaker::createEventDisplay(Bool_t flag_ps)
     const Double_t w = det_size.x();
     Double_t t = det_size.z();
     
-    if(name == "BH2")t*=4;
+    if(name == "BH2")t*=2;
     if(name == "T2")t*=2;
     
     
