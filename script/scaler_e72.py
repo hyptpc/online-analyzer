@@ -15,42 +15,49 @@ scaler_dir = os.path.abspath('/misc/share/monitor-tmp')
 scaler_list = [os.path.join(scaler_dir, 'scaler-hul-scaler-101.txt'),
                ]
 scaler_line = [64, 32]
-nraw = 16
+nraw = 19
 
 channel_map = {
   # 'name': [hul, channel]
   'BHT': [0, 6],
-  'T0': [0, 13],
   'BH2': [0, 7],
+  'BH2-Mp1': [0, 49],
   'BAC': [0, 8],
   'KVC': [0, 11],
-  'T1': [0, 52],
-  'HTOF-OR': [0, 9],
-  'HTOF-NIM-Mp2': [0, 48],
-  'HTOF-Mp3': [0, 49],
+  'HTOF-NIM-MpN': [0, 9],
+  'HTOF-NIM-MpN+1': [0, 48],
   'HTOF-Fwd': [0, 53],
+  'HTOF-Up6': [0, 56],
+  'HTOF-Up10': [0, 57],
+  'HTOF-Up14': [0, 58],
+  'HTOF-JJpi-': [0, 13],
+  'HTOF-JJpi+': [0, 51],
+  'T1': [0, 52],
+  'T2': [0, 54],
+  'T3': [0, 55],
+  'SCH': [0, 61],
+  'GGEM': [0, 59],
+  'GGEMxBH2': [0, 60],
+  '10M-Clock': [0, 0],
+  'TM': [0, 50],
+  # 'SY': [-1, -1],
+  'K-Beam': [0, 30],
+  'Pi-Beam': [0, 29],
+  'Beam': [-1, -1],
   'BEAM-A': [0, 19],
   'BEAM-B': [0, 20],
   'BEAM-C': [0, 21],
   'BEAM-D': [0, 22],
   'BEAM-E': [0, 23],
   'BEAM-F': [0, 24],
-  '10M-Clock': [0, 0],
-  'TM': [0, 50],
-  'SY': [-1, -1],
-  'K-Beam': [0, 30],
-  'Pi-Beam': [0, 29],
-  'Beam': [-1, -1],
-  'CVC': [0, 12],
-  'SAC3': [0, 10],
-  'SFV': [0, 51],
-  'Clock-PS': [0, 40],
   'TRIG-A': [0, 25],
   'TRIG-B': [0, 26],
   'TRIG-C': [0, 27],
   'TRIG-D': [0, 28],
   'TRIG-E': [0, 29],
   'TRIG-F': [0, 30],
+  'CVC': [0, 12],
+  'SAC3': [0, 10],
   'Spill': [-1, -1],
   'Real-Time': [0, 1],
   'Live-Time': [0, 2],
@@ -67,6 +74,7 @@ channel_map = {
   'TRIG-F-PS': [0, 37],
   'TRIG-PSOR-A': [0, 38],
   'TRIG-PSOR-B': [0, 39],
+  'Clock-PS': [0, 40],
   'Reserve2-PS': [0, 41],
 }
 
@@ -96,7 +104,7 @@ def separate_comma(value):
 class ScalerAnalyzer():
 
   #____________________________________________________________________________
-  def __init__(self, port=9096):
+  def __init__(self, port):
     ROOT.gROOT.SetBatch()
     ROOT.gErrorIgnoreLevel = ROOT.kFatal
     ROOT.gSystem.Setenv('AUTO_SCALER_PRINT', '0')
@@ -223,6 +231,7 @@ class ScalerAnalyzer():
       self.legend_daq.AddEntry(g, l, 'P')
     self.legend_daq.SetHeader(f'DAQ Eff. : {0:5.3f}')
     self.legend_daq.Draw()
+    logging.info(f'init')
 
   #____________________________________________________________________________
   def add_runsum(self, scaler):
