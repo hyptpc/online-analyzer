@@ -634,7 +634,8 @@ Multiplicity()
     HistMaker::getUniqueID(kBHT, 0, kMulti, 0),
     HistMaker::getUniqueID(kBH2, 0, kMulti, 0),
     HistMaker::getUniqueID(kBAC, 0, kMulti, 0),
-    HistMaker::getUniqueID(kHTOF, 0, kMulti, 0),
+    HistMaker::getUniqueID(kHTOF,0, kMulti, 0),
+    HistMaker::getUniqueID(kT2,  0, kMulti, 0),
     HistMaker::getUniqueID(kKVC, 0, kMulti, 0),
     HistMaker::getUniqueID(kKVC, 0, kMulti, 1),
     HistMaker::getUniqueID(kSCH, 0, kMulti, 0),
@@ -2130,9 +2131,9 @@ UpdateCounterEfficiency()
 {
   std::vector<TString> ch_name = {
     "BHT_Multi_0",  "BH2_Multi_0", "BAC_Multi_0",
-    "HTOF_Multi_0", "KVC_Multi_0", "KVC_Multi_1",
-    "SCH_Multi_0",  "CVC_Multi_0", "SAC3_Multi_1",
-    "SFV_Multi_0"
+    "HTOF_Multi_0", "T2_Multi_0",  "KVC_Multi_0",
+    "KVC_Multi_1",  "SCH_Multi_0", "CVC_Multi_0",
+    "SAC3_Multi_1", "SFV_Multi_0"
   };
   static std::vector<TText*> tex(ch_name.size());
   static auto c1 = (TCanvas*)gROOT->FindObject("Multiplicity");
