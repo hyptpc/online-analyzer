@@ -483,6 +483,26 @@ SCHTDC()
   return c1;
 }
 
+//_____________________________________________________________________________
+TCanvas*
+SCHTDCVSTOT()
+{
+  auto c1 = new TCanvas(__func__, __func__);
+  c1->Divide(8, 8);
+  const Int_t n_seg = 64;
+  for(Int_t seg=0; seg<n_seg; ++seg){
+    c1->cd(seg+1); // ->SetLogy();
+    auto h2 = (TH2*)GHist::get( HistMaker::getUniqueID(kSCH, 0, kTOT, seg+1) );
+    if(!h2) continue;
+    h2->Draw();
+    auto h3 = (TH2*)GHist::get( HistMaker::getUniqueID(kSCH, 0, kTOTwTDC, seg+1) );
+    if(!h3) continue;
+    h3->SetFillColor(kRed);
+    h3->Draw("same");
+  }
+  return c1;
+}
+
 //____________________________________________________________________________
 TCanvas*
 CVCADC()

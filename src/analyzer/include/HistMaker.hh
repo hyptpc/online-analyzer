@@ -63,8 +63,8 @@ enum DataType{
   kADC,   kTDC,   kHitPat,   kMulti, //4
   kADC2D, kTDC2D, kHitPat2D, kMulti2D, //8
   kTDC3D,
-  kHitPoly, 
-  kADCwTDC, kFADC, kTOT, //11
+  kHitPoly,
+  kADCwTDC, kFADC, kTOT, kTOTwTDC, //11
   kDeltaE, kCTime, kDeltaE2D, kCTime2D, //15
   kResetL, kResetT, //17
   kEnergy1, kEnergy2,  kEnergy3, kEnergy4,  kEnergy5, kEnergy6, //23
@@ -171,14 +171,14 @@ public:
   TList* createBcOutTracking(bool flag_ps=true);  
 
   TList* createTimeStamp(bool flag_ps=true);
-  TList* createHodo(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins, double xmin, double xmax, int nbins2, double xmin2, double xmax2, bool flag_ps=true); 
+  TList* createHodo(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins, double xmin, double xmax, int nbins2, double xmin2, double xmax2, bool flag_ps=true);
+  TList* createSCH(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins, double xmin, double xmax, int nbins2, double xmin2, double xmax2, bool flag_ps=true); 
   TList* createBHT(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins2, double xmin2, double xmax2, bool flag_ps=true); 
   TList* createHTOF(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins, double xmin, double xmax, int nbins2, double xmin2, double xmax2, bool flag_ps=true); 
   TList* createQDC(DetectorType kDET, std::string strDet, int nsegments, int nbins, double xmin, double xmax, bool flag_ps=true); 
   TList* createMHTDC(DetectorType kDET, std::string strDet, int nsegments, double xmax=1024., bool flag_ps=true);
   TList* createBLDC(DetectorType kDET, std::string strDet, int nlayers, int nwires, 
                     bool WIRE_RAW = false, bool ANA=false,bool flag_ps=true);
-  
   TList* createDAQ(bool flag_ps=true);
 
 

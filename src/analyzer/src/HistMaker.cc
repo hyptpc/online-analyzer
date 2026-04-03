@@ -922,6 +922,116 @@ TList* HistMaker::createHodo(DetectorType kDET, std::string strDet, const int ns
 }
 
 // -------------------------------------------------------------------------
+// createSCH
+// -------------------------------------------------------------------------
+TList* HistMaker::createSCH(DetectorType kDET, std::string strDet, const int nsegments, const int nud, int nbins, double xmin, double xmax, int nbins2, double xmin2, double xmax2, bool flag_ps){
+
+  name_created_detectors_.push_back(strDet);
+  if(flag_ps){
+    // name list which are displayed in Ps tab
+    name_ps_files_.push_back(strDet);
+  }
+
+  // Declaration of the directory
+  // Just type conversion from std::string to char*
+  const char* nameDetector = strDet.c_str();
+  TList *top_dir = new TList;
+  top_dir->SetName(nameDetector);
+  std::vector<HistMakerInfo> list;;
+  //list.push_back( HistMakerInfo(kADC,    "ADC",    "ADC [ch]", nbins,xmin,xmax) );
+  //list.push_back( HistMakerInfo(kADCwTDC,"ADCwTDC",  "ADC [ch]", nbins, xmin,xmax) );
+  list.push_back( HistMakerInfo(kTDC,    "TDC",       "TDC [ch]", 1024, 0, 1024) );
+  list.push_back( HistMakerInfo(kTDC2D,  "Trailing",  "Trainling [ch]", nbins2, xmin2, xmax2) );
+  list.push_back( HistMakerInfo(kTOT,    "TOT",      "TOT [ch]", 1024,0.,1024.) );
+  list.push_back( HistMakerInfo(kTOTwTDC,"TOTwTDC",  "TOT [ch]", 1024,0.,1024.) );
+  list.push_back( HistMakerInfo(kCTime,  "MeanTime",       "time [ns]", 5000,-1000,1000) );
+  list.push_back( HistMakerInfo(kHitPat, "HitPat",  "Segment", nsegments+1 ,-0.5,nsegments+0.5) );
+  list.push_back( HistMakerInfo(kMulti,  "Multi",   "Multiplicity", nsegments+1 ,-0.5,nsegments+0.5) );
+  
+  
+  size_t size=list.size();
+  for(size_t i=0; i<size-3;i++){
+    // Declaration of the sub-directory
+    const char* nameSubDir = list[i].type_name.Data();
+    TList *sub_dir = new TList;
+    sub_dir->SetName(nameSubDir);
+    // Make histogram and add it
+    for(int iud=0; iud<nud; ++iud){
+      int target_id = getUniqueID(kDET, iud, list[i].type, 0);
+      for(int j = 0; j<nsegments; ++j){
+	const char* title = NULL;
+	title = Form("%s_%s_%d_%d", nameDetector, nameSubDir, j, iud);
+	sub_dir->Add(createTH1(target_id + j+1, title, // 1 origin
+			       list[i].nbinsx, list[i].xmin, list[i].xmax,
+			       list[i].xtitle, list[i].ytitle));
+      }
+    }
+    top_dir->Add(sub_dir);
+  }
+  {
+    const char* nameSubDir = "TDCvsTOT";
+    TList *sub_dir = new TList;
+    sub_dir->SetName(nameSubDir);
+    top_dir->Add(sub_dir);
+    for(int iud=0; iud<nud; ++iud){
+      int target_id = getUniqueID(kDET, iud, kADC2D, 0);
+      for(int j = 0; j<nsegments; ++j){
+	const char* title = NULL;
+	title = Form("%s_%s_%d_%d", nameDetector, nameSubDir, j, iud);
+
+	sub_dir->Add(createTH2(target_id + j+1, title,
+			       100,xmin2,xmax2,100,0,20000.,
+			       "TDC [ch]", "TOT [ch]") );
+
+      }
+    }
+  }
+  
+  for(size_t i=size-3; i<size-2;i++){
+    // Declaration of the sub-directory
+    const char* nameSubDir = list[i].type_name.Data();
+    TList *sub_dir = new TList;
+    sub_dir->SetName(nameSubDir);
+    // Make histogram and add it
+    int target_id = getUniqueID(kDET, 0, list[i].type, 0);
+    for(int j = 0; j<nsegments; ++j){
+      const char* title = NULL;
+      title = Form("%s_%s_%d", nameDetector, nameSubDir, j);
+      sub_dir->Add(createTH1(target_id + j+1, title, // 1 origin
+			     list[i].nbinsx, list[i].xmin, list[i].xmax,
+			     list[i].xtitle, list[i].ytitle));
+    }
+    top_dir->Add(sub_dir);
+  }  
+  for(size_t i=size-2; i<size;i++){
+    const char* nameSubDir = list[i].type_name.Data();
+    int target_id = getUniqueID(kDET, 0, list[i].type, 0);
+    const char* title = NULL;
+    title = Form("%s_%s", nameDetector, nameSubDir);
+    for(int j = 0; j<3; ++j){
+      const char* title = NULL;
+      title = Form("%s_%s_%d", nameDetector, nameSubDir, j);
+      top_dir->Add(createTH1(target_id + j, title, // 1 origin
+			     list[i].nbinsx, list[i].xmin, list[i].xmax,
+			     list[i].xtitle, list[i].ytitle));
+    }
+  }
+  {
+    const char* nameSubDir = "HitPat2D";
+    int target_id = getUniqueID(kDET, 0, kHitPat2D, 0);
+    const char* title = NULL;
+    title = Form("%s_%s", nameDetector, nameSubDir);
+    top_dir->Add(createTH2(target_id, title, // 1 origin
+			   nsegments,-0.5,nsegments-0.5,
+			   nsegments,-0.5,nsegments-0.5,
+			   "top segment","bottom segment"));
+  }
+  
+  // Return the TList pointer which is added into TGFileBrowser
+  return top_dir;
+}
+
+// -------------------------------------------------------------------------
 // createBHT
 // -------------------------------------------------------------------------
 TList* HistMaker::createBHT(DetectorType kDET, std::string strDet, const int nsegments, const int nud, int nbins2, double xmin2, double xmax2, bool flag_ps)
@@ -1052,7 +1162,7 @@ TList* HistMaker::createHTOF(DetectorType kDET, std::string strDet, const int ns
   
   size_t size=list.size();
   for(size_t i=0; i<size-3;i++){
-    // Declaration of the sub-directory
+  // Declaration of the sub-directory
     const char* nameSubDir = list[i].type_name.Data();
     TList *sub_dir = new TList;
     sub_dir->SetName(nameSubDir);
@@ -1119,8 +1229,22 @@ TList* HistMaker::createHTOF(DetectorType kDET, std::string strDet, const int ns
 			   "up segment","down segment"));
   }
 
-
-  
+  {
+    const char* nameSubDir = "TDCvsTOT";
+    TList *sub_dir = new TList;
+    sub_dir->SetName(nameSubDir);
+    top_dir->Add(sub_dir);    
+    for(int iud=0; iud<nud; ++iud){
+      int target_id = getUniqueID(kDET, iud, kADC2D, 0);
+      for(int j = 0; j<nsegments; ++j){
+	const char* title = NULL;
+	title = Form("%s_%s_%d_%d", nameDetector, nameSubDir, j, iud);
+	sub_dir->Add(createTH2(target_id + j+1, title,
+			       100,xmin2,xmax2,100,0,20000.,
+			       "TDC [ch]", "TOT [ch]") );
+      }
+    }
+  }
   
   // Return the TList pointer which is added into TGFileBrowser
   return top_dir;

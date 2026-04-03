@@ -47,6 +47,7 @@ TCanvas*  HTOFTDC2();
 TCanvas*  T1T2T3();
 TCanvas*  SCHTOT();
 TCanvas*  SCHTDC();
+TCanvas*  SCHTDCVSTOT();
 TCanvas*  CVCADC();
 TCanvas*  CVCTDC();
 TCanvas*  SAC3();

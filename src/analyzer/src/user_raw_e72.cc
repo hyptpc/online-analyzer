@@ -165,7 +165,8 @@ process_begin( const std::vector<std::string>& argv )
 				  nbinshrtdc, hrtdcmin, hrtdcmax));
   gHttp.Register(gHist.createHodo(kT1, "T1", 1, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kT2, "T2", 1, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
-  gHttp.Register(gHist.createHodo(kSCH, "SCH", 64, 1, 150,0,150,1000,0,1000));
+  //gHttp.Register(gHist.createHodo(kSCH, "SCH", 64, 1, 150,0,150,1000,0,1000));
+  gHttp.Register(gHist.createSCH(kSCH, "SCH", 64, 1, 150,0,150,1000,0,1000));
   gHttp.Register(gHist.createHodo(kCVC, "CVC", 8, 3, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kSAC3, "SAC3", 1, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
   gHttp.Register(gHist.createHodo(kSFV, "SFV", 1, 1, nbinsqdc/2,-0.5,2047.5,nbinshrtdc,hrtdcmin,hrtdcmax));
@@ -225,6 +226,7 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::T1T2T3());
   gHttp.Register(http::SCHTOT());
   gHttp.Register(http::SCHTDC());
+  gHttp.Register(http::SCHTDCVSTOT());
   gHttp.Register(http::CVCADC());
   gHttp.Register(http::CVCTDC());
   gHttp.Register(http::SAC3());
@@ -236,8 +238,6 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::BcIn2D());
   gHttp.Register(http::BcOut2D());
   gHttp.Register(http::SHS2D_wotpc());
-  
-  
   
   // Chambers except for CDC
   for(int i=0;i<nchm;i++){
@@ -838,6 +838,10 @@ process_event( void )
 	if(m<leading_size){
 	  hid=gHist.getSequentialID(kDET,0,kTOT,seg+1);
 	  hptr_array[hid]->Fill(leading_array.at(m) - tdc);
+	  hid=gHist.getSequentialID(kDET,0,kTOTwTDC,seg+1);
+	  if(ntdc>0){
+	    hptr_array[hid]->Fill(leading_array.at(m) - tdc);
+	  }
 	  hid=gHist.getSequentialID(kDET,0,kADC2D,seg+1);
 	  hptr_array[hid]->Fill(leading_array.at(m), leading_array.at(m) - tdc);
 	}
