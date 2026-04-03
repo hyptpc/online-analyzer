@@ -1192,14 +1192,19 @@ TPCDataSize( void )
   if( h )h->Draw();
   
   c1->cd(2);
-  id = HistMaker::getUniqueID(kTPC, 1, kADC);
+  id = HistMaker::getUniqueID(kTPC, 0, kMulti);
   h = GHist::get( id );
   if( h ) h->Draw();
 
   c1->cd(3);
-  id = HistMaker::getUniqueID(kDAQ, kEB, kHitPat, 0);
+  id = HistMaker::getUniqueID(kDAQ, kEB, kHitPat, 1);
   h = GHist::get( id );
   if( h ) h->Draw();
+
+  c1->cd(4);
+  id = HistMaker::getUniqueID(kDAQ, kCoBo, kHitPat2D, 1);
+  h = GHist::get( id );
+  if( h ) h->Draw("colz");
 
   return c1;
 }
