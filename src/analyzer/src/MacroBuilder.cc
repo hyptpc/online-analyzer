@@ -1182,17 +1182,22 @@ TPC3DEvt( void ){
 
 //_____________________________________________________________________________
 TCanvas*
-TPCAGETCond( void )
+TPCDataSize( void )
 {
   auto c1 = new TCanvas( __func__, __func__ );
-  c1->Divide(2,1);
+  c1->Divide(2,2);
   c1->cd(1);
-  auto id = HistMaker::getUniqueID(kTPC, 3, kMulti);
+  auto id = HistMaker::getUniqueID(kTPC, 4, kMulti);
   auto h = GHist::get( id );
   if( h )h->Draw();
   
   c1->cd(2);
   id = HistMaker::getUniqueID(kTPC, 1, kADC);
+  h = GHist::get( id );
+  if( h ) h->Draw();
+
+  c1->cd(3);
+  id = HistMaker::getUniqueID(kDAQ, kEB, kHitPat, 0);
   h = GHist::get( id );
   if( h ) h->Draw();
 

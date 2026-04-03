@@ -93,7 +93,7 @@ TCanvas* TPC2D( void );
 TCanvas* TPCMulti( void );
 TCanvas* TPC3D( void );
 TCanvas* TPC3DEvt( void );
-TCanvas* TPCAGETCond( void );
+TCanvas* TPCDataSize( void );
 TCanvas* TPCADCPAD( void );
 TCanvas* TPCTDCPAD( void );
 TCanvas* TPCHTOFPAD( void );

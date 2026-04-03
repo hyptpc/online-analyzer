@@ -194,7 +194,7 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::TPCMulti());
   gHttp.Register(http::TPC3DEvt());
   gHttp.Register(http::TPCADCPAD());
-  gHttp.Register(http::TPCAGETCond());
+  gHttp.Register(http::TPCDataSize());
   gHttp.Register(http::TPCFADCAGET());
   gHttp.Register(http::TPCTHRE());
   gHttp.Register(http::SHS2D_EVT());
