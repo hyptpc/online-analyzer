@@ -2129,9 +2129,10 @@ void
 UpdateCounterEfficiency()
 {
   std::vector<TString> ch_name = {
-    "BHT_Multi_0", "T0_Multi_0", "BH2_Multi_0",
-    "BAC_Multi_0", "HTOF_Multi_0", "KVC_Multi_0",
-    "KVC_Multi_1", "CVC_Multi_0", "SAC3_Multi_1"
+    "BHT_Multi_0",  "BH2_Multi_0", "BAC_Multi_0",
+    "HTOF_Multi_0", "KVC_Multi_0", "KVC_Multi_1",
+    "SCH_Multi_0",  "CVC_Multi_0", "SAC3_Multi_1",
+    "SFV_Multi_0"
   };
   static std::vector<TText*> tex(ch_name.size());
   static auto c1 = (TCanvas*)gROOT->FindObject("Multiplicity");
