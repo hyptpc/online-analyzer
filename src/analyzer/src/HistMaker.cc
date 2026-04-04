@@ -942,8 +942,8 @@ TList* HistMaker::createSCH(DetectorType kDET, std::string strDet, const int nse
   //list.push_back( HistMakerInfo(kADCwTDC,"ADCwTDC",  "ADC [ch]", nbins, xmin,xmax) );
   list.push_back( HistMakerInfo(kTDC,    "TDC",       "TDC [ch]", 1024, 0, 1024) );
   list.push_back( HistMakerInfo(kTDC2D,  "Trailing",  "Trainling [ch]", nbins2, xmin2, xmax2) );
-  list.push_back( HistMakerInfo(kTOT,    "TOT",      "TOT [ch]", 1024,0.,1024.) );
-  list.push_back( HistMakerInfo(kTOTwTDC,"TOTwTDC",  "TOT [ch]", 1024,0.,1024.) );
+  list.push_back( HistMakerInfo(kTOT,    "TOT",      "TOT [ch]", 100, 0., 100.) );
+  list.push_back( HistMakerInfo(kTOTwTDC,"TOTwTDC",  "TOT [ch]", 100, 0., 100.) );
   list.push_back( HistMakerInfo(kCTime,  "MeanTime",       "time [ns]", 5000,-1000,1000) );
   list.push_back( HistMakerInfo(kHitPat, "HitPat",  "Segment", nsegments+1 ,-0.5,nsegments+0.5) );
   list.push_back( HistMakerInfo(kMulti,  "Multi",   "Multiplicity", nsegments+1 ,-0.5,nsegments+0.5) );
