@@ -377,6 +377,10 @@ HistMaker::createBcOutTracking(Bool_t flag_ps)
   TList *top_dir = new TList;
   top_dir->SetName(nameDetector);
   TString title;
+  Int_t id = getUniqueID(kBcOutTracking, 0, kMulti, 0);
+  title = Form("%s_Multi",nameDetector);
+  top_dir->Add(createTH1(++id,title,5,-0.5,4.5,"Multiplicity"));
+  
   std::vector<std::pair<DataType, std::string>> particle_types = {
     {kPi, "Pi"},
     {kKaon, "K"},
@@ -780,7 +784,7 @@ HistMaker::createEventDisplay(Bool_t flag_ps)
     title = Form("%s_BcOut", nameDetector);
     top_dir->Add(createTH2(++target_id,title,
 			   500,-900,0,
-			   500,-500,0,
+			   1000,-500,500,
 			   "Z [mm]","X [mm]"));
 
   }

@@ -1371,9 +1371,11 @@ process_event( void )
   int hist_bcout_bh2_id = gHist.getSequentialID(kBcOutTracking,0,kAll,3);
   int hist_bcout_htof_id = gHist.getSequentialID(kBcOutTracking,0,kAll,4);
   int hist_bcout_target_id = gHist.getSequentialID(kBcOutTracking,0,kAll,5);
+  int hist_bcout_multi_id = gHist.getSequentialID(kBcOutTracking,0,kMulti,1);
 
     
-  
+  int ntrack = dcAna.GetNtracksBcOut();
+  hptr_array[hist_bcout_multi_id]->Fill(ntrack);
   for(const auto& track : dcAna.GetBcOutTrackContainer()){
     double x0 = track->GetX0();
     double y0 = track->GetY0();
