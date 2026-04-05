@@ -19,7 +19,7 @@ const int NumOfSeg[] = {NumOfSegHTOF, NumOfSegBH2, NumOfSegBAC, NumOfSegKVC, Num
 
 const double c_x_min = -700.;
 const double c_x_max = 1800.;
-const double c_y_min = -500.;
+const double c_y_min = -750.;
 const double c_y_max = 750.;
 
 enum DetectorType {
