@@ -76,10 +76,12 @@ HttpServer::MakePs(Int_t run_number)
   TString type;
   if(m_port == 8086)
     type = "rawhist";
+  else if(m_port == 8088)
+    type = "rawhist-tpc";
   else
     return;
-  TString ps_path(Form("/misc/share/rawhist/rawhist-run%05d.pdf",
-		       run_number));
+  TString ps_path(Form("/misc/share/rawhist/%s-run%05d.pdf",
+		       type.Data(), run_number));
   std::ifstream comment_txt("/misc/raid/hddaq/e72_2025/misc/comment.txt");
   TString line;
   TString comment;

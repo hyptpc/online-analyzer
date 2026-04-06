@@ -140,7 +140,7 @@ process_begin( const std::vector<std::string>& argv )
   gStyle->SetPalette(55);
   
   // unpacker and all the parameter managers are initialized at this stage  
-  int port=9090;
+  int port=8088;
   
   if(argv.size()==4){
     outputname=argv.at(3);
@@ -235,6 +235,7 @@ process_event( void )
 
   static Int_t run_number = -1;
   if(run_number != gUnpacker.get_run_number()){
+    if(run_number>0)gHttp.MakePs(run_number);
     for(Int_t i=0, n=hptr_array.size(); i<n; ++i){
       hptr_array[i]->Reset();
     }
