@@ -47,21 +47,47 @@ Example execution:
 ./bin/e72 ../param/conf/analyzer_e72_online.conf /hsm/had/sks/E72/JPARC2025Nov/e72_2025nov/run00001.dat
 ```
 Here:
-* ../param/conf/analyzer_e72_online.conf
+* `../param/conf/analyzer_e72_online.conf`
     * analyzer configuration file from the param repository
-* /hsm/had/sks/E72/JPARC2025Nov/e72_2025nov/run00001.dat
+* `/hsm/had/sks/E72/JPARC2025Nov/e72_2025nov/run00001.dat`
     * raw data file path on KEKCC
 
-## Port forwarding for local host access
-To access the online monitor from your local PC browser, additional SSH port forwarding is required.
+## Port setting and local host access
+
+The monitor port can be changed by editing the analyzer source code.
+For example, in:
+```sh
+src/analyzer/src/user_raw_e72.cc
+```
+you may find:
+```cpp
+int port = 8081;
+```
+
+The online monitor will use this port number.
+For example:
+- `int port = 8081;`
+  → access with `http://localhost:8081`
+- `int port = 9090;`
+  → access with `http://localhost:9090`
+  
+To access the monitor from your local PC browser, SSH port forwarding is required.
 Open another terminal on your local PC and connect to KEKCC with:
+
 ```sh
-ssh -L 9090:localhost:9090 <your_account>@<server>.cc.kek.jp
+ssh -L 8081:localhost:8081 <your_account>@<server>.cc.kek.jp
 ```
-* Replace <your_account> with your KEKCC account name.
-* Replace <server> with the server you want to use (cw02, etc.).
-After connecting, the local host port 9090 will be forwarded to the KEKCC server.
-You can then access the monitor from your local browser using:
+- Replace `<your_account>` with your KEKCC account name.
+- Replace `<server>` with the server you want to use (`cw02`, etc.).
+
+After connecting, open the browser on your local PC:
 ```sh
-http://localhost:9090
+http://localhost:8081
 ```
+The port number in:
+
+1. `user_xxx.cc`
+2. SSH `-L` option
+3. browser `localhost:<port>`
+
+must all match.
