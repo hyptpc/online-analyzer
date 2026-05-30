@@ -546,9 +546,9 @@ HistMaker::createTPC(Bool_t flag_ps)
   // Multiplicity
   top_dir->Add( createTH1( getUniqueID( kTPC, 0, kMulti ),
                            "TPC_multiplicity", 600, 0, 6000 ) );
-  top_dir->Add( createTH1( getUniqueID( kTPC, 3, kMulti ),
-                           "TPC_AGET_multiplicity", 124, 0, 124,
-			   "AsAdID#times4+AGETID", "Multiplicity/AGET/Event" ) );
+  top_dir->Add( createTH2( getUniqueID( kTPC, 3, kMulti ),
+                           "TPC_AGET_multiplicity", 124, -0.5, 123.5, 50,0,50,
+			   "AsAdID#times4+AGETID", "Multiplicity/AGET" ) );
   top_dir->Add( createTH1( getUniqueID( kTPC, 4, kMulti ),
                            "TPC_AGET_multiplicity_Max", 64, 0, 64 ) );
 
@@ -556,6 +556,9 @@ HistMaker::createTPC(Bool_t flag_ps)
   top_dir->Add( createTH1( getUniqueID( kTPC, 1, kADC),
                            "TPC_AGET_Count", 124, 0,124,
 			   "AsAdID#times4+AGETID", "Count" ) );
+
+
+
   
   // ClusterSize
   top_dir->Add( createTH2( getUniqueID( kTPC, 2, kMulti ),
@@ -1652,7 +1655,7 @@ TList* HistMaker::createDAQ(bool flag_ps)
       }
       top_dir->Add(h);
     }
-    
+
   }
   return top_dir;
 }

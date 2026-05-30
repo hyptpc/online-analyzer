@@ -140,7 +140,7 @@ process_begin( const std::vector<std::string>& argv )
   gStyle->SetPalette(55);
   
   // unpacker and all the parameter managers are initialized at this stage  
-  int port=9090;
+  int port=8087;
   
   if(argv.size()==4){
     outputname=argv.at(3);
@@ -665,7 +665,6 @@ process_event( void )
       hptr_array[tpca2d_id]->Reset(); //adc2d
       hptr_array[tpca2d_id+1]->Reset(); //rms2d
       hptr_array[tpca2d_id+2]->Reset(); // tdc2d
-      hptr_array[agetmul_id]->Reset();
       hptr_array[tpct3d_id]->Reset();
     
       std::vector<bool> isDeadPad(NumOfPadTPC + 1, false);
@@ -685,6 +684,7 @@ process_event( void )
       Int_t max_adc = -1;
       Int_t max_tb  = -1;
       Int_t max_pad = -1;
+      int hit_aget[NumOfAsadTPC][4]={0};
       for( Int_t layer=0; layer<32; ++layer ){
 	Int_t nPad = TpcPadHelper::PadParameter[layer][1];
 	for( Int_t ch=0; ch<nPad; ++ch ){
@@ -702,6 +702,7 @@ process_event( void )
 	    continue;
 	  }
 	  std::vector<Double_t> fadc( nhit );
+	  
 	  
 	  for( Int_t i=0; i<nhit; ++i ){
 	    Int_t adc = gUnpacker.get( k_device, layer, 0, ch, k_adc, i );
@@ -740,8 +741,7 @@ process_event( void )
 	  }
 
 	  if( max_adc - mean <= 0 ) continue;
-	
-	  hptr_array[agetmul_id]->Fill( asad*4+aget );
+	  hit_aget[asad][aget]++;
 
 	  hptr_array[tpca_id]->Fill( max_adc - mean );
 	  double aget_count;
@@ -792,9 +792,27 @@ process_event( void )
     
       std::cout << "run# " << run_number << "  ev# " << event_number
 		<< "  active pad = " << n_active_pad << std::endl;
+
+      
       hptr_array[tpcmul_id]->Fill( n_active_pad );
-      hptr_array[amulmax_id]->Fill( hptr_array[agetmul_id]->GetMaximum() );
-    
+
+      int max_count = -1;
+      int max_asad  = -1;
+      int max_aget  = -1;
+      for(int asad=0; asad<NumOfAsadTPC; ++asad){
+	for(int aget=0; aget<4; ++aget){
+	  hptr_array[agetmul_id]->Fill( asad*4+aget,hit_aget[asad][aget] );
+	  if(hit_aget[asad][aget] > max_count){
+            max_count = hit_aget[asad][aget];
+            max_asad  = asad;
+            max_aget  = aget;
+	  }
+	}
+      }
+      
+      hptr_array[amulmax_id]->Fill( max_count);
+
+      
       if( max_adc > 0 ){
 	for( Int_t i=0; i<NumOfTimeBucket; ++i ){
 	  hptr_array[tpcfa_id]->Fill( i, max_fadc[i] );
