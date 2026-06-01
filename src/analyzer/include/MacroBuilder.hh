@@ -98,6 +98,7 @@ TCanvas* TPCADCPAD( void );
 TCanvas* TPCTDCPAD( void );
 TCanvas* TPCHTOFPAD( void );
 TCanvas* TPCFADC( void );
+TCanvas* TPCRMSASAD( void );
 TCanvas* TPCFADCAGET( void );
 TCanvas* TPCTHRE( void );
 

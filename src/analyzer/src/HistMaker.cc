@@ -444,10 +444,13 @@ HistMaker::createTPC(Bool_t flag_ps)
     auto h_loc = dynamic_cast<TH2Poly*>
       ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
     title = Form( "%s_Hit2D", nameDetector );
-    auto h_hit = dynamic_cast<TH2Poly*>
+    auto h_thre = dynamic_cast<TH2Poly*>
       ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
     title = Form( "%s_Threshold2D", nameDetector );
-    auto h_thre = dynamic_cast<TH2Poly*>
+    auto h_max = dynamic_cast<TH2Poly*>
+      ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
+    title = Form( "%s_Max2D", nameDetector );
+    auto h_hit = dynamic_cast<TH2Poly*>
       ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
     top_dir->Add( createTH3( getUniqueID(kTPC, 0, kTDC3D), "TPC_TDC3D", 100,-300,300,100,-300,300,250,-250,250));
 
@@ -481,6 +484,7 @@ HistMaker::createTPC(Bool_t flag_ps)
         h_loc->AddBin( 5, X, Y );
         h_hit->AddBin( 5, X, Y );
 	h_thre->AddBin( 5, X, Y );
+	h_max->AddBin( 5, X, Y );
       }
     }
     
@@ -493,13 +497,17 @@ HistMaker::createTPC(Bool_t flag_ps)
     h_loc->SetStats( 0 );
     h_loc->SetMinimum(    0. );
     h_loc->SetMaximum(  NumOfTimeBucket );
-    h_thre->SetMinimum(   0. );
+    //h_thre->SetMinimum(   0. );
+    h_hit->SetMinimum(   0. );
     //h_thre->SetMaximum( 2000. );
+    h_max->SetMinimum(700.);
+    h_max->SetMaximum(2000.);
     top_dir->Add( h_adc );
     top_dir->Add( h_rms );
     top_dir->Add( h_loc );
     top_dir->Add( h_hit );
     top_dir->Add( h_thre );
+    top_dir->Add( h_max );
     
   }
   // ADC
@@ -557,6 +565,22 @@ HistMaker::createTPC(Bool_t flag_ps)
                            "TPC_AGET_Count", 124, 0,124,
 			   "AsAdID#times4+AGETID", "Count" ) );
 
+  
+  for(int i=0;i<NumOfAsadTPC;i++){
+    top_dir->Add( createTH1( getUniqueID( kTPC, 5, kMulti, i),
+			     Form("TPC_Max_AsAd%d",i+1),NumOfEvtCut,0,NumOfEvtCut,
+			     "Event","Max ADC"));
+    top_dir->Add( createTH1( getUniqueID( kTPC, 6, kMulti, i),
+			     Form("TPC_Min_AsAd%d",i+1),NumOfEvtCut,0,NumOfEvtCut,
+			     "Event","Min ADC"));
+
+    top_dir->Add( createTH2( getUniqueID( kTPC, 7, kMulti, i),
+			     Form("TPC_RMS_AsAd%d",i+1),NumOfEvtCut,0,NumOfEvtCut,10,0,50,
+			     "Event","Min ADC"));
+  }
+  top_dir->Add( createTH1( getUniqueID( kTPC, 8, kMulti),
+			   "TPC_Evt",1000000,0,1000000,
+			   "Event","Count"));
 
 
   

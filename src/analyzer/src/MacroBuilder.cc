@@ -1351,6 +1351,25 @@ TPCFADCAGET( void )
 
 //_____________________________________________________________________________
 TCanvas*
+TPCRMSASAD( void )
+{
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->Divide(8,4);
+  for(int n_asad = 0;n_asad < NumOfAsadTPC;n_asad++){
+    c1->cd(n_asad+1);
+
+    auto id = HistMaker::getUniqueID(kTPC, 7, kMulti, n_asad);
+    auto h = GHist::get(id);
+    if(h){
+      h->Draw("colz");
+    }
+  }
+  return c1;
+  
+}
+
+//_____________________________________________________________________________
+TCanvas*
 TPCTHRE( void )
 {
   auto c1 = new TCanvas( __func__, __func__ );

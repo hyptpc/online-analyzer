@@ -140,7 +140,7 @@ process_begin( const std::vector<std::string>& argv )
   gStyle->SetPalette(55);
   
   // unpacker and all the parameter managers are initialized at this stage  
-  int port=8087;
+  int port=9090;
   
   if(argv.size()==4){
     outputname=argv.at(3);
@@ -197,6 +197,7 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::TPCADCPAD());
   gHttp.Register(http::TPCDataSize());
   gHttp.Register(http::TPCFADCAGET());
+  gHttp.Register(http::TPCRMSASAD());
   gHttp.Register(http::TPCTHRE());
   gHttp.Register(http::SHS2D_EVT());
   gHttp.Register(http::SHS2D_HITPATTERN());
@@ -661,11 +662,47 @@ process_event( void )
       static const Int_t agetmul_id = gHist.getSequentialID( kTPC, 3, kMulti );
       static const Int_t amulmax_id = gHist.getSequentialID( kTPC, 4, kMulti );
       static const Int_t tpct3d_id = gHist.getSequentialID( kTPC, 0, kTDC3D );
+      Int_t tpc_max_evt_id[NumOfAsadTPC];
+      Int_t tpc_min_evt_id[NumOfAsadTPC];
+      Int_t tpc_rms_evt_id[NumOfAsadTPC];
+      
+      for(int i=0;i<NumOfAsadTPC;i++){
+	tpc_max_evt_id[i] = gHist.getSequentialID( kTPC, 5, kMulti, i);
+	tpc_min_evt_id[i] = gHist.getSequentialID(kTPC, 6, kMulti, i);
+	tpc_rms_evt_id[i] = gHist.getSequentialID(kTPC, 7, kMulti, i);
+	
+      }
+      static const Int_t tpc_evt = gHist.getSequentialID(kTPC,8,kMulti);
+      
       
       hptr_array[tpca2d_id]->Reset(); //adc2d
       hptr_array[tpca2d_id+1]->Reset(); //rms2d
       hptr_array[tpca2d_id+2]->Reset(); // tdc2d
       hptr_array[tpct3d_id]->Reset();
+      
+
+      hptr_array[tpc_evt]->Fill(event_number);
+      bool pass_reset = false;
+      if(event_number >NumOfEvtCut){
+	int lastBin = hptr_array[tpc_evt]->FindLastBinAbove(0);
+	int secondLastBin = -1;
+	for (int i = lastBin - 1; i >= 1; i--) {
+	  if (hptr_array[tpc_evt]->GetBinContent(i) != 0) {
+	    if((i-1)%NumOfEvtCut==0)pass_reset = true;
+	    secondLastBin = i;
+	    break;
+	  }
+	}
+	if(secondLastBin==-1)pass_reset = false;
+      }
+      
+      if(pass_reset){
+	for(int i=0;i<NumOfAsadTPC;i++){
+	  hptr_array[tpc_max_evt_id[i]]->Reset();
+	  hptr_array[tpc_min_evt_id[i]]->Reset();
+	  hptr_array[tpc_rms_evt_id[i]]->Reset();
+	}
+      }
     
       std::vector<bool> isDeadPad(NumOfPadTPC + 1, false);
 
@@ -724,19 +761,41 @@ process_event( void )
 	  // Maximum RMS per AGET
 	  Int_t asad = gTpcPad.GetASADId( layer, ch);
 	  Int_t aget = gTpcPad.GetAGETId(asad, layer, ch);
+	  hptr_array[tpc_rms_evt_id[asad]]->Fill(event_number%NumOfEvtCut,rms);
 	  
 	  if(asad < 0 || asad > 31 || aget < 0 || aget > 4)continue;
 	  if(aget_max_rms[asad][aget] < rms){
 	    aget_max_rms[asad][aget] = rms;
 	    max_rms_fadc[asad][aget] = fadc;
 	  }
-	
+
+	  if(max_adc > hptr_array[tpca2d_id+5]->GetBinContent(pad+1)){
+	    hptr_array[tpca2d_id+5]->SetBinContent( pad+1, max_adc );
+	    
+	  }
+	  if(max_adc > hptr_array[tpc_max_evt_id[asad]]->GetBinContent(event_number%NumOfEvtCut+1)){
+	    hptr_array[tpc_max_evt_id[asad]]->SetBinContent(event_number%NumOfEvtCut+1,max_adc);
+	    
+	  }
+	      
+	  
 	  if(hptr_array[tpca2d_id+4]->GetBinContent(pad+1) == 0){
 	    hptr_array[tpca2d_id+4]->SetBinContent( pad+1, max_adc );
 	  }
 	  else{
 	    if(max_adc < hptr_array[tpca2d_id+4]->GetBinContent(pad+1)){
 	      hptr_array[tpca2d_id+4]->SetBinContent( pad+1, max_adc );
+	      
+	    }
+	  }
+	  if(hptr_array[tpc_min_evt_id[asad]]->GetBinContent(event_number%NumOfEvtCut+1) == 0){
+	    hptr_array[tpc_min_evt_id[asad]]->SetBinContent(event_number%NumOfEvtCut+1,max_adc);
+	    
+	  }
+	  else{
+	    if(max_adc < hptr_array[tpc_min_evt_id[asad]]->GetBinContent(event_number%NumOfEvtCut+1)){
+	      hptr_array[tpc_min_evt_id[asad]]->SetBinContent(event_number%NumOfEvtCut+1,max_adc);
+	      
 	    }
 	  }
 
@@ -1042,7 +1101,7 @@ process_event( void )
     //http::UpdateAFTEfficiency();
     gErrorIgnoreLevel = prev_level;
   }
-
+  
   gSystem->ProcessEvents();
   //std::cout << "\a" << std::endl;
 
