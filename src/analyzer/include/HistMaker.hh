@@ -44,6 +44,7 @@ enum DetectorType {
   kHRTDC1,kHRTDC2,kHRTDC3, kHRTDC4,kHRTDC5,kHRTDC6, 
   kMHTDC,
   kBcOutTracking, kBcInTracking,
+  kK18Tracking,
   sizeDetectorType,
   factorDetectorType = 10000000
 };
@@ -169,6 +170,7 @@ public:
 
   TList* createBcInTracking(bool flag_ps=true);  
   TList* createBcOutTracking(bool flag_ps=true);  
+  TList* createK18Tracking(bool flag_ps=true);
 
   TList* createTimeStamp(bool flag_ps=true);
   TList* createHodo(DetectorType kDET, std::string strDet, int nsegments, int nud, int nbins, double xmin, double xmax, int nbins2, double xmin2, double xmax2, bool flag_ps=true);

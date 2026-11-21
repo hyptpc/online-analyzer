@@ -55,7 +55,8 @@ root_glibs += \
  -lEG \
  -lGeom \
  -lGed \
- -lTreePlayer
+ -lTreePlayer \
+ -lMinuit
 
 # -lEve
 # -lRGL

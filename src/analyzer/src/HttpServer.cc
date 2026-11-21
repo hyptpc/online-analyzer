@@ -17,6 +17,7 @@
 #include <TTimeStamp.h>
 
 #include "HttpServer.hh"
+#include "K18Tracking.hh"
 
 //_____________________________________________________________________________
 HttpServer::HttpServer()
@@ -196,6 +197,7 @@ HttpServer::ResetAll()
   std::cout << "#D HttpServer::ResetAll()" << std::endl;
   for(auto&& h : m_th1_list)
     h->Reset();
+  k18::ReloadD5Field();
 }
 
 //____________________________________________________________________________

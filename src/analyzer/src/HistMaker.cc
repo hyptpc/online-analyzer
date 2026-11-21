@@ -422,6 +422,35 @@ HistMaker::createBcOutTracking(Bool_t flag_ps)
 }
 
 //_____________________________________________________________________________
+// K18 momentum from the BcIn-BcOut fit through the D5 transfer matrix
+// (filled in user_beam_e72.cc)
+TList*
+HistMaker::createK18Tracking(Bool_t flag_ps)
+{
+  const std::string strDet("BeamMom");
+  name_created_detectors_.push_back(strDet);
+  if(flag_ps) name_ps_files_.push_back(strDet);
+  const char* nameDetector = strDet.c_str();
+  TList *top_dir = new TList;
+  top_dir->SetName(nameDetector);
+
+  top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kMulti, 1),
+                         Form("%s_Multi", nameDetector),
+                         10, -0.5, 9.5, "Multiplicity", ""));
+  top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kEnergy1, 1),
+                         Form("%s_Momentum", nameDetector),
+                         734, 0., 1.101, // 1.5 MeV/c bins
+                         "Momentum [GeV/c]", ""));
+  top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kEnergy2, 1),
+                         Form("%s_Delta", nameDetector),
+                         200, -0.2, 0.2, "delta = (p-p0)/p0", ""));
+  top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kChisqr, 1),
+                         Form("%s_Chisqr", nameDetector),
+                         200, 0., 50., "#chi^{2}/ndf", ""));
+  return top_dir;
+}
+
+//_____________________________________________________________________________
 TList*
 HistMaker::createTPC(Bool_t flag_ps)
 {

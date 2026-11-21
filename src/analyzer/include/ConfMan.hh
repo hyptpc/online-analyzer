@@ -56,6 +56,8 @@ public:
 
   void initializeBLDCWireMapMan();
   void initializeXTMapMan();
+  void initializeTransferMatrixMan();
+  void initializeK18Tracking();
   
 private:
   ConfMan();

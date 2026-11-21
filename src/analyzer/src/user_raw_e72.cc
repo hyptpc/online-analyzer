@@ -45,6 +45,7 @@
 #include "DCRawHit.hh"
 #include "DCAnalyzer.hh"
 #include "DCLocalTrack.hh"
+#include "K18Tracking.hh"
 #include "EventAnalyzer.hh"
 #include "RawData.hh"
 
@@ -127,6 +128,8 @@ process_begin( const std::vector<std::string>& argv )
   ConfMan::getInstance().initializeDCTdcCalibMan();
   ConfMan::getInstance().initializeDCDriftParamMan();
   ConfMan::getInstance().initializeDetSizeMan();
+  ConfMan::getInstance().initializeTransferMatrixMan();
+  ConfMan::getInstance().initializeK18Tracking();
   // gROOT->SetBatch(kTRUE);
   gStyle->SetOptStat(1110);
   gStyle->SetTitleW(.4);
@@ -181,6 +184,7 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(gHist.createBLDC(kBLC2b,"BLC2b",8,32,true));
   gHttp.Register(gHist.createBcInTracking(true));
   gHttp.Register(gHist.createBcOutTracking(true));
+  gHttp.Register(gHist.createK18Tracking(true));
 
   // BTOF
   gHttp.Register(gHist.createBTOF(true));
@@ -1317,6 +1321,9 @@ process_event( void )
   evAna.DCHit("BcOut", dcAna);
   dcAna.TrackSearchBcOut();
   evAna.BcOutTracking(dcAna);
+
+  //K18Tracking (BcIn-BcOut fit through the D5 matrix)
+  k18::Fill(dcAna, hptr_array);
 
   double ff_offset = -150.; //TPC center = 0, BcOut FF(z=0) : 150.
   const int bh2_id = gGeom.GetDetectorId("BH2");
