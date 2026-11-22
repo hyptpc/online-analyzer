@@ -2,12 +2,14 @@
 
 #include "S2sFieldMap.hh"
 
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include <std_ostream.hh>
 
@@ -70,12 +72,8 @@ S2sFieldMap::~S2sFieldMap()
 Bool_t
 S2sFieldMap::Initialize()
 {
-  std::ifstream ifs(m_file_name);
-  if(!ifs.is_open()){
-    hddaq::cerr << FUNC_NAME << " file open fail : "
-		<< m_file_name << std::endl;
-    return false;
-  }
+
+  const auto t_start = std::chrono::steady_clock::now();
 
   if(m_is_ready){
     hddaq::cerr << FUNC_NAME
@@ -83,9 +81,35 @@ S2sFieldMap::Initialize()
     return false;
   }
 
+  std::vector<char> buf;
+  {
+    std::ifstream ifs(m_file_name, std::ios::binary);
+    if(!ifs.is_open()){
+      hddaq::cerr << FUNC_NAME << " file open fail : "
+                  << m_file_name << std::endl;
+      return false;
+    }
+    ifs.seekg(0, std::ios::end);
+    const std::streamoff size = ifs.tellg();
+    ifs.seekg(0, std::ios::beg);
+    buf.resize(size + 1);
+    ifs.read(buf.data(), size);
+    buf[ifs.gcount()] = '\0';
+  }
+
   ClearField();
 
-  if(!(ifs >> Nx >> Ny >> Nz >> X0 >> Y0 >> Z0 >> dX >> dY >> dZ)){
+  char* p = buf.data();
+  char* e = nullptr;
+  Bool_t ok = true;
+  auto next_int = [&](Int_t& v){
+    v = std::strtol(p, &e, 10); if(e == p) ok = false; p = e; };
+  auto next_double = [&](Double_t& v){
+    v = std::strtod(p, &e); if(e == p) ok = false; p = e; };
+  next_int(Nx); next_int(Ny); next_int(Nz);
+  next_double(X0); next_double(Y0); next_double(Z0);
+  next_double(dX); next_double(dY); next_double(dZ);
+  if(!ok){
     hddaq::cerr << FUNC_NAME << " invalid format" << std::endl;
     return false;
   }
@@ -113,31 +137,34 @@ S2sFieldMap::Initialize()
   }
   const Double_t factor = valueMeasure/valueCalc;
 
-  Double_t x, y, z, bx, by, bz;
-
   hddaq::cout << " reading fieldmap " << std::flush;
 
-
   Int_t line = 0;
-  while(ifs.good()){
+  Double_t v[6];
+  while(true){
+    Int_t k = 0;
+    for(; k<6; ++k){
+      v[k] = std::strtod(p, &e);
+      if(e == p) break;
+      p = e;
+    }
+    if(k < 6) break; // end of file (or a truncated last line)
     if(line++%1000000==0)
       hddaq::cout << "." << std::flush;
-    ifs >> x >> y >> z >> bx >> by >> bz;
+    const Double_t x = v[0], y = v[1], z = v[2];
     Int_t ix = Int_t((x-X0+0.1*dX)/dX);
     Int_t iy = Int_t((y-Y0+0.1*dY)/dY);
     Int_t iz = Int_t((z-Z0+0.1*dZ)/dZ);
     if(ix>=0 && ix<Nx && iy>=0 && iy<Ny && iz>=0 && iz<Nz){
-      B[ix][iy][iz].x = bx*factor;
-      B[ix][iy][iz].y = by*factor;
-      B[ix][iy][iz].z = bz*factor;
+      B[ix][iy][iz].x = v[3]*factor;
+      B[ix][iy][iz].y = v[4]*factor;
+      B[ix][iy][iz].z = v[5]*factor;
     }
-    // else{
-    //   hddaq::cerr << FUNC_NAME << " out of range : " << std::endl;
-    // }
   }
 
-
-  hddaq::cout << " done" << std::endl;
+  const Double_t dt = std::chrono::duration<Double_t>(
+    std::chrono::steady_clock::now() - t_start).count();
+  hddaq::cout << " done (" << line << " points, " << dt << " s)" << std::endl;
   m_is_ready = true;
   return true;
 }
