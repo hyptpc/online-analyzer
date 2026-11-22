@@ -11,7 +11,6 @@
 #include <TGFileBrowser.h>
 #include <TH1.h>
 #include <TH2.h>
-#include <TH3.h>
 #include <THttpServer.h>
 #include <TKey.h>
 #include <TMath.h>
@@ -44,6 +43,8 @@
 #include "DCGeomMan.hh"
 #include "DetSizeMan.hh"
 #include "DCAnalyzer.hh"
+#include "FieldMan.hh"
+#include "K18Tracking.hh"
 #include "DCLocalTrack.hh"
 #include "EventAnalyzer.hh"
 #include "RawData.hh"
@@ -129,6 +130,9 @@ process_begin( const std::vector<std::string>& argv )
   ConfMan::getInstance().initializeDCTdcCalibMan();
   ConfMan::getInstance().initializeDCDriftParamMan();
   ConfMan::getInstance().initializeDetSizeMan();
+  ConfMan::getInstance().initializeTransferMatrixMan();
+  ConfMan::getInstance().initializeK18Tracking();
+  ConfMan::getInstance().initializeFieldMan();
   // gROOT->SetBatch(kTRUE);
   gStyle->SetOptStat(1110);
   gStyle->SetTitleW(.4);
@@ -193,7 +197,6 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::TPC());
   gHttp.Register(http::TPC2D());
   //gHttp.Register(http::TPCMulti());
-  gHttp.Register(http::TPC3DEvt());
   gHttp.Register(http::TPCADCPAD());
   gHttp.Register(http::TPCDataSize());
   gHttp.Register(http::TPCFADCAGET());
@@ -661,7 +664,6 @@ process_event( void )
       static const Int_t tpcbp_id   = gHist.getSequentialID( kTPC, 2, kTDC );
       static const Int_t agetmul_id = gHist.getSequentialID( kTPC, 3, kMulti );
       static const Int_t amulmax_id = gHist.getSequentialID( kTPC, 4, kMulti );
-      static const Int_t tpct3d_id = gHist.getSequentialID( kTPC, 0, kTDC3D );
       Int_t tpc_max_evt_id[NumOfAsadTPC];
       Int_t tpc_min_evt_id[NumOfAsadTPC];
       Int_t tpc_rms_evt_id[NumOfAsadTPC];
@@ -678,7 +680,6 @@ process_event( void )
       hptr_array[tpca2d_id]->Reset(); //adc2d
       hptr_array[tpca2d_id+1]->Reset(); //rms2d
       hptr_array[tpca2d_id+2]->Reset(); // tdc2d
-      hptr_array[tpct3d_id]->Reset();
       
 
       hptr_array[tpc_evt]->Fill(event_number);
@@ -818,11 +819,6 @@ process_event( void )
 	  Double_t pad_x = gTpcPad.GetPoint( pad ).X();
 
 	  
-	  auto h3 = dynamic_cast<TH3D*>(hptr_array[tpct3d_id]);
-	  if (h3 && loc_max > 30 && loc_max < 150) {
-	    double pad_y = (((double)loc_max-84)*80-1270)*0.055;
-	    h3->Fill((Double_t)pad_z, (Double_t)pad_x, pad_y, max_adc-mean);
-	  }
 
 	
 	  if( max_adc - mean > 0 ){
@@ -1053,11 +1049,20 @@ process_event( void )
   {
     
     RawData rawData;
+    for (const auto& name : DCNameList.at("BcIn")) rawData.DecodeHits(name);
     for (const auto& name : DCNameList.at("BcOut")) rawData.DecodeHits(name);
     EventAnalyzer evAna;
     evAna.DCRawHit("BcOut", rawData);
 
     DCAnalyzer dcAna(rawData);
+    // BcIn for the K18 momentum of the RK beam line
+    dcAna.DecodeBcInHits();
+    dcAna.TotCut("BLC1a");
+    dcAna.TotCut("BLC1b");
+    dcAna.DriftTimeCut("BLC1a");
+    dcAna.DriftTimeCut("BLC1b");
+    dcAna.TrackSearchBcIn();
+
     dcAna.DecodeBcOutHits();
     dcAna.TotCut("BLC2a");
     dcAna.TotCut("BLC2b");
@@ -1078,13 +1083,19 @@ process_event( void )
     auto h2 = dynamic_cast<TH2*>(hptr_array[hist_id]);
     h2->Reset();
     const auto& tracks = dcAna.GetBcOutTrackContainer();
-    
-    for (const auto& track : tracks) {
-      double x0 = track->GetX0();
-      double u0 = track->GetU0();
-      for(int n_bcout = 0;n_bcout<bcout_count;n_bcout++){
-	double real_z = z_start+step*n_bcout;
-	h2->Fill(real_z+ff_offset,x0+real_z*u0,100);
+
+    // RK beam line through the HS field up to SCH (K18 momentum);
+    // the straight BcOut line below is drawn only without the field map
+    k18::UpdateEventDisplay(dcAna);
+
+    if(!FieldMan::GetInstance().IsReady()){
+      for (const auto& track : tracks) {
+        double x0 = track->GetX0();
+        double u0 = track->GetU0();
+        for(int n_bcout = 0;n_bcout<bcout_count;n_bcout++){
+          double real_z = z_start+step*n_bcout;
+          h2->Fill(real_z+ff_offset,x0+real_z*u0,100);
+        }
       }
     }
   }

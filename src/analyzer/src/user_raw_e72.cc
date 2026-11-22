@@ -130,6 +130,7 @@ process_begin( const std::vector<std::string>& argv )
   ConfMan::getInstance().initializeDetSizeMan();
   ConfMan::getInstance().initializeTransferMatrixMan();
   ConfMan::getInstance().initializeK18Tracking();
+  ConfMan::getInstance().initializeFieldMan();
   // gROOT->SetBatch(kTRUE);
   gStyle->SetOptStat(1110);
   gStyle->SetTitleW(.4);
@@ -241,6 +242,7 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::BcInOut1D());
   gHttp.Register(http::BcIn2D());
   gHttp.Register(http::BcOut2D());
+  gHttp.Register(http::Beam());
   gHttp.Register(http::SHS2D_wotpc());
   
   // Chambers except for CDC

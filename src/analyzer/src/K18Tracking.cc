@@ -3,12 +3,14 @@
 #include "K18Tracking.hh"
 
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include <TGraph.h>
 #include <TH1.h>
 #include <TMath.h>
 #include <TMinuit.h>
@@ -18,8 +20,10 @@
 #include "DCGeomMan.hh"
 #include "DCLocalTrack.hh"
 #include "DCLTrackHit.hh"
+#include "FieldMan.hh"
 #include "HistMaker.hh"
 #include "TransferMatrixMan.hh"
+#include "ThreeVector.hh"
 
 #include <UnpackerManager.hh>
 
@@ -27,6 +31,7 @@ namespace
 {
 auto& gTM = TransferMatrixMan::GetInstance();
 const auto& gGeom = DCGeomMan::GetInstance();
+const auto& gField = FieldMan::GetInstance();
 
 const Int_t    kNParam      = 5;
 const Int_t    kMatrixOrder = 2;  // with D5Matrix2nd corrections
@@ -44,6 +49,17 @@ std::string g_d5_file;
 Double_t    g_d5_field  = 0.;    // [T], last value read
 const Double_t kD5Radius    = 1.8984;    // [m]
 const Double_t kFieldFactor = 1.08;
+
+//_____________________________________________________________________________
+// beam charge from the D5 field sign (-1 when D5 is off), as offline
+// UserK18Tracking (UpdateCentralMomentum)
+Int_t
+BeamCharge()
+{
+  static const Double_t kMinD5Field = 0.01; // [T], below this D5 is off
+  if(TMath::Abs(g_d5_field) < kMinD5Field) return -1;
+  return g_d5_field > 0. ? 1 : -1;
+}
 
 //_____________________________________________________________________________
 // read the D5 field and set the central momentum; on failure the previous
@@ -100,6 +116,7 @@ struct K18Fit
   Int_t    ibcout;
   Double_t chisqr;  // reduced
   Double_t par[kNParam];  // {xin, uin, yin, vin, delta}
+  Double_t vo[4];         // matrix output at VO {xout, uout, yout, vout}
 };
 
 //_____________________________________________________________________________
@@ -176,7 +193,108 @@ DoK18Fit(const DCLocalTrack* blc1, const DCLocalTrack* blc2, K18Fit& fit)
   Int_t npari, nparx, istat;
   minuit.mnstat(fmin, fedm, errdef, npari, nparx, istat);
   fit.chisqr = fmin/ndf;
+
+  Double_t p2[kNParam] = {0., 0., 0., 0., 0.};
+  gTM.CalcBLC1toBLC2(fit.par, p2, kMatrixOrder);
+  for(Int_t i=0; i<4; ++i) fit.vo[i] = p2[i];
   return true;
+}
+
+//_____________________________________________________________________________
+// Beam RK through the HS field map, as offline HSTrack::Propagate
+// (RK4 of NIM 160 (1979) 43, RK::PropagateOnce). Only the track state
+// (x, y, u, v) is propagated: the transport-matrix derivatives of the
+// offline code do not change it and are not needed here.
+// Frame: HypTPC local [mm]; the start is the fitted VO state converted
+// from the BcOut (FF) frame through DCGEO "HypTPC" (HSTrack::GlobalToHypTPC).
+const Double_t kCHLB    = 2.99792458e-4; // [GeV/c / (T mm)]
+const Double_t kRKStepZ = 10.;           // [mm], as HSTrack
+const Int_t    kRKMaxStep = 10000;
+// RK q = kShsMapChargeSign * charge / p (offline HSTrack, SHS map)
+const Double_t kShsMapChargeSign = -1.;
+// histogram planes in the HypTPC local frame [mm]
+// Target plane: DCGEO "Target" converted to the HypTPC local frame in
+// k18::Initialize() (DCGEO: global z = -293.1 -> local z = -143.0, the
+// offline tpc::Z_TARGET); NaN without a Target entry
+Double_t g_z_target = std::nan("");
+// T2 plane: DCGEO "T2" converted to the HypTPC local frame in
+// k18::Initialize() (online DCGEO: global z = 200 -> local z = 350.1);
+// NaN without a T2 entry
+Double_t g_z_t2 = std::nan("");
+
+// z of a DCGEO entry in the HypTPC local frame, NaN if missing
+Double_t
+LocalZFromGeom(const TString& name)
+{
+  try {
+    const ThreeVector pos = gGeom.Global2LocalPos("HypTPC",
+                                                  gGeom.GetGlobalPosition(name));
+    std::cout << "#D K18 " << name << " plane from DCGEO : HypTPC local (x, y, z) = ("
+              << pos.x() << ", " << pos.y() << ", " << pos.z() << ") mm"
+              << std::endl;
+    return pos.z();
+  } catch(const std::exception& e) {
+    std::cout << "#W K18 no " << name << " in DCGEO, " << name
+              << " histograms will stay empty : " << e.what() << std::endl;
+    return std::nan("");
+  }
+}
+
+struct RKState { Double_t x, y, z, u, v; };
+
+void
+RKKick(Double_t u, Double_t v, Double_t q, const ThreeVector& B,
+       Double_t& kx, Double_t& ky)
+{
+  const Double_t fac = std::sqrt(1.+u*u+v*v);
+  kx = fac*(u*v*B.x() - (1.+u*u)*B.y() + v*B.z())*q*kCHLB;
+  ky = fac*((1.+v*v)*B.x() - u*v*B.y() - u*B.z())*q*kCHLB;
+}
+
+RKState
+RKStep(const RKState& s, Double_t q)
+{
+  const Double_t dr = kRKStepZ/std::sqrt(1.+s.u*s.u+s.v*s.v);
+  const ThreeVector Z1(s.x, s.y, s.z);
+  Double_t k1x, k1y, k2x, k2y, k3x, k3y, k4x, k4y;
+  RKKick(s.u, s.v, q, gField.GetField(Z1), k1x, k1y);
+  const ThreeVector B2 = gField.GetField(
+    Z1 + ThreeVector(0.5*dr*s.u + 0.125*dr*dr*k1x,
+                     0.5*dr*s.v + 0.125*dr*dr*k1y, 0.5*dr));
+  RKKick(s.u + 0.5*dr*k1x, s.v + 0.5*dr*k1y, q, B2, k2x, k2y);
+  RKKick(s.u + 0.5*dr*k2x, s.v + 0.5*dr*k2y, q, B2, k3x, k3y);
+  const ThreeVector B4 = gField.GetField(
+    Z1 + ThreeVector(dr*s.u + 0.5*dr*dr*k3x,
+                     dr*s.v + 0.5*dr*dr*k3y, dr));
+  RKKick(s.u + dr*k3x, s.v + dr*k3y, q, B4, k4x, k4y);
+  RKState n;
+  n.z = s.z + dr;
+  n.x = s.x + dr*s.u + dr*dr/6.*(k1x + k2x + k3x);
+  n.y = s.y + dr*s.v + dr*dr/6.*(k1y + k2y + k3y);
+  n.u = s.u + dr/6.*(k1x + 2.*(k2x + k3x) + k4x);
+  n.v = s.v + dr/6.*(k1y + 2.*(k2y + k3y) + k4y);
+  return n;
+}
+
+// propagate to the planes z_planes (ascending); false if not all reached
+Bool_t
+RKPropagate(RKState s, Double_t q, const std::vector<Double_t>& z_planes,
+            std::vector<RKState>& out)
+{
+  out.clear();
+  std::size_t ivp = 0;
+  for(Int_t istep=0; istep<kRKMaxStep && ivp<z_planes.size(); ++istep){
+    const RKState n = RKStep(s, q);
+    while(ivp<z_planes.size() &&
+          (s.z - z_planes[ivp])*(n.z - z_planes[ivp]) <= 0.){
+      const Double_t f = (z_planes[ivp] - s.z)/(n.z - s.z);
+      out.push_back({s.x + f*(n.x - s.x), s.y + f*(n.y - s.y), z_planes[ivp],
+                     s.u + f*(n.u - s.u), s.v + f*(n.v - s.v)});
+      ++ivp;
+    }
+    s = n;
+  }
+  return ivp == z_planes.size();
 }
 
 }
@@ -192,6 +310,8 @@ Initialize(const std::string& d5_file)
   kZVO = 0.5*(gGeom.GetLocalZ("BLC2a-U1") + gGeom.GetLocalZ("BLC2b-VP2"));
   std::cout << "#D K18 matrix planes from DCGEO : VI z = " << kZVI
             << " mm, VO z = " << kZVO << " mm" << std::endl;
+  g_z_target = LocalZFromGeom("Target");
+  g_z_t2     = LocalZFromGeom("T2");
   UpdateD5Field();
 }
 
@@ -203,20 +323,21 @@ ReloadD5Field()
 }
 
 //_____________________________________________________________________________
-void
-Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array)
+std::vector<BeamTrack>
+FitBeamTracks(const DCAnalyzer& dcAna)
 {
   // re-read the D5 field at every run change
   static const auto& gUnpacker = hddaq::unpacker::GUnpacker::get_instance();
-  static Int_t s_run = gUnpacker.get_run_number();
+  static UInt_t s_run = gUnpacker.get_run_number();
   if(s_run != gUnpacker.get_run_number()){
     s_run = gUnpacker.get_run_number();
     UpdateD5Field();
   }
 
+  std::vector<BeamTrack> tracks;
   const auto& contIn  = dcAna.GetBcInTrackContainer();
   const auto& contOut = dcAna.GetBcOutTrackContainer();
-  if(!gTM.IsReady() || contIn.empty() || contOut.empty()) return;
+  if(!gTM.IsReady() || contIn.empty() || contOut.empty()) return tracks;
 
   // combinatorial fit of all BcIn-BcOut pairs
   const Int_t nIn  = TMath::Min((Int_t)contIn.size(),  kMaxNTrack);
@@ -234,25 +355,163 @@ Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array)
   std::sort(cands.begin(), cands.end(),
             [](const K18Fit& a, const K18Fit& b){ return a.chisqr < b.chisqr; });
 
-  static const Int_t multi_id  = HistMaker::getSequentialID(kK18Tracking, 0, kMulti,   1);
-  static const Int_t mom_id    = HistMaker::getSequentialID(kK18Tracking, 0, kEnergy1, 1);
-  static const Int_t delta_id  = HistMaker::getSequentialID(kK18Tracking, 0, kEnergy2, 1);
-  static const Int_t chisqr_id = HistMaker::getSequentialID(kK18Tracking, 0, kChisqr,  1);
-
   // greedy exclusive pairing: a local track joins only one K18 track
   std::vector<Bool_t> used1(nIn, false), used2(nOut, false);
   const Double_t p0 = gTM.GetCentralMomentum();
-  Int_t ntK18 = 0;
   for(const auto& fit : cands){
     if(used1[fit.ibcin] || used2[fit.ibcout]) continue;
     used1[fit.ibcin]  = true;
     used2[fit.ibcout] = true;
-    ++ntK18;
-    hptr_array[mom_id]->Fill(p0*(1. + fit.par[4]));
-    hptr_array[delta_id]->Fill(fit.par[4]);
-    hptr_array[chisqr_id]->Fill(fit.chisqr);
+    BeamTrack t;
+    t.delta  = fit.par[4];
+    t.p      = p0*(1. + fit.par[4]);
+    t.chisqr = fit.chisqr;
+    for(Int_t i=0; i<4; ++i) t.vo[i] = fit.vo[i];
+    tracks.push_back(t);
   }
-  hptr_array[multi_id]->Fill(ntK18);
+  return tracks;
+}
+
+//_____________________________________________________________________________
+// RK start state of a beam track in the HypTPC local frame
+Bool_t
+StartState(const BeamTrack& t, RKState& start, Double_t& q)
+{
+  if(!gField.IsReady()) return false;
+  if(t.p <= 0. || !std::isfinite(t.p)) return false;
+  const ThreeVector pos = gGeom.Global2LocalPos("HypTPC",
+    ThreeVector(t.vo[0], t.vo[2], kZVO));
+  const ThreeVector dir = gGeom.Global2LocalDir("HypTPC",
+    ThreeVector(t.vo[1], t.vo[3], 1.));
+  if(TMath::Abs(dir.z()) < 1.e-12) return false;
+  start = {pos.x(), pos.y(), pos.z(), dir.x()/dir.z(), dir.y()/dir.z()};
+  q = kShsMapChargeSign*BeamCharge()/t.p;
+  return true;
+}
+
+//_____________________________________________________________________________
+Bool_t
+TraceBeam(const BeamTrack& t, Double_t z_end, std::vector<ThreeVector>& points)
+{
+  points.clear();
+  RKState s;
+  Double_t q;
+  if(!StartState(t, s, q)) return false;
+  points.emplace_back(s.x, s.y, s.z);
+  for(Int_t istep=0; istep<kRKMaxStep; ++istep){
+    const RKState n = RKStep(s, q);
+    if(!std::isfinite(n.z) || n.z <= s.z) return false;
+    if(n.z >= z_end){
+      const Double_t f = (z_end - s.z)/(n.z - s.z);
+      points.emplace_back(s.x + f*(n.x - s.x), s.y + f*(n.y - s.y), z_end);
+      return true;
+    }
+    points.emplace_back(n.x, n.y, n.z);
+    s = n;
+  }
+  return false;
+}
+
+//_____________________________________________________________________________
+Double_t
+LocalZ(const TString& name)
+{
+  return LocalZFromGeom(name);
+}
+
+//_____________________________________________________________________________
+void
+Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array)
+{
+  static const Int_t multi_id  = HistMaker::getSequentialID(kK18Tracking, 0, kMulti,   1);
+  static const Int_t mom_id    = HistMaker::getSequentialID(kK18Tracking, 0, kEnergy1, 1);
+  static const Int_t delta_id  = HistMaker::getSequentialID(kK18Tracking, 0, kEnergy2, 1);
+  static const Int_t chisqr_id = HistMaker::getSequentialID(kK18Tracking, 0, kChisqr,  1);
+  static const Int_t rk_status_id = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 2);
+  static const Int_t tgt_xy_id  = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 1);
+  static const Int_t t2_xy_id   = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 2);
+  static const Int_t tgt_x_id   = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat, 1);
+  static const Int_t tgt_y_id   = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat, 2);
+  static const Int_t t2_x_id    = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat, 3);
+  static const Int_t t2_y_id    = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat, 4);
+
+  // planes in ascending z, with the histograms to fill at each
+  struct Plane { Double_t z; Int_t xy_id, x_id, y_id; };
+  static const std::vector<Plane> planes = []{
+    std::vector<Plane> v;
+    if(std::isfinite(g_z_target)) v.push_back({g_z_target, tgt_xy_id, tgt_x_id, tgt_y_id});
+    if(std::isfinite(g_z_t2))     v.push_back({g_z_t2,     t2_xy_id,  t2_x_id,  t2_y_id});
+    std::sort(v.begin(), v.end(),
+              [](const Plane& a, const Plane& b){ return a.z < b.z; });
+    return v;
+  }();
+  static const std::vector<Double_t> plane_z = []{
+    std::vector<Double_t> z;
+    for(const auto& pl : planes) z.push_back(pl.z);
+    return z;
+  }();
+
+  const auto tracks = FitBeamTracks(dcAna);
+  if(!gTM.IsReady() || dcAna.GetBcInTrackContainer().empty()
+     || dcAna.GetBcOutTrackContainer().empty()) return;
+  for(const auto& t : tracks){
+    hptr_array[mom_id]->Fill(t.p);
+    hptr_array[delta_id]->Fill(t.delta);
+    hptr_array[chisqr_id]->Fill(t.chisqr);
+
+    // beam RK from VO to the target and T2
+    RKState start;
+    Double_t q;
+    if(planes.empty() || !StartState(t, start, q)) continue;
+    std::vector<RKState> vp;
+    const Bool_t passed = RKPropagate(start, q, plane_z, vp);
+    hptr_array[rk_status_id]->Fill(passed ? 1 : 0);
+    if(!passed) continue;
+    for(std::size_t i=0; i<planes.size(); ++i){
+      hptr_array[planes[i].xy_id]->Fill(vp[i].x, vp[i].y);
+      hptr_array[planes[i].x_id]->Fill(vp[i].x);
+      hptr_array[planes[i].y_id]->Fill(vp[i].y);
+    }
+  }
+  hptr_array[multi_id]->Fill((Int_t)tracks.size());
+}
+
+//_____________________________________________________________________________
+std::vector<TGraph*>&
+EventDisplayGraphs()
+{
+  static std::vector<TGraph*> graphs = []{
+    std::vector<TGraph*> g;
+    for(Int_t i=0; i<kMaxDisplayTracks; ++i){
+      auto gr = new TGraph();
+      gr->SetName(Form("BeamRK_%d", i));
+      gr->SetLineColor(kRed);
+      gr->SetLineWidth(2);
+      g.push_back(gr);
+    }
+    return g;
+  }();
+  return graphs;
+}
+
+//_____________________________________________________________________________
+void
+UpdateEventDisplay(const DCAnalyzer& dcAna)
+{
+  // RK end plane: SCH from DCGEO (HypTPC local), as the event display frame
+  static const Double_t z_sch = LocalZFromGeom("SCH");
+  auto& graphs = EventDisplayGraphs();
+  for(auto& gr : graphs) gr->Set(0);
+  if(!std::isfinite(z_sch)) return;
+  const auto tracks = FitBeamTracks(dcAna);
+  std::vector<ThreeVector> points;
+  for(std::size_t i=0; i<tracks.size() && i<graphs.size(); ++i){
+    if(!TraceBeam(tracks[i], z_sch, points)) continue;
+    // event display: horizontal = z, vertical = x [mm]
+    graphs[i]->Set(points.size());
+    for(std::size_t j=0; j<points.size(); ++j)
+      graphs[i]->SetPoint(j, points[j].z(), points[j].x());
+  }
 }
 }
 

@@ -14,6 +14,7 @@
 #include <TText.h>
 #include <TArc.h>
 #include <TLine.h>
+#include <TBox.h>
 #include <TObject.h>
 #include <TPolyLine.h>
 #include <TMultiGraph.h>
@@ -30,13 +31,15 @@
 #include <TGeoMaterial.h>
 #include <TGeoXtru.h>
 #include <TPolyMarker3D.h>
-#include <TPolyLine3D.h>
 #include <TVirtualViewer3D.h>
 
 #include "DetectorID.hh"
 #include "Main.hh"
 #include "HistHelper.hh"
 #include "HistMaker.hh"
+#include "DCGeomMan.hh"
+#include "DetSizeMan.hh"
+#include "K18Tracking.hh"
 namespace{
   HistMaker&   gHist   = HistMaker::getInstance();
 }
@@ -1058,131 +1061,6 @@ TPC3D( void )
 
 //_____________________________________________________________________________
 TCanvas*
-TPC3DEvt( void ){
-  auto c1 = new TCanvas( __func__, __func__ );
-
-  auto id_tpc = HistMaker::getUniqueID( kTPC, 0, kTDC3D);
-
-  auto h = GHist::get( id_tpc );
-  auto h3d = dynamic_cast<TH3*>(h);
-  c1->cd();
-  h3d->SetMinimum(0);
-  h3d->SetMaximum(3000);
-  gStyle->SetPalette(kBird);
-  h3d->GetXaxis()->SetTickLength(0);
-  h3d->GetYaxis()->SetTickLength(0);
-  h3d->GetZaxis()->SetTickLength(0);
-  h3d->Draw("BOX2 Z");
-
-  const double flength = 586.0;
-  const double fheight = 550.0;
-  const double edge    = flength / (1.0 + std::sqrt(2.0));
-  const double tanv    = TMath::Tan(22.5 * TMath::Pi() / 180.0);
-  
-  double x[8] = {
-    -flength/2.0, -edge/2.0,  edge/2.0,  flength/2.0,
-    flength/2.0,  edge/2.0, -edge/2.0, -flength/2.0
-  };
-    
-  double z[8] = {
-    -tanv*flength/2.0, -flength/2.0, -flength/2.0, -tanv*flength/2.0,
-    tanv*flength/2.0,  flength/2.0,  flength/2.0,  tanv*flength/2.0
-  };
-    
-  const double y1 = -fheight/2.0;
-  const double y2 =  fheight/2.0;
-
-  TPolyLine3D* p1 = new TPolyLine3D(9);
-  TPolyLine3D* p2 = new TPolyLine3D(9);
-
-  for (int i = 0; i < 8; ++i) {
-    // (X,Y,Z) = (z,x,y)
-    p1->SetPoint(i, z[i], x[i], y1);
-    p2->SetPoint(i, z[i], x[i], y2);
-  }
-
-  p1->SetPoint(8, z[0], x[0], y1);
-  p2->SetPoint(8, z[0], x[0], y2);
-
-  p1->SetLineColor(kBlack);
-  p2->SetLineColor(kBlack);
-  p1->SetLineWidth(2);
-  p2->SetLineWidth(2);
-
-  p1->Draw("same");
-  p2->Draw("same");
-
-  for (int i = 0; i < 8; ++i) {
-    TPolyLine3D* s = new TPolyLine3D(2);
-
-    s->SetPoint(0, z[i], x[i], y1);
-    s->SetPoint(1, z[i], x[i], y2);
-
-    s->SetLineColor(kBlack);
-    s->SetLineWidth(2);
-    s->Draw("same");
-  }
-
-  const int nseg = 60;
-
-  double cx = 0.0;      //z
-  double cy = 0.0;   //x
-  double cz = -143.0;      //y
-
-  double radius = 40.0;
-  double length = 100.0;
-
-  double y_low  = cy - length / 2.0;
-  double y_high = cy + length / 2.0;
-
-  TPolyLine3D* cyl1 = new TPolyLine3D(nseg + 1);
-  TPolyLine3D* cyl2 = new TPolyLine3D(nseg + 1);
-
-  for (int i = 0; i <= nseg; i++) {
-    double phi = 2.0 * TMath::Pi() * i / nseg;
-
-    double x = cx + radius * cos(phi);
-    double z = cz + radius * sin(phi);
-
-    //cyl1->SetPoint(i, x, y_low,  z);
-    cyl1->SetPoint(i, z, x, y_low);
-    cyl2->SetPoint(i, z, x, y_high);
-  }
-
-  cyl1->SetLineColor(kRed+1);
-  cyl2->SetLineColor(kRed+1);
-  cyl1->SetLineWidth(2);
-  cyl2->SetLineWidth(2);
-
-  cyl1->Draw("same");
-  cyl2->Draw("same");
-
-  // side lines
-
-  for (int i = 0; i < 8; i++) {
-    double phi = 2.0 * TMath::Pi() * i / 8.0;
-
-    double x = cx + radius * cos(phi);
-    double z = cz + radius * sin(phi);
-
-    TPolyLine3D* side = new TPolyLine3D(2);
-    side->SetPoint(0, z,x , y_low);
-    side->SetPoint(1, z,x, y_high);
-
-    side->SetLineColor(kRed+1);
-    side->SetLineWidth(2);
-    side->Draw("same");
-  }
-
-  
-  c1->SetTheta(40);
-  c1->SetPhi(30);
-  return c1;
-}
-  
-
-//_____________________________________________________________________________
-TCanvas*
 TPCDataSize( void )
 {
   auto c1 = new TCanvas( __func__, __func__ );
@@ -1463,6 +1341,10 @@ SHS2D_EVT( void )
   auto h_bcout = GHist::get(id_bcout);
   h_bcout->SetFillColor(kRed);
   h_bcout->Draw("box same");
+
+  // RK beam lines up to SCH (filled by k18::UpdateEventDisplay)
+  for(auto gr : k18::EventDisplayGraphs())
+    gr->Draw("l same");
   
   gStyle->SetPalette(kBird);
   c1->Modified();
@@ -1685,6 +1567,61 @@ BcOut2D( void )
   }
   return c1;
   
+}
+
+//_____________________________________________________________________________
+// Beam momentum and the RK beam profiles at the target and T2 (K18Tracking).
+// The target and T2 outlines are drawn at their DCGEO positions converted to
+// the HypTPC local frame (the histogram frame), so they follow the param.
+TCanvas*
+Beam( void )
+{
+  const auto& geom = DCGeomMan::GetInstance();
+  const auto& size = DetSizeMan::GetInstance();
+  auto c1 = new TCanvas( __func__, __func__ );
+  c1->Divide(2,2);
+
+  // draw an outline box of full widths (wx, wy) centered on the DCGEO entry
+  auto draw_box = [&](const TString& name, Double_t wx, Double_t wy){
+    try {
+      const ThreeVector pos = geom.Global2LocalPos("HypTPC",
+                                                   geom.GetGlobalPosition(name));
+      auto box = new TBox(pos.x() - 0.5*wx, pos.y() - 0.5*wy,
+                          pos.x() + 0.5*wx, pos.y() + 0.5*wy);
+      box->SetFillStyle(0);
+      box->SetLineColor(kRed);
+      box->SetLineWidth(2);
+      box->Draw("l");
+    } catch(const std::exception& e) {
+      std::cout << "#W macro::Beam no " << name << " outline : "
+                << e.what() << std::endl;
+    }
+  };
+
+  c1->cd(1);
+  if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kEnergy1, 1)))
+    h->Draw();
+
+  c1->cd(2);
+  if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kHitPat2D, 1))){
+    h->Draw("colz");
+    // E72 cylindrical target (axis along y), raw size without the holder:
+    // radius 40 mm, half-length 50 mm (offline TPCPadHelper.hh)
+    draw_box("Target", 2.*40., 2.*50.);
+  }
+
+  c1->cd(3);
+  if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kHitPat2D, 2))){
+    h->Draw("colz");
+    try {
+      const ThreeVector t2 = size.GetSize("T2"); // DSIZE full widths [mm]
+      draw_box("T2", t2.x(), t2.y());
+    } catch(const std::exception& e) {
+      std::cout << "#W macro::Beam no T2 size in DSIZE : "
+                << e.what() << std::endl;
+    }
+  }
+  return c1;
 }
 
 //____________________________________________________________________________

@@ -58,6 +58,7 @@ public:
   void initializeXTMapMan();
   void initializeTransferMatrixMan();
   void initializeK18Tracking();
+  void initializeFieldMan();
   
 private:
   ConfMan();

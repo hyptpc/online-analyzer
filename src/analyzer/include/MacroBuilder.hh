@@ -92,7 +92,6 @@ TCanvas* TPC( void );
 TCanvas* TPC2D( void );
 TCanvas* TPCMulti( void );
 TCanvas* TPC3D( void );
-TCanvas* TPC3DEvt( void );
 TCanvas* TPCDataSize( void );
 TCanvas* TPCADCPAD( void );
 TCanvas* TPCTDCPAD( void );
@@ -106,6 +105,7 @@ TCanvas* TPCTHRE( void );
 TCanvas* BcInOut1D( void );
 TCanvas* BcIn2D( void );
 TCanvas* BcOut2D( void );
+TCanvas* Beam( void );
 
 //Event Display
 TCanvas* SHS2D_EVT( void );

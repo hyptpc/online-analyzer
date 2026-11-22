@@ -11,7 +11,6 @@
 #include <TGFileBrowser.h>
 #include <TH1.h>
 #include <TH2.h>
-#include <TH3.h>
 #include <THttpServer.h>
 #include <TKey.h>
 #include <TMath.h>
@@ -193,7 +192,6 @@ process_begin( const std::vector<std::string>& argv )
   gHttp.Register(http::TPC());
   gHttp.Register(http::TPC2D());
   //gHttp.Register(http::TPCMulti());
-  gHttp.Register(http::TPC3DEvt());
   gHttp.Register(http::TPCADCPAD());
   gHttp.Register(http::TPCDataSize());
   gHttp.Register(http::TPCFADCAGET());
@@ -661,13 +659,11 @@ process_event( void )
       static const Int_t tpcbp_id   = gHist.getSequentialID( kTPC, 2, kTDC );
       static const Int_t agetmul_id = gHist.getSequentialID( kTPC, 3, kMulti );
       static const Int_t amulmax_id = gHist.getSequentialID( kTPC, 4, kMulti );
-      static const Int_t tpct3d_id = gHist.getSequentialID( kTPC, 0, kTDC3D );
       
       hptr_array[tpca2d_id]->Reset(); //adc2d
       hptr_array[tpca2d_id+1]->Reset(); //rms2d
       hptr_array[tpca2d_id+2]->Reset(); // tdc2d
       hptr_array[agetmul_id]->Reset();
-      hptr_array[tpct3d_id]->Reset();
     
       std::vector<bool> isDeadPad(NumOfPadTPC + 1, false);
 
@@ -760,11 +756,6 @@ process_event( void )
 	  Double_t pad_x = gTpcPad.GetPoint( pad ).X();
 
 	  
-	  auto h3 = dynamic_cast<TH3D*>(hptr_array[tpct3d_id]);
-	  if (h3 && loc_max > 30 && loc_max < 150) {
-	    double pad_y = (((double)loc_max-84)*80-1270)*0.055;
-	    h3->Fill((Double_t)pad_z, (Double_t)pad_x, pad_y, max_adc-mean);
-	  }
 
 	
 	  if( max_adc - mean > 0 ){

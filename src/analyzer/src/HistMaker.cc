@@ -427,7 +427,7 @@ HistMaker::createBcOutTracking(Bool_t flag_ps)
 TList*
 HistMaker::createK18Tracking(Bool_t flag_ps)
 {
-  const std::string strDet("BeamMom");
+  const std::string strDet("Beam");
   name_created_detectors_.push_back(strDet);
   if(flag_ps) name_ps_files_.push_back(strDet);
   const char* nameDetector = strDet.c_str();
@@ -447,6 +447,30 @@ HistMaker::createK18Tracking(Bool_t flag_ps)
   top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kChisqr, 1),
                          Form("%s_Chisqr", nameDetector),
                          200, 0., 50., "#chi^{2}/ndf", ""));
+  // beam RK through the HS field map (HypTPC local frame)
+  top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kMulti, 2),
+                         Form("%s_RKStatus", nameDetector),
+                         2, -0.5, 1.5, "RK passed", ""));
+  top_dir->Add(createTH2(getUniqueID(kK18Tracking, 0, kHitPat2D, 1),
+                         Form("%s_Target_XY", nameDetector),
+                         100, -100., 100., 100, -100., 100.,
+                         "X [mm]", "Y [mm]"));
+  top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kHitPat, 1),
+                         Form("%s_Target_X", nameDetector),
+                         200, -100., 100., "X [mm]", ""));
+  top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kHitPat, 2),
+                         Form("%s_Target_Y", nameDetector),
+                         200, -100., 100., "Y [mm]", ""));
+  top_dir->Add(createTH2(getUniqueID(kK18Tracking, 0, kHitPat2D, 2),
+                         Form("%s_T2_XY", nameDetector),
+                         100, -200., 200., 100, -200., 200.,
+                         "X [mm]", "Y [mm]"));
+  top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kHitPat, 3),
+                         Form("%s_T2_X", nameDetector),
+                         200, -200., 200., "X [mm]", ""));
+  top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kHitPat, 4),
+                         Form("%s_T2_Y", nameDetector),
+                         200, -200., 200., "Y [mm]", ""));
   return top_dir;
 }
 
@@ -481,7 +505,6 @@ HistMaker::createTPC(Bool_t flag_ps)
     title = Form( "%s_Max2D", nameDetector );
     auto h_hit = dynamic_cast<TH2Poly*>
       ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
-    top_dir->Add( createTH3( getUniqueID(kTPC, 0, kTDC3D), "TPC_TDC3D", 100,-300,300,100,-300,300,250,-250,250));
 
 
     Double_t X[5]={};
