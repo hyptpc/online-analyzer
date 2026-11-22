@@ -1579,7 +1579,7 @@ Beam( void )
   const auto& geom = DCGeomMan::GetInstance();
   const auto& size = DetSizeMan::GetInstance();
   auto c1 = new TCanvas( __func__, __func__ );
-  c1->Divide(2,2);
+  c1->Divide(3,2);
 
   // draw an outline box of full widths (wx, wy) centered on the DCGEO entry
   auto draw_box = [&](const TString& name, Double_t wx, Double_t wy){
@@ -1598,27 +1598,33 @@ Beam( void )
     }
   };
 
-  c1->cd(1);
-  if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kEnergy1, 1)))
-    h->Draw();
-
-  c1->cd(2);
-  if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kHitPat2D, 1))){
-    h->Draw("colz");
-    // E72 cylindrical target (axis along y), raw size without the holder:
-    // radius 40 mm, half-length 50 mm (offline TPCPadHelper.hh)
-    draw_box("Target", 2.*40., 2.*50.);
-  }
-
-  c1->cd(3);
-  if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kHitPat2D, 2))){
-    h->Draw("colz");
-    try {
-      const ThreeVector t2 = size.GetSize("T2"); // DSIZE full widths [mm]
-      draw_box("T2", t2.x(), t2.y());
-    } catch(const std::exception& e) {
-      std::cout << "#W macro::Beam no T2 size in DSIZE : "
-                << e.what() << std::endl;
+  // 3x2: top row pi, bottom row K (beam TOF); momentum, Target XY, T2 XY
+  const std::vector<std::pair<Int_t, Int_t>> rows = {
+    {2, 3},   // pi: Momentum ch, Target_XY ch (T2_XY = Target_XY + 2)
+    {3, 4} }; // K
+  for(std::size_t r=0; r<rows.size(); ++r){
+    const Int_t mom_ch = rows[r].first;
+    const Int_t tgt_ch = rows[r].second;
+    c1->cd(3*r + 1);
+    if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kEnergy1, mom_ch)))
+      h->Draw();
+    c1->cd(3*r + 2);
+    if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kHitPat2D, tgt_ch))){
+      h->Draw("colz");
+      // E72 cylindrical target (axis along y), raw size without the holder:
+      // radius 40 mm, half-length 50 mm (offline TPCPadHelper.hh)
+      draw_box("Target", 2.*40., 2.*50.);
+    }
+    c1->cd(3*r + 3);
+    if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kHitPat2D, tgt_ch + 2))){
+      h->Draw("colz");
+      try {
+        const ThreeVector t2 = size.GetSize("T2"); // DSIZE full widths [mm]
+        draw_box("T2", t2.x(), t2.y());
+      } catch(const std::exception& e) {
+        std::cout << "#W macro::Beam no T2 size in DSIZE : "
+                  << e.what() << std::endl;
+      }
     }
   }
   return c1;

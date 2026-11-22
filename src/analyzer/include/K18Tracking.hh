@@ -36,7 +36,10 @@ const Int_t kMaxDisplayTracks = 5;
 // (ConfMan::initializeK18Tracking() passes the conf key "D5FIELD:")
 void Initialize(const std::string& d5_file);
 // call in process_event after TrackSearchBcIn() and TrackSearchBcOut()
-void Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array);
+// particle = kPi / kKaon (beam TOF), or kAll when neither: the momentum is
+// filled to Beam_Momentum (all) and to Beam_Momentum_Pi / _K
+void Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array,
+          Int_t particle);
 // fitted beam tracks, best chisqr first (exclusive BcIn-BcOut pairs)
 std::vector<BeamTrack> FitBeamTracks(const DCAnalyzer& dcAna);
 // RK trajectory through the HS field map from VO to z_end, HypTPC local [mm]

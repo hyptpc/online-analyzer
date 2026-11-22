@@ -1324,9 +1324,6 @@ process_event( void )
   dcAna.TrackSearchBcOut();
   evAna.BcOutTracking(dcAna);
 
-  //K18Tracking (BcIn-BcOut fit through the D5 matrix)
-  k18::Fill(dcAna, hptr_array);
-
   double ff_offset = -150.; //TPC center = 0, BcOut FF(z=0) : 150.
   const int bh2_id = gGeom.GetDetectorId("BH2");
   const double bh2_z = gGeom.GetGlobalPosition(bh2_id).z();
@@ -1344,6 +1341,9 @@ process_event( void )
   else if(btof0 < btof_cut2 && btof0 > btof_cut1){
     btof_p = kKaon;
   }
+
+  //K18Tracking (BcIn-BcOut fit through the D5 matrix), K / pi by beam TOF
+  k18::Fill(dcAna, hptr_array, btof_p);
   
 
   int hist_bcin_x_p_id = gHist.getSequentialID(kBcInTracking,0,btof_p,1);

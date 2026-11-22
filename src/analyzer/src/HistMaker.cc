@@ -439,8 +439,15 @@ HistMaker::createK18Tracking(Bool_t flag_ps)
                          10, -0.5, 9.5, "Multiplicity", ""));
   top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kEnergy1, 1),
                          Form("%s_Momentum", nameDetector),
-                         734, 0., 1.101, // 1.5 MeV/c bins
+                         400, 0.6, 1.2, // 1.5 MeV/c bins
                          "Momentum [GeV/c]", ""));
+  // separated by the beam TOF as BcOutTracking (BTOF, BTOF_Cut in USER)
+  top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kEnergy1, 2),
+                         Form("%s_Momentum_Pi", nameDetector),
+                         400, 0.6, 1.2, "Momentum [GeV/c]", ""));
+  top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kEnergy1, 3),
+                         Form("%s_Momentum_K", nameDetector),
+                         400, 0.6, 1.2, "Momentum [GeV/c]", ""));
   top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kEnergy2, 1),
                          Form("%s_Delta", nameDetector),
                          200, -0.2, 0.2, "delta = (p-p0)/p0", ""));
@@ -471,6 +478,15 @@ HistMaker::createK18Tracking(Bool_t flag_ps)
   top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kHitPat, 4),
                          Form("%s_T2_Y", nameDetector),
                          200, -200., 200., "Y [mm]", ""));
+  // 2D per particle (beam TOF): Target_XY_Pi/K, T2_XY_Pi/K
+  const std::vector<std::pair<Int_t, TString>> xy_particles = {
+    {3, "Target_XY_Pi"}, {4, "Target_XY_K"}, {5, "T2_XY_Pi"}, {6, "T2_XY_K"} };
+  for(const auto& [ch, name] : xy_particles){
+    const Double_t r = name.BeginsWith("Target") ? 100. : 200.;
+    top_dir->Add(createTH2(getUniqueID(kK18Tracking, 0, kHitPat2D, ch),
+                           Form("%s_%s", nameDetector, name.Data()),
+                           100, -r, r, 100, -r, r, "X [mm]", "Y [mm]"));
+  }
   return top_dir;
 }
 

@@ -421,10 +421,12 @@ LocalZ(const TString& name)
 
 //_____________________________________________________________________________
 void
-Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array)
+Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array, Int_t particle)
 {
   static const Int_t multi_id  = HistMaker::getSequentialID(kK18Tracking, 0, kMulti,   1);
   static const Int_t mom_id    = HistMaker::getSequentialID(kK18Tracking, 0, kEnergy1, 1);
+  static const Int_t mom_pi_id = HistMaker::getSequentialID(kK18Tracking, 0, kEnergy1, 2);
+  static const Int_t mom_k_id  = HistMaker::getSequentialID(kK18Tracking, 0, kEnergy1, 3);
   static const Int_t delta_id  = HistMaker::getSequentialID(kK18Tracking, 0, kEnergy2, 1);
   static const Int_t chisqr_id = HistMaker::getSequentialID(kK18Tracking, 0, kChisqr,  1);
   static const Int_t rk_status_id = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 2);
@@ -434,13 +436,20 @@ Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array)
   static const Int_t tgt_y_id   = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat, 2);
   static const Int_t t2_x_id    = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat, 3);
   static const Int_t t2_y_id    = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat, 4);
+  // 2D per particle (beam TOF)
+  static const Int_t tgt_xy_pi_id = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 3);
+  static const Int_t tgt_xy_k_id  = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 4);
+  static const Int_t t2_xy_pi_id  = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 5);
+  static const Int_t t2_xy_k_id   = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 6);
 
   // planes in ascending z, with the histograms to fill at each
-  struct Plane { Double_t z; Int_t xy_id, x_id, y_id; };
+  struct Plane { Double_t z; Int_t xy_id, x_id, y_id, xy_pi_id, xy_k_id; };
   static const std::vector<Plane> planes = []{
     std::vector<Plane> v;
-    if(std::isfinite(g_z_target)) v.push_back({g_z_target, tgt_xy_id, tgt_x_id, tgt_y_id});
-    if(std::isfinite(g_z_t2))     v.push_back({g_z_t2,     t2_xy_id,  t2_x_id,  t2_y_id});
+    if(std::isfinite(g_z_target))
+      v.push_back({g_z_target, tgt_xy_id, tgt_x_id, tgt_y_id, tgt_xy_pi_id, tgt_xy_k_id});
+    if(std::isfinite(g_z_t2))
+      v.push_back({g_z_t2, t2_xy_id, t2_x_id, t2_y_id, t2_xy_pi_id, t2_xy_k_id});
     std::sort(v.begin(), v.end(),
               [](const Plane& a, const Plane& b){ return a.z < b.z; });
     return v;
@@ -456,6 +465,8 @@ Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array)
      || dcAna.GetBcOutTrackContainer().empty()) return;
   for(const auto& t : tracks){
     hptr_array[mom_id]->Fill(t.p);
+    if(particle == kPi)   hptr_array[mom_pi_id]->Fill(t.p);
+    if(particle == kKaon) hptr_array[mom_k_id]->Fill(t.p);
     hptr_array[delta_id]->Fill(t.delta);
     hptr_array[chisqr_id]->Fill(t.chisqr);
 
@@ -471,6 +482,8 @@ Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array)
       hptr_array[planes[i].xy_id]->Fill(vp[i].x, vp[i].y);
       hptr_array[planes[i].x_id]->Fill(vp[i].x);
       hptr_array[planes[i].y_id]->Fill(vp[i].y);
+      if(particle == kPi)   hptr_array[planes[i].xy_pi_id]->Fill(vp[i].x, vp[i].y);
+      if(particle == kKaon) hptr_array[planes[i].xy_k_id]->Fill(vp[i].x, vp[i].y);
     }
   }
   hptr_array[multi_id]->Fill((Int_t)tracks.size());
