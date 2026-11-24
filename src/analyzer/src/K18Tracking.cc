@@ -14,12 +14,14 @@
 #include <TH1.h>
 #include <TMath.h>
 #include <TMinuit.h>
+#include <TText.h>
 
 #include "ConfMan.hh"
 #include "DCAnalyzer.hh"
 #include "DCGeomMan.hh"
 #include "DCLocalTrack.hh"
 #include "DCLTrackHit.hh"
+#include "DetSizeMan.hh"
 #include "FieldMan.hh"
 #include "HistMaker.hh"
 #include "TransferMatrixMan.hh"
@@ -222,6 +224,67 @@ Double_t g_z_target = std::nan("");
 // NaN without a T2 entry
 Double_t g_z_t2 = std::nan("");
 
+// T2 box and the HTOF segments behind it, set in k18::Initialize() from
+// DCGEO "T2" (position) and DSIZE "T2" (full widths), HypTPC local [mm]
+struct T2Box { Bool_t ok; Double_t x1, x2, y1, y2; };
+T2Box g_t2_box = {false, 0., 0., 0., 0.};
+// HTOF downstream face (azimuth 180 deg, z = +348.6 mm local, just in front
+// of T2): segments 18-21 from -x to +x, 71 mm pitch (70 mm + clearance),
+// as offline TPCAnalyzer::ExtrapolateToHTOF. Segment numbers 0-33 as the
+// online HTOF histograms (0-based: HTOF_TDC_20_*, HitPat bin 20).
+const Int_t    kHtofDownSeg0  = 18;
+const Int_t    kHtofDownNSeg  = 4;
+const Double_t kHtofSegWidth  = 71.;
+std::vector<Int_t> g_t2_htof_segs; // segments overlapping the T2 x range
+
+Bool_t
+InT2Box(Double_t x, Double_t y)
+{
+  return g_t2_box.ok && g_t2_box.x1 < x && x < g_t2_box.x2
+    && g_t2_box.y1 < y && y < g_t2_box.y2;
+}
+
+void
+SetupT2Box()
+{
+  g_t2_box.ok = false;
+  g_t2_htof_segs.clear();
+  try {
+    const ThreeVector pos = gGeom.Global2LocalPos("HypTPC",
+                                                  gGeom.GetGlobalPosition("T2"));
+    const ThreeVector size = DetSizeMan::GetInstance().GetSize("T2");
+    g_t2_box = {true, pos.x() - 0.5*size.x(), pos.x() + 0.5*size.x(),
+                pos.y() - 0.5*size.y(), pos.y() + 0.5*size.y()};
+  } catch(const std::exception& e) {
+    std::cout << "#W K18 no T2 box (DCGEO / DSIZE), T2 counts disabled : "
+              << e.what() << std::endl;
+    return;
+  }
+  for(Int_t i=0; i<kHtofDownNSeg; ++i){
+    const Double_t x1 = (i - 0.5*kHtofDownNSeg) * kHtofSegWidth;
+    const Double_t x2 = x1 + kHtofSegWidth;
+    if(x1 < g_t2_box.x2 && g_t2_box.x1 < x2)
+      g_t2_htof_segs.push_back(kHtofDownSeg0 + i);
+  }
+  std::cout << "#D K18 T2 box x = [" << g_t2_box.x1 << ", " << g_t2_box.x2
+            << "], y = [" << g_t2_box.y1 << ", " << g_t2_box.y2
+            << "] mm, HTOF segments :";
+  for(auto seg : g_t2_htof_segs) std::cout << " " << seg;
+  if(g_t2_htof_segs.empty()) std::cout << " none (T2 outside the HTOF face)";
+  std::cout << std::endl;
+}
+
+// T2 efficiency text on the canvas (same style as the Multiplicity eff.):
+// InBox&HTOF / HTOF from the count histogram
+void
+UpdateT2Text(TText* text, const TH1* h)
+{
+  if(!text || !h) return;
+  const Double_t n_htof = h->GetBinContent(3);
+  const Double_t n_both = h->GetBinContent(4);
+  text->SetTitle(Form("eff. %.3f", n_htof > 0. ? n_both/n_htof : 0.));
+}
+
 // z of a DCGEO entry in the HypTPC local frame, NaN if missing
 Double_t
 LocalZFromGeom(const TString& name)
@@ -312,6 +375,7 @@ Initialize(const std::string& d5_file)
             << " mm, VO z = " << kZVO << " mm" << std::endl;
   g_z_target = LocalZFromGeom("Target");
   g_z_t2     = LocalZFromGeom("T2");
+  SetupT2Box();
   UpdateD5Field();
 }
 
@@ -421,7 +485,8 @@ LocalZ(const TString& name)
 
 //_____________________________________________________________________________
 void
-Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array, Int_t particle)
+Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array, Int_t particle,
+     const std::vector<Int_t>& htof_segs)
 {
   static const Int_t multi_id  = HistMaker::getSequentialID(kK18Tracking, 0, kMulti,   1);
   static const Int_t mom_id    = HistMaker::getSequentialID(kK18Tracking, 0, kEnergy1, 1);
@@ -441,6 +506,9 @@ Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array, Int_t particle)
   static const Int_t tgt_xy_k_id  = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 4);
   static const Int_t t2_xy_pi_id  = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 5);
   static const Int_t t2_xy_k_id   = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 6);
+  // T2 counts per particle: Tracks, InBox, HTOF, InBox&HTOF
+  static const Int_t t2_cnt_pi_id = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 3);
+  static const Int_t t2_cnt_k_id  = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 4);
 
   // planes in ascending z, with the histograms to fill at each
   struct Plane { Double_t z; Int_t xy_id, x_id, y_id, xy_pi_id, xy_k_id; };
@@ -460,10 +528,19 @@ Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array, Int_t particle)
     return z;
   }();
 
+  // beam really at T2: a U&D hit (HTOF_TDC window) in a segment behind T2
+  Bool_t htof_hit = false;
+  for(auto seg : htof_segs)
+    if(std::find(g_t2_htof_segs.begin(), g_t2_htof_segs.end(), seg)
+       != g_t2_htof_segs.end()) htof_hit = true;
+  const Int_t t2_cnt_id = particle == kPi ? t2_cnt_pi_id
+    : particle == kKaon ? t2_cnt_k_id : -1;
+
   const auto tracks = FitBeamTracks(dcAna);
   if(!gTM.IsReady() || dcAna.GetBcInTrackContainer().empty()
      || dcAna.GetBcOutTrackContainer().empty()) return;
-  for(const auto& t : tracks){
+  for(std::size_t it=0; it<tracks.size(); ++it){
+    const auto& t = tracks[it];
     hptr_array[mom_id]->Fill(t.p);
     if(particle == kPi)   hptr_array[mom_pi_id]->Fill(t.p);
     if(particle == kKaon) hptr_array[mom_k_id]->Fill(t.p);
@@ -484,9 +561,66 @@ Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array, Int_t particle)
       hptr_array[planes[i].y_id]->Fill(vp[i].y);
       if(particle == kPi)   hptr_array[planes[i].xy_pi_id]->Fill(vp[i].x, vp[i].y);
       if(particle == kKaon) hptr_array[planes[i].xy_k_id]->Fill(vp[i].x, vp[i].y);
+      // T2 counts with the best track of the event (one beam per event)
+      if(it == 0 && t2_cnt_id >= 0 && planes[i].z == g_z_t2 && g_t2_box.ok){
+        const Bool_t in_box = InT2Box(vp[i].x, vp[i].y);
+        TH1* h = hptr_array[t2_cnt_id];
+        h->Fill(0);
+        if(in_box)             h->Fill(1);
+        if(htof_hit)           h->Fill(2);
+        if(in_box && htof_hit) h->Fill(3);
+        UpdateT2Text(T2CountText(particle), h);
+      }
     }
   }
   hptr_array[multi_id]->Fill((Int_t)tracks.size());
+}
+
+//_____________________________________________________________________________
+Double_t
+T2CenterX()
+{
+  return g_t2_box.ok ? 0.5*(g_t2_box.x1 + g_t2_box.x2) : 0.;
+}
+
+//_____________________________________________________________________________
+TText*
+T2CountText(Int_t particle)
+{
+  auto make = [](const char* name){
+    auto t = new TText(0.150, 0.800, "eff. 0.000");
+    t->SetName(name);
+    t->SetNDC();
+    t->SetTextSize(0.080);
+    return t;
+  };
+  static TText* text_pi = make("Beam_T2_Eff_Pi_Text");
+  static TText* text_k  = make("Beam_T2_Eff_K_Text");
+  if(particle == kPi)   return text_pi;
+  if(particle == kKaon) return text_k;
+  return nullptr;
+}
+
+//_____________________________________________________________________________
+TText*
+T2SegText(Int_t particle)
+{
+  auto make = [](const char* name){
+    TString segs;
+    for(auto seg : g_t2_htof_segs)
+      segs += Form("%s%d", segs.IsNull() ? "" : ",", seg);
+    if(segs.IsNull()) segs = "none";
+    auto t = new TText(0.150, 0.720, Form("HTOF seg %s", segs.Data()));
+    t->SetName(name);
+    t->SetNDC();
+    t->SetTextSize(0.060);
+    return t;
+  };
+  static TText* text_pi = make("Beam_T2_Seg_Pi_Text");
+  static TText* text_k  = make("Beam_T2_Seg_K_Text");
+  if(particle == kPi)   return text_pi;
+  if(particle == kKaon) return text_k;
+  return nullptr;
 }
 
 //_____________________________________________________________________________
@@ -509,7 +643,7 @@ EventDisplayGraphs()
 
 //_____________________________________________________________________________
 void
-UpdateEventDisplay(const DCAnalyzer& dcAna)
+UpdateEventDisplay(const DCAnalyzer& dcAna, TH1* h_target_x)
 {
   // RK end plane: SCH from DCGEO (HypTPC local), as the event display frame
   static const Double_t z_sch = LocalZFromGeom("SCH");
@@ -524,6 +658,17 @@ UpdateEventDisplay(const DCAnalyzer& dcAna)
     graphs[i]->Set(points.size());
     for(std::size_t j=0; j<points.size(); ++j)
       graphs[i]->SetPoint(j, points[j].z(), points[j].x());
+    // x at the target plane, interpolated between the RK points
+    if(!h_target_x || !std::isfinite(g_z_target)) continue;
+    for(std::size_t j=1; j<points.size(); ++j){
+      const auto& a = points[j-1];
+      const auto& b = points[j];
+      if(a.z() <= g_z_target && g_z_target <= b.z() && b.z() > a.z()){
+        const Double_t f = (g_z_target - a.z())/(b.z() - a.z());
+        h_target_x->Fill(a.x() + f*(b.x() - a.x()));
+        break;
+      }
+    }
   }
 }
 }

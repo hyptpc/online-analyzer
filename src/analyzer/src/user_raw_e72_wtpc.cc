@@ -1086,7 +1086,8 @@ process_event( void )
 
     // RK beam line through the HS field up to SCH (K18 momentum);
     // the straight BcOut line below is drawn only without the field map
-    k18::UpdateEventDisplay(dcAna);
+    static const Int_t tpcbp_rk_id = gHist.getSequentialID(kTPC, 2, kHitPat);
+    k18::UpdateEventDisplay(dcAna, hptr_array[tpcbp_rk_id]);
 
     if(!FieldMan::GetInstance().IsReady()){
       for (const auto& track : tracks) {
@@ -1105,6 +1106,7 @@ process_event( void )
     auto prev_level = gErrorIgnoreLevel;
     gErrorIgnoreLevel = kError;
     http::UpdateCounterEfficiency();
+    http::UpdateTPCBeamProfile();
     //http::UpdateBcOutEfficiency();
     //http::UpdateSdcInOutEfficiency();
     // http::UpdateT0PeakFitting();

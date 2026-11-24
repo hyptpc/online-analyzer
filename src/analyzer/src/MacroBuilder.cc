@@ -15,6 +15,8 @@
 #include <TArc.h>
 #include <TLine.h>
 #include <TBox.h>
+#include <TH1D.h>
+#include <algorithm>
 #include <TObject.h>
 #include <TPolyLine.h>
 #include <TMultiGraph.h>
@@ -995,6 +997,11 @@ TPC( void )
   return c1;
 }
 
+// TPC_BeamProfile and TPC_BeamProfile_RK, taken in TPC2D(): GHist::get()
+// looks in the current directory, which is not gROOT in the event loop
+TH1* g_tpc_bp    = nullptr;
+TH1* g_tpc_bp_rk = nullptr;
+
 //_____________________________________________________________________________
 TCanvas*
 TPC2D( void )
@@ -1013,6 +1020,30 @@ TPC2D( void )
     if( i==1 || i==2 ) c1->cd( i+1 )->SetLogz();
     auto h = GHist::get( id[i] );
     if( h ) h->Draw( "colz" );
+  }
+  // TPC_BeamProfile + RK beam x at the target (red), scaled to the TPC
+  // peak by UpdateTPCBeamProfile()
+  c1->cd( 4 );
+  g_tpc_bp    = GHist::get( id[3] );
+  g_tpc_bp_rk = GHist::get( HistMaker::getUniqueID( kTPC, 2, kHitPat ) );
+  if( auto h = g_tpc_bp ){
+    h->SetLineColor( kBlack );
+    h->SetStats( 0 );
+    auto rk = new TH1D( "TPC_BeamProfile_RK_Scaled",
+                        "TPC_BeamProfile",
+                        h->GetNbinsX(), h->GetXaxis()->GetXmin(),
+                        h->GetXaxis()->GetXmax() );
+    rk->SetDirectory( nullptr );
+    rk->SetLineColor( kRed );
+    rk->SetLineWidth( 2 );
+    rk->SetStats( 0 );
+    rk->Draw( "hist same" );
+    auto leg = new TLegend( 0.70, 0.75, 0.88, 0.88 );
+    leg->SetBorderSize( 0 );
+    leg->SetFillStyle( 0 );
+    leg->AddEntry( h,  "TPC", "l" );
+    leg->AddEntry( rk, "RK",  "l" );
+    leg->Draw();
   }
   return c1;
 }
@@ -1625,6 +1656,12 @@ Beam( void )
         std::cout << "#W macro::Beam no T2 size in DSIZE : "
                   << e.what() << std::endl;
       }
+      // counts in the T2 box and the efficiency against the HTOF segments
+      // behind T2 (k18::Fill), updated every event
+      if(auto text = k18::T2CountText(r == 0 ? kPi : kKaon))
+        text->Draw();
+      if(auto text = k18::T2SegText(r == 0 ? kPi : kKaon))
+        text->Draw();
     }
   }
   return c1;
@@ -2087,6 +2124,25 @@ UpdateBLDCEfficiency()
     tmpn+=layer[ichm];
   } 
 }
+//_____________________________________________________________________________
+void
+UpdateTPCBeamProfile()
+{
+  static auto c1 = (TCanvas*)gROOT->FindObject("TPC2D");
+  if(!c1) return;
+  auto pad = c1->GetPad(4);
+  if(!pad) return;
+  auto rk  = (TH1*)pad->FindObject("TPC_BeamProfile_RK_Scaled");
+  auto tpc = g_tpc_bp;
+  auto raw = g_tpc_bp_rk;
+  if(!rk || !tpc || !raw) return;
+  // RK peak scaled to the TPC peak: the pad y axis stays the TPC one
+  rk->Reset();
+  const Double_t max_raw = raw->GetMaximum();
+  if(max_raw > 0.) rk->Add(raw, tpc->GetMaximum()/max_raw);
+  pad->Modified();
+}
+
 //_____________________________________________________________________________
 void
 UpdateCounterEfficiency()

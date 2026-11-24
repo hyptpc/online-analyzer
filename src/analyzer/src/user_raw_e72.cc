@@ -1343,7 +1343,8 @@ process_event( void )
   }
 
   //K18Tracking (BcIn-BcOut fit through the D5 matrix), K / pi by beam TOF
-  k18::Fill(dcAna, hptr_array, btof_p);
+  k18::Fill(dcAna, hptr_array, btof_p,
+            hit_seg_map[gUnpacker.get_device_id("HTOF")]);
   
 
   int hist_bcin_x_p_id = gHist.getSequentialID(kBcInTracking,0,btof_p,1);

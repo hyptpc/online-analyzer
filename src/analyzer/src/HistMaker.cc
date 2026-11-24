@@ -9,6 +9,8 @@
 #include "DetectorID.hh"
 #include "HistHelper.hh"
 #include "HistMaker.hh"
+#include "K18Tracking.hh"
+#include <TMath.h>
 
 #include "DCGeomMan.hh"
 #include "DetSizeMan.hh"
@@ -468,13 +470,16 @@ HistMaker::createK18Tracking(Bool_t flag_ps)
   top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kHitPat, 2),
                          Form("%s_Target_Y", nameDetector),
                          200, -100., 100., "Y [mm]", ""));
+  // T2: x range +-200 mm around the T2 x of DCGEO (rounded to 10 mm), so
+  // the box stays in the middle when T2 moves (k18::Initialize before this)
+  const Double_t t2_xc = 10.*TMath::Nint(0.1*k18::T2CenterX());
   top_dir->Add(createTH2(getUniqueID(kK18Tracking, 0, kHitPat2D, 2),
                          Form("%s_T2_XY", nameDetector),
-                         100, -200., 200., 100, -200., 200.,
+                         100, t2_xc-200., t2_xc+200., 100, -200., 200.,
                          "X [mm]", "Y [mm]"));
   top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kHitPat, 3),
                          Form("%s_T2_X", nameDetector),
-                         200, -200., 200., "X [mm]", ""));
+                         200, t2_xc-200., t2_xc+200., "X [mm]", ""));
   top_dir->Add(createTH1(getUniqueID(kK18Tracking, 0, kHitPat, 4),
                          Form("%s_T2_Y", nameDetector),
                          200, -200., 200., "Y [mm]", ""));
@@ -482,10 +487,23 @@ HistMaker::createK18Tracking(Bool_t flag_ps)
   const std::vector<std::pair<Int_t, TString>> xy_particles = {
     {3, "Target_XY_Pi"}, {4, "Target_XY_K"}, {5, "T2_XY_Pi"}, {6, "T2_XY_K"} };
   for(const auto& [ch, name] : xy_particles){
-    const Double_t r = name.BeginsWith("Target") ? 100. : 200.;
+    const Bool_t is_t2 = name.BeginsWith("T2");
+    const Double_t r  = is_t2 ? 200. : 100.;
+    const Double_t xc = is_t2 ? t2_xc : 0.;
     top_dir->Add(createTH2(getUniqueID(kK18Tracking, 0, kHitPat2D, ch),
                            Form("%s_%s", nameDetector, name.Data()),
-                           100, -r, r, 100, -r, r, "X [mm]", "Y [mm]"));
+                           100, xc-r, xc+r, 100, -r, r, "X [mm]", "Y [mm]"));
+  }
+  // T2 counts per particle (best track of the event), see k18::Fill
+  const std::vector<std::pair<Int_t, TString>> t2_counts = {
+    {3, "T2_Count_Pi"}, {4, "T2_Count_K"} };
+  for(const auto& [ch, name] : t2_counts){
+    auto h = createTH1(getUniqueID(kK18Tracking, 0, kMulti, ch),
+                       Form("%s_%s", nameDetector, name.Data()),
+                       4, -0.5, 3.5, "", "");
+    const char* labels[] = {"Tracks", "InBox", "HTOF", "InBox&HTOF"};
+    for(Int_t i=0; i<4; ++i) h->GetXaxis()->SetBinLabel(i+1, labels[i]);
+    top_dir->Add(h);
   }
   return top_dir;
 }
@@ -668,6 +686,11 @@ HistMaker::createTPC(Bool_t flag_ps)
 //		 	  "Pad", "") );
   top_dir->Add( createTH1( getUniqueID( kTPC, 2, kTDC ),
 			   "TPC_BeamProfile", 20, -100, 100,
+			   "x [mm]", "") );
+  // RK beam x at the target (K18Tracking), same binning as TPC_BeamProfile;
+  // drawn scaled to TPC_BeamProfile on TPC2D (http::UpdateTPCBeamProfile)
+  top_dir->Add( createTH1( getUniqueID( kTPC, 2, kHitPat ),
+			   "TPC_BeamProfile_RK", 20, -100, 100,
 			   "x [mm]", "") );
   return top_dir;
 }
