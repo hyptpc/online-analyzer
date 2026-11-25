@@ -494,6 +494,27 @@ HistMaker::createK18Tracking(Bool_t flag_ps)
                            Form("%s_%s", nameDetector, name.Data()),
                            100, xc-r, xc+r, 100, -r, r, "X [mm]", "Y [mm]"));
   }
+  // BAC XY (RK at DCGEO BAC): all, Pi, K
+  const std::vector<std::pair<Int_t, TString>> bac_xy = {
+    {7, "BAC_XY"}, {8, "BAC_XY_Pi"}, {9, "BAC_XY_K"} };
+  for(const auto& [ch, name] : bac_xy){
+    top_dir->Add(createTH2(getUniqueID(kK18Tracking, 0, kHitPat2D, ch),
+                           Form("%s_%s", nameDetector, name.Data()),
+                           100, -100., 100., 100, -100., 100.,
+                           "X [mm]", "Y [mm]"));
+  }
+  // BAC / Target in-box counts per particle (best track), see k18::Fill
+  const std::vector<std::pair<Int_t, TString>> box_counts = {
+    {5, "BAC_Count_Pi"}, {6, "BAC_Count_K"},
+    {7, "Target_Count_Pi"}, {8, "Target_Count_K"} };
+  for(const auto& [ch, name] : box_counts){
+    auto h = createTH1(getUniqueID(kK18Tracking, 0, kMulti, ch),
+                       Form("%s_%s", nameDetector, name.Data()),
+                       2, -0.5, 1.5, "", "");
+    h->GetXaxis()->SetBinLabel(1, "Tracks");
+    h->GetXaxis()->SetBinLabel(2, "InBox");
+    top_dir->Add(h);
+  }
   // T2 counts per particle (best track of the event), see k18::Fill
   const std::vector<std::pair<Int_t, TString>> t2_counts = {
     {3, "T2_Count_Pi"}, {4, "T2_Count_K"} };

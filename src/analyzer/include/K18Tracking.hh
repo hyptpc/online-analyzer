@@ -48,6 +48,9 @@ void Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array,
 Double_t T2CenterX();
 // T2 efficiency text (eff. = InBox&HTOF / HTOF) for kPi or kKaon, drawn by http::Beam
 TText* T2CountText(Int_t particle);
+// BAC / Target in-box fraction text (eff. = InBox / Tracks, best track)
+// for name "BAC" or "Target" and kPi or kKaon, drawn by http::Beam
+TText* BoxEffText(const TString& name, Int_t particle);
 // HTOF segments used for the T2 efficiency (0-based), drawn by http::Beam
 TText* T2SegText(Int_t particle);
 // fitted beam tracks, best chisqr first (exclusive BcIn-BcOut pairs)

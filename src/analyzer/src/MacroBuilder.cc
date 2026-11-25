@@ -1601,18 +1601,14 @@ BcOut2D( void )
 }
 
 //_____________________________________________________________________________
-// Beam momentum and the RK beam profiles at the target and T2 (K18Tracking).
-// The target and T2 outlines are drawn at their DCGEO positions converted to
-// the HypTPC local frame (the histogram frame), so they follow the param.
 TCanvas*
 Beam( void )
 {
   const auto& geom = DCGeomMan::GetInstance();
   const auto& size = DetSizeMan::GetInstance();
   auto c1 = new TCanvas( __func__, __func__ );
-  c1->Divide(3,2);
+  c1->Divide(4,2);
 
-  // draw an outline box of full widths (wx, wy) centered on the DCGEO entry
   auto draw_box = [&](const TString& name, Double_t wx, Double_t wy){
     try {
       const ThreeVector pos = geom.Global2LocalPos("HypTPC",
@@ -1629,24 +1625,39 @@ Beam( void )
     }
   };
 
-  // 3x2: top row pi, bottom row K (beam TOF); momentum, Target XY, T2 XY
-  const std::vector<std::pair<Int_t, Int_t>> rows = {
-    {2, 3},   // pi: Momentum ch, Target_XY ch (T2_XY = Target_XY + 2)
-    {3, 4} }; // K
+  struct Row { Int_t mom_ch, bac_ch, tgt_ch; };
+  const std::vector<Row> rows = {
+    {2, 8, 3},   // pi (T2_XY = Target_XY + 2)
+    {3, 9, 4} }; // K
   for(std::size_t r=0; r<rows.size(); ++r){
-    const Int_t mom_ch = rows[r].first;
-    const Int_t tgt_ch = rows[r].second;
-    c1->cd(3*r + 1);
+    const Int_t mom_ch = rows[r].mom_ch;
+    const Int_t tgt_ch = rows[r].tgt_ch;
+    c1->cd(4*r + 1);
     if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kEnergy1, mom_ch)))
       h->Draw();
-    c1->cd(3*r + 2);
+    c1->cd(4*r + 2);
+    if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kHitPat2D, rows[r].bac_ch))){
+      h->Draw("colz");
+      try {
+        const ThreeVector bac = size.GetSize("BAC"); // DSIZE full widths [mm]
+        draw_box("BAC", bac.x(), bac.y());
+      } catch(const std::exception& e) {
+        std::cout << "#W macro::Beam no BAC size in DSIZE : "
+                  << e.what() << std::endl;
+      }
+      if(auto text = k18::BoxEffText("BAC", r == 0 ? kPi : kKaon))
+        text->Draw();
+    }
+    c1->cd(4*r + 3);
     if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kHitPat2D, tgt_ch))){
       h->Draw("colz");
       // E72 cylindrical target (axis along y), raw size without the holder:
       // radius 40 mm, half-length 50 mm (offline TPCPadHelper.hh)
       draw_box("Target", 2.*40., 2.*50.);
+      if(auto text = k18::BoxEffText("Target", r == 0 ? kPi : kKaon))
+        text->Draw();
     }
-    c1->cd(3*r + 3);
+    c1->cd(4*r + 4);
     if(auto h = GHist::get(HistMaker::getUniqueID(kK18Tracking, 0, kHitPat2D, tgt_ch + 2))){
       h->Draw("colz");
       try {

@@ -223,6 +223,9 @@ Double_t g_z_target = std::nan("");
 // k18::Initialize() (online DCGEO: global z = 200 -> local z = 350.1);
 // NaN without a T2 entry
 Double_t g_z_t2 = std::nan("");
+// BAC plane: DCGEO "BAC" in the HypTPC local frame (online DCGEO: global
+// z = -648.4 -> local z = -498.3), NaN without a BAC entry
+Double_t g_z_bac = std::nan("");
 
 // T2 box and the HTOF segments behind it, set in k18::Initialize() from
 // DCGEO "T2" (position) and DSIZE "T2" (full widths), HypTPC local [mm]
@@ -242,6 +245,45 @@ InT2Box(Double_t x, Double_t y)
 {
   return g_t2_box.ok && g_t2_box.x1 < x && x < g_t2_box.x2
     && g_t2_box.y1 < y && y < g_t2_box.y2;
+}
+
+// BAC (DCGEO + DSIZE) and target boxes for the in-box fraction
+// eff. = InBox / Tracks (no detector reference: BAC is a Cherenkov veto)
+T2Box g_bac_box = {false, 0., 0., 0., 0.};
+T2Box g_tgt_box = {false, 0., 0., 0., 0.};
+// E72 cylindrical target seen from the beam: 2*radius x length [mm], as the
+// outline on the Beam canvas (offline TPCPadHelper.hh)
+const Double_t kTargetWX = 80.;
+const Double_t kTargetWY = 100.;
+
+Bool_t
+InBox(const T2Box& b, Double_t x, Double_t y)
+{
+  return b.ok && b.x1 < x && x < b.x2 && b.y1 < y && y < b.y2;
+}
+
+// box of full widths (wx, wy) on the DCGEO entry; wx <= 0 takes DSIZE
+T2Box
+MakeBox(const TString& name, Double_t wx = -1., Double_t wy = -1.)
+{
+  try {
+    const ThreeVector pos = gGeom.Global2LocalPos("HypTPC",
+                                                  gGeom.GetGlobalPosition(name));
+    if(wx <= 0.){
+      const ThreeVector size = DetSizeMan::GetInstance().GetSize(name);
+      wx = size.x();
+      wy = size.y();
+    }
+    std::cout << "#D K18 " << name << " box x = [" << pos.x() - 0.5*wx << ", "
+              << pos.x() + 0.5*wx << "], y = [" << pos.y() - 0.5*wy << ", "
+              << pos.y() + 0.5*wy << "] mm" << std::endl;
+    return {true, pos.x() - 0.5*wx, pos.x() + 0.5*wx,
+            pos.y() - 0.5*wy, pos.y() + 0.5*wy};
+  } catch(const std::exception& e) {
+    std::cout << "#W K18 no " << name << " box (DCGEO / DSIZE), eff. disabled : "
+              << e.what() << std::endl;
+    return {false, 0., 0., 0., 0.};
+  }
 }
 
 void
@@ -375,7 +417,10 @@ Initialize(const std::string& d5_file)
             << " mm, VO z = " << kZVO << " mm" << std::endl;
   g_z_target = LocalZFromGeom("Target");
   g_z_t2     = LocalZFromGeom("T2");
+  g_z_bac    = LocalZFromGeom("BAC");
   SetupT2Box();
+  g_bac_box = MakeBox("BAC");
+  g_tgt_box = MakeBox("Target", kTargetWX, kTargetWY);
   UpdateD5Field();
 }
 
@@ -506,18 +551,34 @@ Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array, Int_t particle,
   static const Int_t tgt_xy_k_id  = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 4);
   static const Int_t t2_xy_pi_id  = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 5);
   static const Int_t t2_xy_k_id   = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 6);
+  // BAC XY: all, Pi, K (no 1D)
+  static const Int_t bac_xy_id    = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 7);
+  static const Int_t bac_xy_pi_id = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 8);
+  static const Int_t bac_xy_k_id  = HistMaker::getSequentialID(kK18Tracking, 0, kHitPat2D, 9);
+  // in-box counts (Tracks, InBox): BAC Pi / K, Target Pi / K
+  static const Int_t bac_cnt_pi_id = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 5);
+  static const Int_t bac_cnt_k_id  = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 6);
+  static const Int_t tgt_cnt_pi_id = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 7);
+  static const Int_t tgt_cnt_k_id  = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 8);
   // T2 counts per particle: Tracks, InBox, HTOF, InBox&HTOF
   static const Int_t t2_cnt_pi_id = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 3);
   static const Int_t t2_cnt_k_id  = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 4);
 
   // planes in ascending z, with the histograms to fill at each
-  struct Plane { Double_t z; Int_t xy_id, x_id, y_id, xy_pi_id, xy_k_id; };
+  // box: in-box fraction for Pi / K (count ids, -1 without)
+  struct Plane { Double_t z; Int_t xy_id, x_id, y_id, xy_pi_id, xy_k_id;
+                 const T2Box* box = nullptr; Int_t cnt_pi_id = -1, cnt_k_id = -1;
+                 TString name = ""; };
   static const std::vector<Plane> planes = []{
     std::vector<Plane> v;
     if(std::isfinite(g_z_target))
-      v.push_back({g_z_target, tgt_xy_id, tgt_x_id, tgt_y_id, tgt_xy_pi_id, tgt_xy_k_id});
+      v.push_back({g_z_target, tgt_xy_id, tgt_x_id, tgt_y_id, tgt_xy_pi_id, tgt_xy_k_id,
+                   &g_tgt_box, tgt_cnt_pi_id, tgt_cnt_k_id, "Target"});
     if(std::isfinite(g_z_t2))
       v.push_back({g_z_t2, t2_xy_id, t2_x_id, t2_y_id, t2_xy_pi_id, t2_xy_k_id});
+    if(std::isfinite(g_z_bac))
+      v.push_back({g_z_bac, bac_xy_id, -1, -1, bac_xy_pi_id, bac_xy_k_id,
+                   &g_bac_box, bac_cnt_pi_id, bac_cnt_k_id, "BAC"});
     std::sort(v.begin(), v.end(),
               [](const Plane& a, const Plane& b){ return a.z < b.z; });
     return v;
@@ -557,10 +618,23 @@ Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array, Int_t particle,
     if(!passed) continue;
     for(std::size_t i=0; i<planes.size(); ++i){
       hptr_array[planes[i].xy_id]->Fill(vp[i].x, vp[i].y);
-      hptr_array[planes[i].x_id]->Fill(vp[i].x);
-      hptr_array[planes[i].y_id]->Fill(vp[i].y);
+      if(planes[i].x_id >= 0) hptr_array[planes[i].x_id]->Fill(vp[i].x);
+      if(planes[i].y_id >= 0) hptr_array[planes[i].y_id]->Fill(vp[i].y);
       if(particle == kPi)   hptr_array[planes[i].xy_pi_id]->Fill(vp[i].x, vp[i].y);
       if(particle == kKaon) hptr_array[planes[i].xy_k_id]->Fill(vp[i].x, vp[i].y);
+      // BAC / Target in-box fraction with the best track of the event
+      const Int_t cnt_id = particle == kPi ? planes[i].cnt_pi_id
+        : particle == kKaon ? planes[i].cnt_k_id : -1;
+      if(it == 0 && cnt_id >= 0 && planes[i].box && planes[i].box->ok){
+        TH1* h = hptr_array[cnt_id];
+        h->Fill(0);
+        if(InBox(*planes[i].box, vp[i].x, vp[i].y)) h->Fill(1);
+        if(auto text = BoxEffText(planes[i].name, particle)){
+          const Double_t n_trk = h->GetBinContent(1);
+          text->SetTitle(Form("eff. %.3f",
+                              n_trk > 0. ? h->GetBinContent(2)/n_trk : 0.));
+        }
+      }
       // T2 counts with the best track of the event (one beam per event)
       if(it == 0 && t2_cnt_id >= 0 && planes[i].z == g_z_t2 && g_t2_box.ok){
         const Bool_t in_box = InT2Box(vp[i].x, vp[i].y);
@@ -603,6 +677,28 @@ T2CountText(Int_t particle)
 
 //_____________________________________________________________________________
 TText*
+BoxEffText(const TString& name, Int_t particle)
+{
+  auto make = [](const char* tname){
+    auto t = new TText(0.150, 0.800, "eff. 0.000");
+    t->SetName(tname);
+    t->SetNDC();
+    t->SetTextSize(0.080);
+    return t;
+  };
+  static TText* bac_pi = make("Beam_BAC_Eff_Pi_Text");
+  static TText* bac_k  = make("Beam_BAC_Eff_K_Text");
+  static TText* tgt_pi = make("Beam_Target_Eff_Pi_Text");
+  static TText* tgt_k  = make("Beam_Target_Eff_K_Text");
+  if(name == "BAC")
+    return particle == kPi ? bac_pi : particle == kKaon ? bac_k : nullptr;
+  if(name == "Target")
+    return particle == kPi ? tgt_pi : particle == kKaon ? tgt_k : nullptr;
+  return nullptr;
+}
+
+//_____________________________________________________________________________
+TText*
 T2SegText(Int_t particle)
 {
   auto make = [](const char* name){
@@ -624,6 +720,15 @@ T2SegText(Int_t particle)
 }
 
 //_____________________________________________________________________________
+// one point outside any frame, so that an unused line draws nothing
+void
+HideGraph(TGraph* gr)
+{
+  gr->Set(1);
+  gr->SetPoint(0, -1.e6, -1.e6);
+}
+
+//_____________________________________________________________________________
 std::vector<TGraph*>&
 EventDisplayGraphs()
 {
@@ -634,6 +739,7 @@ EventDisplayGraphs()
       gr->SetName(Form("BeamRK_%d", i));
       gr->SetLineColor(kRed);
       gr->SetLineWidth(2);
+      HideGraph(gr);
       g.push_back(gr);
     }
     return g;
@@ -648,7 +754,9 @@ UpdateEventDisplay(const DCAnalyzer& dcAna, TH1* h_target_x)
   // RK end plane: SCH from DCGEO (HypTPC local), as the event display frame
   static const Double_t z_sch = LocalZFromGeom("SCH");
   auto& graphs = EventDisplayGraphs();
-  for(auto& gr : graphs) gr->Set(0);
+  // unused lines keep one point far outside the frame: a 0-point TGraph
+  // gives "TGraphPainter::PaintGraph: illegal number of points (0)"
+  for(auto& gr : graphs) HideGraph(gr);
   if(!std::isfinite(z_sch)) return;
   const auto tracks = FitBeamTracks(dcAna);
   std::vector<ThreeVector> points;
