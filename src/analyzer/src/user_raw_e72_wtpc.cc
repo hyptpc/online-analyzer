@@ -11,6 +11,7 @@
 #include <TGFileBrowser.h>
 #include <TH1.h>
 #include <TH2.h>
+#include <TH2Poly.h>
 #include <THttpServer.h>
 #include <TKey.h>
 #include <TMath.h>
@@ -62,6 +63,30 @@ using namespace hddaq::unpacker;
 namespace
 {
 std::vector<TH1*> hptr_array;
+
+// Fast TH2Poly bin access for the TPC pad maps. TH2Poly::Get/SetBinContent
+// look the bin up in a TList (TList::At walks the list), so one call costs
+// O(number of pads ~ 5800) and the pad loop took ~0.6 s per event. The bin
+// objects are cached once and filled directly.
+struct PolyBins
+{
+  TH2Poly* h = nullptr;
+  std::vector<TH2PolyBin*> bins;
+  explicit PolyBins(TH1* h1) : h(dynamic_cast<TH2Poly*>(h1))
+  {
+    if(!h) return;
+    for(auto obj : *h->GetBins())
+      bins.push_back(static_cast<TH2PolyBin*>(obj));
+  }
+  Bool_t Valid(Int_t bin) const { return 1 <= bin && bin <= (Int_t)bins.size(); }
+  Double_t Get(Int_t bin) const { return Valid(bin) ? bins[bin-1]->GetContent() : 0.; }
+  void Set(Int_t bin, Double_t content)
+  {
+    if(!Valid(bin)) return;
+    bins[bin-1]->SetContent(content);
+    h->SetBinContentChanged(kTRUE);
+  }
+};
 HistMaker&   gHist   = HistMaker::getInstance();
 HttpServer&    gHttp = HttpServer::GetInstance();
 const auto& gUser    = UserParamMan::GetInstance();
@@ -650,61 +675,47 @@ process_event( void )
       // static const Int_t k_tdc_low  = gUnpacker.get_data_id( "TPC", "tdc_low" );
       // sequential id
       static const Int_t tpca_id   = gHist.getSequentialID( kTPC, 0, kADC, 1 );
-      static const Int_t tpcaget_count_id   = gHist.getSequentialID( kTPC, 1, kADC);
       static const Int_t tpct_id   = gHist.getSequentialID( kTPC, 0, kTDC );
       static const Int_t rms_id    = gHist.getSequentialID( kTPC, 0, kPede );
       static const Int_t tpcfa_id   = gHist.getSequentialID( kTPC, 0, kFADC, 1 );
-      static const Int_t tpca2d_id = gHist.getSequentialID( kTPC, 0, kADC2D, 1 );
+      // TH2Poly pad maps (only those drawn on the canvases)
+      static const Int_t adc2d_id  = gHist.getSequentialID( kTPC, 0, kADC2D, 1 ); // ADC2D
+      static const Int_t tdc2d_id  = gHist.getSequentialID( kTPC, 0, kADC2D, 3 ); // TDC2D
+      static const Int_t hit2d_id  = gHist.getSequentialID( kTPC, 0, kADC2D, 4 ); // Hit2D
+      static const Int_t thre2d_id = gHist.getSequentialID( kTPC, 0, kADC2D, 5 ); // Threshold2D
+      static PolyBins poly_adc ( hptr_array[adc2d_id]  );
+      static PolyBins poly_tdc ( hptr_array[tdc2d_id]  );
+      static PolyBins poly_thre( hptr_array[thre2d_id] );
       static const Int_t tpcmul_id = gHist.getSequentialID( kTPC, 0, kMulti );
       static const Int_t tpcbp_id   = gHist.getSequentialID( kTPC, 2, kTDC );
-      static const Int_t agetmul_id = gHist.getSequentialID( kTPC, 3, kMulti );
       static const Int_t amulmax_id = gHist.getSequentialID( kTPC, 4, kMulti );
-      Int_t tpc_max_evt_id[NumOfAsadTPC];
-      Int_t tpc_min_evt_id[NumOfAsadTPC];
-      Int_t tpc_rms_evt_id[NumOfAsadTPC];
-      
-      for(int i=0;i<NumOfAsadTPC;i++){
-	tpc_max_evt_id[i] = gHist.getSequentialID( kTPC, 5, kMulti, i);
-	tpc_min_evt_id[i] = gHist.getSequentialID(kTPC, 6, kMulti, i);
-	tpc_rms_evt_id[i] = gHist.getSequentialID(kTPC, 7, kMulti, i);
-	
+      // RMS vs event per AsAd (TPCRMSASAD), x = event_number % NumOfEvtCut
+      static Int_t tpc_rms_evt_id[NumOfAsadTPC];
+      static bool tpc_rms_evt_init = false;
+      if(!tpc_rms_evt_init){
+	for(int i=0;i<NumOfAsadTPC;i++)
+	  tpc_rms_evt_id[i] = gHist.getSequentialID(kTPC, 7, kMulti, i);
+	tpc_rms_evt_init = true;
       }
-      static const Int_t tpc_evt = gHist.getSequentialID(kTPC,8,kMulti);
-      
-      
-      hptr_array[tpca2d_id]->Reset(); //adc2d
-      hptr_array[tpca2d_id+1]->Reset(); //rms2d
-      hptr_array[tpca2d_id+2]->Reset(); // tdc2d
-      
 
-      hptr_array[tpc_evt]->Fill(event_number);
-      bool pass_reset = false;
-      if(event_number >NumOfEvtCut){
-	int lastBin = hptr_array[tpc_evt]->FindLastBinAbove(0);
-	int secondLastBin = -1;
-	for (int i = lastBin - 1; i >= 1; i--) {
-	  if (hptr_array[tpc_evt]->GetBinContent(i) != 0) {
-	    if((i-1)%NumOfEvtCut==0)pass_reset = true;
-	    secondLastBin = i;
-	    break;
-	  }
-	}
-	if(secondLastBin==-1)pass_reset = false;
-      }
-      
-      if(pass_reset){
-	for(int i=0;i<NumOfAsadTPC;i++){
-	  hptr_array[tpc_max_evt_id[i]]->Reset();
-	  hptr_array[tpc_min_evt_id[i]]->Reset();
+      hptr_array[adc2d_id]->Reset();
+      hptr_array[tdc2d_id]->Reset();
+
+      // restart the RMS vs event plots every NumOfEvtCut events
+      static Int_t last_evt_block = -1;
+      const Int_t evt_block = event_number / NumOfEvtCut;
+      if(last_evt_block >= 0 && evt_block != last_evt_block){
+	for(int i=0;i<NumOfAsadTPC;i++)
 	  hptr_array[tpc_rms_evt_id[i]]->Reset();
-	}
       }
-    
-      std::vector<bool> isDeadPad(NumOfPadTPC + 1, false);
+      last_evt_block = evt_block;
 
-      for (size_t k = 0; k < sizeof(TpcPadHelper::padOnCenterFrame)/sizeof(*TpcPadHelper::padOnCenterFrame); ++k) {
-	isDeadPad[TpcPadHelper::padOnCenterFrame[k]] = true;
-      }
+      static const std::vector<bool> isDeadPad = []{
+	std::vector<bool> v(NumOfPadTPC + 1, false);
+	for (size_t k = 0; k < sizeof(TpcPadHelper::padOnCenterFrame)/sizeof(*TpcPadHelper::padOnCenterFrame); ++k)
+	  v[TpcPadHelper::padOnCenterFrame[k]] = true;
+	return v;
+      }();
     
       // FADC before
       Int_t n_active_pad = 0;
@@ -729,9 +740,8 @@ process_event( void )
 	  }
 	  Int_t nhit = gUnpacker.get_entries( k_device, layer, 0, ch, k_adc );
 	  if( nhit == 0 ){
-	    hptr_array[tpca2d_id]->SetBinContent( pad+1, 0 );
-	    hptr_array[tpca2d_id+1]->SetBinContent( pad+1, 0 );
-	    hptr_array[tpca2d_id+2]->SetBinContent( pad+1, 0 );
+	    poly_adc.Set( pad+1, 0 );
+	    poly_tdc.Set( pad+1, 0 );
 	    continue;
 	  }
 	  std::vector<Double_t> fadc( nhit );
@@ -765,51 +775,20 @@ process_event( void )
 	    max_rms_fadc[asad][aget] = fadc;
 	  }
 
-	  if(max_adc > hptr_array[tpca2d_id+5]->GetBinContent(pad+1)){
-	    hptr_array[tpca2d_id+5]->SetBinContent( pad+1, max_adc );
-	    
-	  }
-	  if(max_adc > hptr_array[tpc_max_evt_id[asad]]->GetBinContent(event_number%NumOfEvtCut+1)){
-	    hptr_array[tpc_max_evt_id[asad]]->SetBinContent(event_number%NumOfEvtCut+1,max_adc);
-	    
-	  }
-	      
-	  
-	  if(hptr_array[tpca2d_id+4]->GetBinContent(pad+1) == 0){
-	    hptr_array[tpca2d_id+4]->SetBinContent( pad+1, max_adc );
-	  }
-	  else{
-	    if(max_adc < hptr_array[tpca2d_id+4]->GetBinContent(pad+1)){
-	      hptr_array[tpca2d_id+4]->SetBinContent( pad+1, max_adc );
-	      
-	    }
-	  }
-	  if(hptr_array[tpc_min_evt_id[asad]]->GetBinContent(event_number%NumOfEvtCut+1) == 0){
-	    hptr_array[tpc_min_evt_id[asad]]->SetBinContent(event_number%NumOfEvtCut+1,max_adc);
-	    
-	  }
-	  else{
-	    if(max_adc < hptr_array[tpc_min_evt_id[asad]]->GetBinContent(event_number%NumOfEvtCut+1)){
-	      hptr_array[tpc_min_evt_id[asad]]->SetBinContent(event_number%NumOfEvtCut+1,max_adc);
-	      
-	    }
+	  // threshold map: the lowest max ADC seen per pad (TPCTHRE)
+	  const Double_t thre = poly_thre.Get(pad+1);
+	  if(thre == 0 || max_adc < thre){
+	    poly_thre.Set( pad+1, max_adc );
 	  }
 
 	  if( max_adc - mean <= 0 ) continue;
 	  hit_aget[asad][aget]++;
 
 	  hptr_array[tpca_id]->Fill( max_adc - mean );
-	  double aget_count;
-	  if(max_adc - mean > 200)
-	    aget_count = hptr_array[tpcaget_count_id]->GetBinContent(asad*4+aget+1)+1;
-	
-	  hptr_array[tpcaget_count_id]->SetBinContent(asad*4+aget+1,aget_count);
-
 	  hptr_array[tpct_id]->Fill( loc_max );
 	  hptr_array[rms_id]->Fill( rms );
-	  hptr_array[tpca2d_id]->SetBinContent( pad+1, max_adc - mean );
-	  hptr_array[tpca2d_id+1]->SetBinContent( pad+1, rms );
-	  hptr_array[tpca2d_id+2]->SetBinContent( pad+1, loc_max );
+	  poly_adc.Set( pad+1, max_adc - mean );
+	  poly_tdc.Set( pad+1, loc_max );
 	  Double_t pad_z = gTpcPad.GetPoint( pad ).Z();
 	  Double_t pad_x = gTpcPad.GetPoint( pad ).X();
 
@@ -818,7 +797,7 @@ process_event( void )
 	
 	  if( max_adc - mean > 0 ){
 	    ++n_active_pad;
-	    hptr_array[tpca2d_id+3]->Fill( pad_z, pad_x );
+	    hptr_array[hit2d_id]->Fill( pad_z, pad_x );
 	    if( max_tb >= 60 && max_tb < 100
 		&& pad_z >= -250 && pad_z <= -200
 		&& max_adc - mean > 300
@@ -851,7 +830,6 @@ process_event( void )
       int max_aget  = -1;
       for(int asad=0; asad<NumOfAsadTPC; ++asad){
 	for(int aget=0; aget<4; ++aget){
-	  hptr_array[agetmul_id]->Fill( asad*4+aget,hit_aget[asad][aget] );
 	  if(hit_aget[asad][aget] > max_count){
             max_count = hit_aget[asad][aget];
             max_asad  = asad;

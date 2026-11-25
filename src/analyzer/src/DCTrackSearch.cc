@@ -37,7 +37,10 @@ const auto& gUser = UserParamMan::GetInstance();
 const auto& zBH2  = gGeom.LocalZ("BH2");
 const Double_t MaxChisquare       = 2000.; // Set to be More than 30
 const Double_t MaxNumOfCluster = 10.;    // Set to be Less than 30
-const Double_t MaxCombi = 1.0e6;    // Set to be Less than 10^6
+// online: 1e5 (offline 1e6). With 1e6 a busy BcIn/BcOut event took up to
+// ~1.5 s; with 1e5 the max is ~65 ms, losing ~5% of BcIn / ~0.4% of BcOut
+// track-found events (run 2448)
+const Double_t MaxCombi = 1.0e5;    // Set to be Less than 10^6
 // BcOut for XUV Tracking routine
 const Double_t MaxChisquareVXU = 50.;//
 const Double_t ChisquareCutVXU = 50.;//

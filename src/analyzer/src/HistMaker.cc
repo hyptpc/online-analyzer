@@ -541,26 +541,20 @@ HistMaker::createTPC(Bool_t flag_ps)
   TList *top_dir = new TList;
   top_dir->SetName(nameDetector);
   {
-    Int_t target_id = getUniqueID( kTPC, 0, kADC2D );
-    auto title = Form( "%s_ADC2D", nameDetector );
+    // pad maps drawn on the canvases (ch: 1 ADC2D, 3 TDC2D, 4 Hit2D,
+    // 5 Threshold2D; 2 RMS2D and 6 Max2D are no longer made)
     auto h_adc = dynamic_cast<TH2Poly*>
-      ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
-    title = Form( "%s_RMS2D", nameDetector );
-    auto h_rms = dynamic_cast<TH2Poly*>
-      ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
-    title = Form( "%s_TDC2D", nameDetector );
-    auto h_loc = dynamic_cast<TH2Poly*>
-      ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
-    title = Form( "%s_Hit2D", nameDetector );
-    auto h_thre = dynamic_cast<TH2Poly*>
-      ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
-    title = Form( "%s_Threshold2D", nameDetector );
-    auto h_max = dynamic_cast<TH2Poly*>
-      ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
-    title = Form( "%s_Max2D", nameDetector );
+      ( createTH2Poly( getUniqueID( kTPC, 0, kADC2D, 1 ),
+                       Form( "%s_ADC2D", nameDetector ), -300, 300, -300, 300 ) );
+    auto h_tdc = dynamic_cast<TH2Poly*>
+      ( createTH2Poly( getUniqueID( kTPC, 0, kADC2D, 3 ),
+                       Form( "%s_TDC2D", nameDetector ), -300, 300, -300, 300 ) );
     auto h_hit = dynamic_cast<TH2Poly*>
-      ( createTH2Poly( target_id++, title, -300, 300, -300, 300 ) );
-
+      ( createTH2Poly( getUniqueID( kTPC, 0, kADC2D, 4 ),
+                       Form( "%s_Hit2D", nameDetector ), -300, 300, -300, 300 ) );
+    auto h_thre = dynamic_cast<TH2Poly*>
+      ( createTH2Poly( getUniqueID( kTPC, 0, kADC2D, 5 ),
+                       Form( "%s_Threshold2D", nameDetector ), -300, 300, -300, 300 ) );
 
     Double_t X[5]={};
     Double_t Y[5]={};
@@ -587,34 +581,24 @@ HistMaker::createTPC(Bool_t flag_ps)
 	Y[0] = Y[4];
 	for( Int_t ii=0; ii<5; ii++ ) X[ii] -=143;
         h_adc->AddBin( 5, X, Y );
-        h_rms->AddBin( 5, X, Y );
-        h_loc->AddBin( 5, X, Y );
+        h_tdc->AddBin( 5, X, Y );
         h_hit->AddBin( 5, X, Y );
-	h_thre->AddBin( 5, X, Y );
-	h_max->AddBin( 5, X, Y );
+        h_thre->AddBin( 5, X, Y );
       }
     }
-    
+
     h_adc->SetStats( 0 );
     h_adc->SetMinimum(    0. );
     h_adc->SetMaximum( 4000. );
-    h_rms->SetStats( 0 );
-    h_rms->SetMinimum(    0. );
-    h_rms->SetMaximum(  200. );
-    h_loc->SetStats( 0 );
-    h_loc->SetMinimum(    0. );
-    h_loc->SetMaximum(  NumOfTimeBucket );
-    //h_thre->SetMinimum(   0. );
-    h_hit->SetMinimum(   0. );
-    //h_thre->SetMaximum( 2000. );
-    h_max->SetMinimum(700.);
-    h_max->SetMaximum(2000.);
+    h_tdc->SetStats( 0 );
+    h_tdc->SetMinimum(    0. );
+    h_tdc->SetMaximum(  NumOfTimeBucket );
+    h_thre->SetMinimum( 700. );
+    h_thre->SetMaximum( 2000. );
     top_dir->Add( h_adc );
-    top_dir->Add( h_rms );
-    top_dir->Add( h_loc );
+    top_dir->Add( h_tdc );
     top_dir->Add( h_hit );
     top_dir->Add( h_thre );
-    top_dir->Add( h_max );
     
   }
   // ADC
@@ -625,22 +609,6 @@ HistMaker::createTPC(Bool_t flag_ps)
   // TDC
   top_dir->Add( createTH1( getUniqueID( kTPC, 0, kTDC ),
                            "TPC_TDC", NumOfTimeBucket, 0, NumOfTimeBucket ) );
-  top_dir->Add( createTH2( getUniqueID( kTPC, 0, kTDC2D ),
-                           "TPC_Hit_ZY", 100, -300, 300,
-			   NumOfTimeBucket, 0, NumOfTimeBucket,
-			   "z [mm]", "tb" ) );
-  top_dir->Add( createTH2( getUniqueID( kTPC, 1, kTDC2D ),
-                           "TPC_Hit_XY", 100, -300, 300,
-			   NumOfTimeBucket, 0, NumOfTimeBucket,
-			   "x [mm]", "tb" ) );
-  top_dir->Add( createTH2( getUniqueID( kTPC, 2, kTDC2D ),
-                           "TPC_ZY", 100, -300, 300,
-			   NumOfTimeBucket, 0, NumOfTimeBucket,
-			   "z [mm]", "tb" ) );
-  top_dir->Add( createTH2( getUniqueID( kTPC, 3, kTDC2D ),
-                           "TPC_XY", 100, -300, 300,
-			   NumOfTimeBucket, 0, NumOfTimeBucket,
-			   "x [mm]", "tb" ) );
   // FADC
   top_dir->Add( createTH2( getUniqueID( kTPC, 0, kFADC,1 ),
                            "TPC_FADC",
@@ -661,46 +629,20 @@ HistMaker::createTPC(Bool_t flag_ps)
   // Multiplicity
   top_dir->Add( createTH1( getUniqueID( kTPC, 0, kMulti ),
                            "TPC_multiplicity", 600, 0, 6000 ) );
-  top_dir->Add( createTH2( getUniqueID( kTPC, 3, kMulti ),
-                           "TPC_AGET_multiplicity", 124, -0.5, 123.5, 50,0,50,
-			   "AsAdID#times4+AGETID", "Multiplicity/AGET" ) );
   top_dir->Add( createTH1( getUniqueID( kTPC, 4, kMulti ),
                            "TPC_AGET_multiplicity_Max", 64, 0, 64 ) );
 
 
-  top_dir->Add( createTH1( getUniqueID( kTPC, 1, kADC),
-                           "TPC_AGET_Count", 124, 0,124,
-			   "AsAdID#times4+AGETID", "Count" ) );
 
   
   for(int i=0;i<NumOfAsadTPC;i++){
-    top_dir->Add( createTH1( getUniqueID( kTPC, 5, kMulti, i),
-			     Form("TPC_Max_AsAd%d",i+1),NumOfEvtCut,0,NumOfEvtCut,
-			     "Event","Max ADC"));
-    top_dir->Add( createTH1( getUniqueID( kTPC, 6, kMulti, i),
-			     Form("TPC_Min_AsAd%d",i+1),NumOfEvtCut,0,NumOfEvtCut,
-			     "Event","Min ADC"));
-
     top_dir->Add( createTH2( getUniqueID( kTPC, 7, kMulti, i),
 			     Form("TPC_RMS_AsAd%d",i+1),NumOfEvtCut,0,NumOfEvtCut,10,0,50,
 			     "Event","Min ADC"));
   }
-  top_dir->Add( createTH1( getUniqueID( kTPC, 8, kMulti),
-			   "TPC_Evt",1000000,0,1000000,
-			   "Event","Count"));
 
 
   
-  // ClusterSize
-  top_dir->Add( createTH2( getUniqueID( kTPC, 2, kMulti ),
-                           "TPC_ClusterSize", 42, -10, 32, 10, 0, 10,
-			   "Layer ID", "Cluster size") );
-  // TPC-CLOCK
-  top_dir->Add( createTH1( getUniqueID( kTPC, 1, kTDC ),
-			   "TPC_CLOCK", 50000, 0, 2000000,
-			   "TDC", "") );
-  top_dir->Add( createTH1( getUniqueID( kTPC, 1, kMulti ),
-			  "TPC_CLOCK_multiplicity", 10, 0, 10) );
   // TPC-BeamProfile
 //  top_dir->Add( createTH1( getUniqueID( kTPC, 2, kTDC ),
 //		 	  "TPC_BeamProfile", 34, 0, 34,
