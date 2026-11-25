@@ -10,7 +10,6 @@
 #include <string>
 #include <vector>
 
-#include <TGraph.h>
 #include <TH1.h>
 #include <TMath.h>
 #include <TMinuit.h>
@@ -719,66 +718,6 @@ T2SegText(Int_t particle)
   return nullptr;
 }
 
-//_____________________________________________________________________________
-// one point outside any frame, so that an unused line draws nothing
-void
-HideGraph(TGraph* gr)
-{
-  gr->Set(1);
-  gr->SetPoint(0, -1.e6, -1.e6);
-}
-
-//_____________________________________________________________________________
-std::vector<TGraph*>&
-EventDisplayGraphs()
-{
-  static std::vector<TGraph*> graphs = []{
-    std::vector<TGraph*> g;
-    for(Int_t i=0; i<kMaxDisplayTracks; ++i){
-      auto gr = new TGraph();
-      gr->SetName(Form("BeamRK_%d", i));
-      gr->SetLineColor(kRed);
-      gr->SetLineWidth(2);
-      HideGraph(gr);
-      g.push_back(gr);
-    }
-    return g;
-  }();
-  return graphs;
-}
-
-//_____________________________________________________________________________
-void
-UpdateEventDisplay(const DCAnalyzer& dcAna, TH1* h_target_x)
-{
-  // RK end plane: SCH from DCGEO (HypTPC local), as the event display frame
-  static const Double_t z_sch = LocalZFromGeom("SCH");
-  auto& graphs = EventDisplayGraphs();
-  // unused lines keep one point far outside the frame: a 0-point TGraph
-  // gives "TGraphPainter::PaintGraph: illegal number of points (0)"
-  for(auto& gr : graphs) HideGraph(gr);
-  if(!std::isfinite(z_sch)) return;
-  const auto tracks = FitBeamTracks(dcAna);
-  std::vector<ThreeVector> points;
-  for(std::size_t i=0; i<tracks.size() && i<graphs.size(); ++i){
-    if(!TraceBeam(tracks[i], z_sch, points)) continue;
-    // event display: horizontal = z, vertical = x [mm]
-    graphs[i]->Set(points.size());
-    for(std::size_t j=0; j<points.size(); ++j)
-      graphs[i]->SetPoint(j, points[j].z(), points[j].x());
-    // x at the target plane, interpolated between the RK points
-    if(!h_target_x || !std::isfinite(g_z_target)) continue;
-    for(std::size_t j=1; j<points.size(); ++j){
-      const auto& a = points[j-1];
-      const auto& b = points[j];
-      if(a.z() <= g_z_target && g_z_target <= b.z() && b.z() > a.z()){
-        const Double_t f = (g_z_target - a.z())/(b.z() - a.z());
-        h_target_x->Fill(a.x() + f*(b.x() - a.x()));
-        break;
-      }
-    }
-  }
-}
 }
 
 //______________________________________________________________________________

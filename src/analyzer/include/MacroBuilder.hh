@@ -115,8 +115,6 @@ TCanvas* SHS2D_wotpc( void );
 
 void      UpdateBLDCEfficiency();
 void      UpdateCounterEfficiency();
-// RK target x (TPC_BeamProfile_RK) scaled to the TPC_BeamProfile peak on TPC2D
-void      UpdateTPCBeamProfile();
 }
 
 };

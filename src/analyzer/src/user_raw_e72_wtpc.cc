@@ -43,8 +43,6 @@
 #include "DCGeomMan.hh"
 #include "DetSizeMan.hh"
 #include "DCAnalyzer.hh"
-#include "FieldMan.hh"
-#include "K18Tracking.hh"
 #include "DCLocalTrack.hh"
 #include "EventAnalyzer.hh"
 #include "RawData.hh"
@@ -130,9 +128,6 @@ process_begin( const std::vector<std::string>& argv )
   ConfMan::getInstance().initializeDCTdcCalibMan();
   ConfMan::getInstance().initializeDCDriftParamMan();
   ConfMan::getInstance().initializeDetSizeMan();
-  ConfMan::getInstance().initializeTransferMatrixMan();
-  ConfMan::getInstance().initializeK18Tracking();
-  ConfMan::getInstance().initializeFieldMan();
   // gROOT->SetBatch(kTRUE);
   gStyle->SetOptStat(1110);
   gStyle->SetTitleW(.4);
@@ -1049,20 +1044,11 @@ process_event( void )
   {
     
     RawData rawData;
-    for (const auto& name : DCNameList.at("BcIn")) rawData.DecodeHits(name);
     for (const auto& name : DCNameList.at("BcOut")) rawData.DecodeHits(name);
     EventAnalyzer evAna;
     evAna.DCRawHit("BcOut", rawData);
 
     DCAnalyzer dcAna(rawData);
-    // BcIn for the K18 momentum of the RK beam line
-    dcAna.DecodeBcInHits();
-    dcAna.TotCut("BLC1a");
-    dcAna.TotCut("BLC1b");
-    dcAna.DriftTimeCut("BLC1a");
-    dcAna.DriftTimeCut("BLC1b");
-    dcAna.TrackSearchBcIn();
-
     dcAna.DecodeBcOutHits();
     dcAna.TotCut("BLC2a");
     dcAna.TotCut("BLC2b");
@@ -1083,20 +1069,13 @@ process_event( void )
     auto h2 = dynamic_cast<TH2*>(hptr_array[hist_id]);
     h2->Reset();
     const auto& tracks = dcAna.GetBcOutTrackContainer();
-
-    // RK beam line through the HS field up to SCH (K18 momentum);
-    // the straight BcOut line below is drawn only without the field map
-    static const Int_t tpcbp_rk_id = gHist.getSequentialID(kTPC, 2, kHitPat);
-    k18::UpdateEventDisplay(dcAna, hptr_array[tpcbp_rk_id]);
-
-    if(!FieldMan::GetInstance().IsReady()){
-      for (const auto& track : tracks) {
-        double x0 = track->GetX0();
-        double u0 = track->GetU0();
-        for(int n_bcout = 0;n_bcout<bcout_count;n_bcout++){
-          double real_z = z_start+step*n_bcout;
-          h2->Fill(real_z+ff_offset,x0+real_z*u0,100);
-        }
+    
+    for (const auto& track : tracks) {
+      double x0 = track->GetX0();
+      double u0 = track->GetU0();
+      for(int n_bcout = 0;n_bcout<bcout_count;n_bcout++){
+	double real_z = z_start+step*n_bcout;
+	h2->Fill(real_z+ff_offset,x0+real_z*u0,100);
       }
     }
   }
@@ -1106,7 +1085,6 @@ process_event( void )
     auto prev_level = gErrorIgnoreLevel;
     gErrorIgnoreLevel = kError;
     http::UpdateCounterEfficiency();
-    http::UpdateTPCBeamProfile();
     //http::UpdateBcOutEfficiency();
     //http::UpdateSdcInOutEfficiency();
     // http::UpdateT0PeakFitting();

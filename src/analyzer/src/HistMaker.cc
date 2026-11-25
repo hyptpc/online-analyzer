@@ -708,11 +708,6 @@ HistMaker::createTPC(Bool_t flag_ps)
   top_dir->Add( createTH1( getUniqueID( kTPC, 2, kTDC ),
 			   "TPC_BeamProfile", 20, -100, 100,
 			   "x [mm]", "") );
-  // RK beam x at the target (K18Tracking), same binning as TPC_BeamProfile;
-  // drawn scaled to TPC_BeamProfile on TPC2D (http::UpdateTPCBeamProfile)
-  top_dir->Add( createTH1( getUniqueID( kTPC, 2, kHitPat ),
-			   "TPC_BeamProfile_RK", 20, -100, 100,
-			   "x [mm]", "") );
   return top_dir;
 }
 
