@@ -26,6 +26,8 @@ private:
   std::vector<TH1*>      m_th1_list;
 
 public:
+  // serve the files of the local directory path at the URL prefix (e.g. "tpcmap/")
+  void AddLocation(TString prefix, TString path);
   void CreateItem(TString name, TString desc);
   void Hide(TString dir);
   void Open();

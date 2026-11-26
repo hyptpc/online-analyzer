@@ -44,6 +44,31 @@
 #include "K18Tracking.hh"
 namespace{
   HistMaker&   gHist   = HistMaker::getInstance();
+
+//_____________________________________________________________________________
+// Painting a TH2Poly (c1->Update()) gives every bin polygon its own TH1F
+// (TGraph::GetHistogram). JSROOT does not use them, but THttpServer sends
+// them with every request: ~2.4 kB per TPC pad, ~14 MB for one pad map.
+void
+DropPolyBinHistograms(TVirtualPad* pad)
+{
+  if(!pad) return;
+  for(auto obj : *pad->GetListOfPrimitives()){
+    if(auto sub = dynamic_cast<TVirtualPad*>(obj)){
+      DropPolyBinHistograms(sub);
+      continue;
+    }
+    auto poly = dynamic_cast<TH2Poly*>(obj);
+    if(!poly || !poly->GetBins()) continue;
+    for(auto b : *poly->GetBins()){
+      auto g = dynamic_cast<TGraph*>(static_cast<TH2PolyBin*>(b)->GetPolygon());
+      if(!g) continue;
+      auto h = g->GetHistogram();
+      g->SetHistogram(nullptr);
+      delete h;
+    }
+  }
+}
 }
 namespace analyzer
 {
@@ -1381,6 +1406,7 @@ SHS2D_EVT( void )
   c1->Modified();
   gPad->RedrawAxis();
   c1->Update();
+  DropPolyBinHistograms(c1);
   
   return c1;
 }
@@ -1466,6 +1492,7 @@ SHS2D_HITPATTERN( void )
   gStyle->SetPalette(kBird);
   c1->Modified();
   c1->Update();
+  DropPolyBinHistograms(c1);
   
   return c1;
 }
@@ -1509,6 +1536,7 @@ SHS2D_wotpc( void )
   gStyle->SetPalette(kBird);
   c1->Modified();
   c1->Update();
+  DropPolyBinHistograms(c1);
   
   return c1;
 }

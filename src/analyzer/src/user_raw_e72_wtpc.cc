@@ -46,6 +46,7 @@
 #include "DCAnalyzer.hh"
 #include "FieldMan.hh"
 #include "K18Tracking.hh"
+#include "TpcPadMapWeb.hh"
 #include "DCLocalTrack.hh"
 #include "EventAnalyzer.hh"
 #include "RawData.hh"
@@ -216,6 +217,12 @@ process_begin( const std::vector<std::string>& argv )
 
   
   if(0 != gHist.setHistPtr(hptr_array)){ return -1; }
+
+  // light pad maps for /tpcmap/tpc_padmap.html (polygons sent once)
+  tpcweb::Initialize( hptr_array[gHist.getSequentialID(kTPC, 0, kADC2D, 1)],
+                      hptr_array[gHist.getSequentialID(kTPC, 0, kADC2D, 3)],
+                      hptr_array[gHist.getSequentialID(kTPC, 0, kADC2D, 4)],
+                      hptr_array[gHist.getSequentialID(kTPC, 0, kADC2D, 5)] );
   
   // Macro for HttpServer
 
@@ -837,6 +844,8 @@ process_event( void )
         
     
     
+      tpcweb::Update();
+
       std::cout << "run# " << run_number << "  ev# " << event_number
 		<< "  active pad = " << n_active_pad << std::endl;
 

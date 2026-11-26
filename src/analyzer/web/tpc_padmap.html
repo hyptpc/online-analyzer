@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TPC pad maps</title>
+<!--
+  Light TPC pad maps (tpcweb, TpcPadMapWeb.cc).
+  The pad polygons are read once from /TPCPadMap/TPC_PadGeom; at every
+  refresh only the pad contents (TH1D /TPCPadMap/TPC_Pad*) are fetched.
+-->
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; font: 13px/1.4 system-ui, sans-serif; background: #f4f4f4; color: #222; }
+  header { display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+           padding: 6px 10px; background: #fff; border-bottom: 1px solid #ccc; }
+  header h1 { font-size: 15px; margin: 0 8px 0 0; }
+  header label { display: flex; gap: 4px; align-items: center; }
+  #status { color: #666; font-variant-numeric: tabular-nums; }
+  #status.err { color: #b00; }
+  main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+         gap: 8px; padding: 8px; }
+  .panel { background: #fff; border: 1px solid #ccc; position: relative; }
+  .panel .title { padding: 4px 8px; font-weight: 600; border-bottom: 1px solid #eee;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .panel canvas { display: block; width: 100%; }
+  #tip { position: fixed; pointer-events: none; background: rgba(0,0,0,.8); color: #fff;
+         padding: 3px 6px; border-radius: 3px; font-variant-numeric: tabular-nums;
+         display: none; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>TPC pad maps</h1>
+  <label>refresh
+    <select id="interval">
+      <option value="1000">1 s</option>
+      <option value="3000" selected>3 s</option>
+      <option value="5000">5 s</option>
+      <option value="10000">10 s</option>
+    </select>
+  </label>
+  <button id="pause" type="button">pause</button>
+  <span id="status">loading pad geometry…</span>
+</header>
+<main id="panels"></main>
+<div id="tip"></div>
+<script>
+"use strict";
+// server root: this page is served at /tpcmap/tpc_padmap.html
+const ROOT_URL = new URL("../", location.href).href;
+const MAPS = [
+  { name: "TPC_PadADC",       label: "ADC2D" },
+  { name: "TPC_PadTDC",       label: "TDC2D" },
+  { name: "TPC_PadHit",       label: "Hit2D" },
+  { name: "TPC_PadThreshold", label: "Threshold2D" },
+];
+const RANGE = { xmin: -300, xmax: 300, ymin: -300, ymax: 300 }; // HistMaker::createTPC
+
+// ROOT kBird palette (TColor::SetPalette(kBird)), 255 colors
+const PALETTE = (() => {
+  const r = [0.2082, 0.0592, 0.0780, 0.0232, 0.1802, 0.5301, 0.8186, 0.9956, 0.9764];
+  const g = [0.1664, 0.3599, 0.5041, 0.6419, 0.7178, 0.7492, 0.7328, 0.7862, 0.9832];
+  const b = [0.5293, 0.8684, 0.8385, 0.7914, 0.6425, 0.4662, 0.3499, 0.1968, 0.0539];
+  const out = [];
+  for (let i = 0; i < 255; ++i) {
+    const t = i / 254 * 8, k = Math.min(7, Math.floor(t)), f = t - k;
+    const c = (a) => Math.round(255 * (a[k] + f * (a[k + 1] - a[k])));
+    out.push(`rgb(${c(r)},${c(g)},${c(b)})`);
+  }
+  return out;
+})();
+
+let geom = null;      // { n, paths: Path2D[], cx, cy } in mm
+let timer = null, paused = false, busy = false;
+const panels = [];
+
+function fetchJson(path) {
+  return fetch(ROOT_URL + path, { cache: "no-store" }).then((r) => {
+    if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
+    return r.json();
+  });
+}
+
+// fArray of a TH1D; also accepts the TBufferJSON compressed array form
+function plainArray(a) {
+  if (Array.isArray(a)) return a;
+  if (a && a.$arr !== undefined) {
+    const out = new Array(a.len).fill(0);
+    let p = a.p ?? 0;
+    if (a.v !== undefined) {
+      const v = Array.isArray(a.v) ? a.v : [a.v];
+      if (a.n !== undefined) for (let i = 0; i < a.n; ++i) out[p++] = v[0];
+      else for (const x of v) out[p++] = x;
+    }
+    for (let k = 1; a["p" + k] !== undefined; ++k) {
+      p = a["p" + k];
+      const v = a["v" + k], n = a["n" + k];
+      if (n !== undefined) for (let i = 0; i < n; ++i) out[p++] = v;
+      else for (const x of (Array.isArray(v) ? v : [v])) out[p++] = x;
+    }
+    return out;
+  }
+  return [];
+}
+
+function buildGeometry(g) {
+  const paths = [], cx = [], cy = [];
+  for (let i = 0; i < g.n; ++i) {
+    const xs = g.x[i], ys = g.y[i], p = new Path2D();
+    let sx = 0, sy = 0;
+    for (let k = 0; k < xs.length; ++k) {
+      if (k === 0) p.moveTo(xs[k], ys[k]); else p.lineTo(xs[k], ys[k]);
+      sx += xs[k]; sy += ys[k];
+    }
+    p.closePath();
+    paths.push(p); cx.push(sx / xs.length); cy.push(sy / xs.length);
+  }
+  return { n: g.n, paths, cx, cy };
+}
+
+function makePanel(m) {
+  const div = document.createElement("div");
+  div.className = "panel";
+  const title = document.createElement("div");
+  title.className = "title";
+  title.textContent = m.label;
+  const canvas = document.createElement("canvas");
+  div.append(title, canvas);
+  document.getElementById("panels").append(div);
+  const panel = { ...m, div, title, canvas, values: null, zmin: 0, zmax: 1, xf: null };
+  canvas.addEventListener("mousemove", (e) => showTip(panel, e));
+  canvas.addEventListener("mouseleave", () => { document.getElementById("tip").style.display = "none"; });
+  return panel;
+}
+
+// frame: square plot area on the left, color bar on the right
+function layout(panel) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = panel.canvas.clientWidth;
+  const h = Math.round(w * 0.88);
+  panel.canvas.style.height = h + "px";
+  if (panel.canvas.width !== Math.round(w * dpr) || panel.canvas.height !== Math.round(h * dpr)) {
+    panel.canvas.width = Math.round(w * dpr);
+    panel.canvas.height = Math.round(h * dpr);
+  }
+  const padL = 44, padB = 34, padT = 8, barW = 14, barGap = 10, barLab = 44;
+  const size = Math.min(w - padL - barGap - barW - barLab, h - padB - padT);
+  return { dpr, w, h, x0: padL, y0: padT, size, barX: padL + size + barGap, barW };
+}
+
+function zRange(panel, vals) {
+  let lo = panel.minStored, hi = panel.maxStored;
+  if (!(hi > -1111)) { // not set: maximum of the contents (min 0, as TH2Poly colz)
+    hi = 0;
+    for (const v of vals) if (v > hi) hi = v;
+    if (hi <= 0) hi = 1;
+  }
+  if (!(lo > -1111)) lo = 0;
+  if (hi <= lo) hi = lo + 1;
+  return [lo, hi];
+}
+
+function draw(panel) {
+  if (!geom) return;
+  const L = layout(panel);
+  const ctx = panel.canvas.getContext("2d");
+  ctx.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
+  ctx.clearRect(0, 0, L.w, L.h);
+  const sx = L.size / (RANGE.xmax - RANGE.xmin), sy = L.size / (RANGE.ymax - RANGE.ymin);
+  // data (mm) -> CSS px, y up
+  panel.xf = { a: sx, d: -sy, e: L.x0 - RANGE.xmin * sx, f: L.y0 + RANGE.ymax * sy };
+  const vals = panel.values;
+  const [lo, hi] = vals ? zRange(panel, vals) : [0, 1];
+  panel.zmin = lo; panel.zmax = hi;
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(L.x0, L.y0, L.size, L.size); ctx.clip();
+  ctx.setTransform(L.dpr * panel.xf.a, 0, 0, L.dpr * panel.xf.d, L.dpr * panel.xf.e, L.dpr * panel.xf.f);
+  ctx.lineWidth = 0.4 / sx;
+  ctx.strokeStyle = "#d0d0d0";
+  for (let i = 0; i < geom.n; ++i) {
+    const v = vals ? vals[i] : 0;
+    // as ROOT "col": empty and below-minimum pads are not painted
+    if (vals && v !== 0 && v >= lo) {
+      const k = Math.max(0, Math.min(254, Math.floor((v - lo) / (hi - lo) * 255)));
+      ctx.fillStyle = PALETTE[k];
+      ctx.fill(geom.paths[i]);
+    } else {
+      ctx.stroke(geom.paths[i]);
+    }
+  }
+  ctx.restore();
+
+  // frame and axes
+  ctx.strokeStyle = "#000"; ctx.lineWidth = 1;
+  ctx.strokeRect(L.x0 + 0.5, L.y0 + 0.5, L.size, L.size);
+  ctx.fillStyle = "#000"; ctx.font = "11px system-ui, sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (let t = RANGE.xmin; t <= RANGE.xmax; t += 100) {
+    const x = panel.xf.a * t + panel.xf.e;
+    ctx.fillRect(x, L.y0 + L.size - 5, 1, 5);
+    ctx.fillText(t, x, L.y0 + L.size + 3);
+  }
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (let t = RANGE.ymin; t <= RANGE.ymax; t += 100) {
+    const y = panel.xf.d * t + panel.xf.f;
+    ctx.fillRect(L.x0, y, 5, 1);
+    if (t > RANGE.ymin) ctx.fillText(t, L.x0 - 4, y); // the corner keeps the x label
+  }
+
+  // color bar
+  const n = 64;
+  for (let i = 0; i < n; ++i) {
+    ctx.fillStyle = PALETTE[Math.floor(i / n * 255)];
+    const y1 = L.y0 + L.size * (1 - (i + 1) / n);
+    ctx.fillRect(L.barX, y1, L.barW, L.size / n + 0.5);
+  }
+  ctx.strokeRect(L.barX + 0.5, L.y0 + 0.5, L.barW, L.size);
+  ctx.fillStyle = "#000"; ctx.textAlign = "left";
+  for (let i = 0; i <= 4; ++i) {
+    const z = lo + (hi - lo) * i / 4, y = L.y0 + L.size * (1 - i / 4);
+    ctx.fillText(fmt(z), L.barX + L.barW + 4, y);
+  }
+}
+
+function fmt(v) {
+  const a = Math.abs(v);
+  if (a !== 0 && (a >= 1e5 || a < 1e-2)) return v.toExponential(1);
+  return Number.isInteger(v) ? String(v) : v.toFixed(a < 10 ? 2 : 0);
+}
+
+function showTip(panel, e) {
+  const tip = document.getElementById("tip");
+  if (!geom || !panel.xf) { tip.style.display = "none"; return; }
+  const r = panel.canvas.getBoundingClientRect();
+  const px = e.clientX - r.left, py = e.clientY - r.top;
+  const x = (px - panel.xf.e) / panel.xf.a, y = (py - panel.xf.f) / panel.xf.d;
+  const ctx = panel.canvas.getContext("2d");
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+  let hit = -1, best = Infinity;
+  for (let i = 0; i < geom.n; ++i) { // nearest pad centers first, then the exact polygon
+    const d = (geom.cx[i] - x) ** 2 + (geom.cy[i] - y) ** 2;
+    if (d < best && d < 400 && ctx.isPointInPath(geom.paths[i], x, y)) { best = d; hit = i; }
+  }
+  ctx.restore();
+  if (hit < 0) { tip.style.display = "none"; return; }
+  const v = panel.values ? panel.values[hit] : 0;
+  tip.textContent = `pad ${hit}  (z ${geom.cx[hit].toFixed(0)}, x ${geom.cy[hit].toFixed(0)} mm)  ${panel.label} = ${fmt(v)}`;
+  tip.style.left = (e.clientX + 12) + "px";
+  tip.style.top = (e.clientY + 12) + "px";
+  tip.style.display = "block";
+}
+
+async function refresh() {
+  if (busy || paused) return;
+  busy = true;
+  const st = document.getElementById("status");
+  const t0 = performance.now();
+  try {
+    const objs = await Promise.all(panels.map((p) => fetchJson(`TPCPadMap/${p.name}/root.json?compact=3`)));
+    objs.forEach((o, i) => {
+      const p = panels[i];
+      p.values = plainArray(o.fArray).slice(1, geom.n + 1);
+      p.minStored = o.fMinimum; p.maxStored = o.fMaximum;
+      p.title.textContent = o.fTitle || p.label;
+      draw(p);
+    });
+    st.className = "";
+    st.textContent = `updated ${new Date().toLocaleTimeString()} (${Math.round(performance.now() - t0)} ms)`;
+  } catch (err) {
+    st.className = "err";
+    st.textContent = `update failed: ${err.message}`;
+  } finally {
+    busy = false;
+  }
+}
+
+function restartTimer() {
+  if (timer) clearInterval(timer);
+  timer = setInterval(refresh, Number(document.getElementById("interval").value));
+}
+
+async function main() {
+  for (const m of MAPS) panels.push(makePanel(m));
+  try {
+    const g = await fetchJson("TPCPadMap/TPC_PadGeom/root.json");
+    geom = buildGeometry(JSON.parse(g.fTitle));
+  } catch (err) {
+    const st = document.getElementById("status");
+    st.className = "err";
+    st.textContent = `cannot read pad geometry: ${err.message}`;
+    return;
+  }
+  panels.forEach(draw);
+  await refresh();
+  restartTimer();
+}
+
+document.getElementById("interval").addEventListener("change", restartTimer);
+document.getElementById("pause").addEventListener("click", (e) => {
+  paused = !paused;
+  e.target.textContent = paused ? "resume" : "pause";
+  if (!paused) refresh();
+});
+window.addEventListener("resize", () => panels.forEach(draw));
+main();
+</script>
+</body>
+</html>

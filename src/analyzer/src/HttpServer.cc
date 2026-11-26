@@ -33,6 +33,13 @@ HttpServer::~HttpServer()
 
 //____________________________________________________________________________
 void
+HttpServer::AddLocation(TString prefix, TString path)
+{
+  m_server->AddLocation(prefix, path);
+}
+
+//____________________________________________________________________________
+void
 HttpServer::CreateItem(TString name, TString desc)
 {
   m_server->CreateItem(name, desc);
