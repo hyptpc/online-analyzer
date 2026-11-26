@@ -715,6 +715,8 @@ process_event( void )
       Int_t max_pad = -1;
       for( Int_t layer=0; layer<32; ++layer ){
 	Int_t nPad = TpcPadHelper::PadParameter[layer][1];
+	// digits of this layer: one lookup instead of one per sample in get()
+	const auto& tpc_plane = gUnpacker.find( k_device, layer );
 	for( Int_t ch=0; ch<nPad; ++ch ){
 	  Int_t pad = gTpcPad.GetPadId( layer, ch ); //0 origin
 	  if( pad < 0 ) continue;
@@ -729,10 +731,20 @@ process_event( void )
 	    continue;
 	  }
 	  std::vector<Double_t> fadc( nhit );
-	  
+	  const auto& raw = tpc_plane[0][ch][k_adc];
+	  // sum, max and its first position in the same pass (same results as
+	  // TMath::Mean, TMath::MaxElement and TMath::LocMax)
+	  Double_t sum = 0.;
+	  Double_t pad_max = 0.;
+	  Int_t loc_max = 0;
 	  for( Int_t i=0; i<nhit; ++i ){
-	    Int_t adc = gUnpacker.get( k_device, layer, 0, ch, k_adc, i );
+	    Int_t adc = raw[i];
 	    fadc[i] = adc;
+	    sum += fadc[i];
+	    if( i == 0 || pad_max < fadc[i] ){
+	      pad_max = fadc[i];
+	      loc_max = i;
+	    }
 	    if( max_adc < adc && nhit == NumOfTimeBucket ){
 	      max_adc = adc;
 	      max_tb  = i;
@@ -743,10 +755,12 @@ process_event( void )
 	    max_fadc = fadc;
 	  }
 	
-	  Double_t mean = TMath::Mean( nhit, fadc.data() );
-	  Double_t rms = TMath::RMS( nhit, fadc.data() );
-	  Double_t max_adc = TMath::MaxElement( nhit, fadc.data() );
-	  Int_t loc_max = TMath::LocMax( nhit, fadc.data() );
+	  Double_t mean = sum/nhit;
+	  // standard deviation with (n-1), two-pass as TMath::RMS
+	  Double_t dev2 = 0.;
+	  for( Int_t i=0; i<nhit; ++i ) dev2 += (fadc[i] - mean)*(fadc[i] - mean);
+	  Double_t rms = nhit > 1 ? TMath::Sqrt( dev2/(nhit - 1) ) : 0.;
+	  Double_t max_adc = pad_max;
 	  // Maximum RMS per AGET
 	  Int_t asad = gTpcPad.GetASADId( layer, ch);
 	  Int_t aget = gTpcPad.GetAGETId(asad, layer, ch);

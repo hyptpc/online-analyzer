@@ -44,6 +44,8 @@
 #include "DCGeomMan.hh"
 #include "DetSizeMan.hh"
 #include "DCAnalyzer.hh"
+#include "FieldMan.hh"
+#include "K18Tracking.hh"
 #include "DCLocalTrack.hh"
 #include "EventAnalyzer.hh"
 #include "RawData.hh"
@@ -153,6 +155,9 @@ process_begin( const std::vector<std::string>& argv )
   ConfMan::getInstance().initializeDCTdcCalibMan();
   ConfMan::getInstance().initializeDCDriftParamMan();
   ConfMan::getInstance().initializeDetSizeMan();
+  ConfMan::getInstance().initializeTransferMatrixMan();
+  ConfMan::getInstance().initializeK18Tracking();
+  ConfMan::getInstance().initializeFieldMan();
   // gROOT->SetBatch(kTRUE);
   gStyle->SetOptStat(1110);
   gStyle->SetTitleW(.4);
@@ -164,7 +169,7 @@ process_begin( const std::vector<std::string>& argv )
   gStyle->SetPalette(55);
   
   // unpacker and all the parameter managers are initialized at this stage  
-  int port=9090;
+  int port=8087;
   
   if(argv.size()==4){
     outputname=argv.at(3);
@@ -731,6 +736,8 @@ process_event( void )
       int hit_aget[NumOfAsadTPC][4]={0};
       for( Int_t layer=0; layer<32; ++layer ){
 	Int_t nPad = TpcPadHelper::PadParameter[layer][1];
+	// digits of this layer: one lookup instead of one per sample in get()
+	const auto& tpc_plane = gUnpacker.find( k_device, layer );
 	for( Int_t ch=0; ch<nPad; ++ch ){
 	  Int_t pad = gTpcPad.GetPadId( layer, ch ); //0 origin
 	  if( pad < 0 ) continue;
@@ -745,11 +752,20 @@ process_event( void )
 	    continue;
 	  }
 	  std::vector<Double_t> fadc( nhit );
-	  
-	  
+	  const auto& raw = tpc_plane[0][ch][k_adc];
+	  // sum, max and its first position in the same pass (same results as
+	  // TMath::Mean, TMath::MaxElement and TMath::LocMax)
+	  Double_t sum = 0.;
+	  Double_t pad_max = 0.;
+	  Int_t loc_max = 0;
 	  for( Int_t i=0; i<nhit; ++i ){
-	    Int_t adc = gUnpacker.get( k_device, layer, 0, ch, k_adc, i );
+	    Int_t adc = raw[i];
 	    fadc[i] = adc;
+	    sum += fadc[i];
+	    if( i == 0 || pad_max < fadc[i] ){
+	      pad_max = fadc[i];
+	      loc_max = i;
+	    }
 	    if( max_adc < adc && nhit == NumOfTimeBucket ){
 	      max_adc = adc;
 	      max_tb  = i;
@@ -760,10 +776,12 @@ process_event( void )
 	    max_fadc = fadc;
 	  }
 	
-	  Double_t mean = TMath::Mean( nhit, fadc.data() );
-	  Double_t rms = TMath::RMS( nhit, fadc.data() );
-	  Double_t max_adc = TMath::MaxElement( nhit, fadc.data() );
-	  Int_t loc_max = TMath::LocMax( nhit, fadc.data() );
+	  Double_t mean = sum/nhit;
+	  // standard deviation with (n-1), two-pass as TMath::RMS
+	  Double_t dev2 = 0.;
+	  for( Int_t i=0; i<nhit; ++i ) dev2 += (fadc[i] - mean)*(fadc[i] - mean);
+	  Double_t rms = nhit > 1 ? TMath::Sqrt( dev2/(nhit - 1) ) : 0.;
+	  Double_t max_adc = pad_max;
 	  // Maximum RMS per AGET
 	  Int_t asad = gTpcPad.GetASADId( layer, ch);
 	  Int_t aget = gTpcPad.GetAGETId(asad, layer, ch);
@@ -1022,11 +1040,20 @@ process_event( void )
   {
     
     RawData rawData;
+    for (const auto& name : DCNameList.at("BcIn")) rawData.DecodeHits(name);
     for (const auto& name : DCNameList.at("BcOut")) rawData.DecodeHits(name);
     EventAnalyzer evAna;
     evAna.DCRawHit("BcOut", rawData);
 
     DCAnalyzer dcAna(rawData);
+    // BcIn for the K18 momentum of the RK beam line
+    dcAna.DecodeBcInHits();
+    dcAna.TotCut("BLC1a");
+    dcAna.TotCut("BLC1b");
+    dcAna.DriftTimeCut("BLC1a");
+    dcAna.DriftTimeCut("BLC1b");
+    dcAna.TrackSearchBcIn();
+
     dcAna.DecodeBcOutHits();
     dcAna.TotCut("BLC2a");
     dcAna.TotCut("BLC2b");
@@ -1047,13 +1074,20 @@ process_event( void )
     auto h2 = dynamic_cast<TH2*>(hptr_array[hist_id]);
     h2->Reset();
     const auto& tracks = dcAna.GetBcOutTrackContainer();
-    
-    for (const auto& track : tracks) {
-      double x0 = track->GetX0();
-      double u0 = track->GetU0();
-      for(int n_bcout = 0;n_bcout<bcout_count;n_bcout++){
-	double real_z = z_start+step*n_bcout;
-	h2->Fill(real_z+ff_offset,x0+real_z*u0,100);
+
+    // RK beam line through the HS field up to SCH (K18 momentum);
+    // the straight BcOut line below is drawn only without the field map
+    static const Int_t tpcbp_rk_id = gHist.getSequentialID(kTPC, 2, kHitPat);
+    k18::UpdateEventDisplay(dcAna, hptr_array[tpcbp_rk_id]);
+
+    if(!FieldMan::GetInstance().IsReady()){
+      for (const auto& track : tracks) {
+        double x0 = track->GetX0();
+        double u0 = track->GetU0();
+        for(int n_bcout = 0;n_bcout<bcout_count;n_bcout++){
+          double real_z = z_start+step*n_bcout;
+          h2->Fill(real_z+ff_offset,x0+real_z*u0,100);
+        }
       }
     }
   }
@@ -1063,6 +1097,7 @@ process_event( void )
     auto prev_level = gErrorIgnoreLevel;
     gErrorIgnoreLevel = kError;
     http::UpdateCounterEfficiency();
+    http::UpdateTPCBeamProfile();
     //http::UpdateBcOutEfficiency();
     //http::UpdateSdcInOutEfficiency();
     // http::UpdateT0PeakFitting();
