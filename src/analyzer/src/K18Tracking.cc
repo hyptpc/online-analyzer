@@ -302,12 +302,15 @@ SetupT2Box()
               << e.what() << std::endl;
     return;
   }
+  /*
   for(Int_t i=0; i<kHtofDownNSeg; ++i){
     const Double_t x1 = (i - 0.5*kHtofDownNSeg) * kHtofSegWidth;
     const Double_t x2 = x1 + kHtofSegWidth;
     if(x1 < g_t2_box.x2 && g_t2_box.x1 < x2)
       g_t2_htof_segs.push_back(kHtofDownSeg0 + i);
   }
+  */
+  g_t2_htof_segs.push_back(20);
   std::cout << "#D K18 T2 box x = [" << g_t2_box.x1 << ", " << g_t2_box.x2
             << "], y = [" << g_t2_box.y1 << ", " << g_t2_box.y2
             << "] mm, HTOF segments :";
