@@ -539,7 +539,7 @@ TCanvas*
 SCHTOTBoard()
 {
   TCanvas *c1 = new TCanvas(__func__, __func__);
-  c1->Divide(2, 1);
+  c1->Divide(2, 2);
   for(Int_t board=0; board<2; ++board){
     c1->cd(board+1);
     auto hall = GHist::get(HistMaker::getUniqueID(kSCH, 0, kTOT, 100+board+1));
@@ -554,11 +554,25 @@ SCHTOTBoard()
     auto href = SCHTOTRefMarker(board);
     if(href) href->Draw("hist same");
   }
+  // lower pads: single segments at the board boundary (seg 31: board0, seg 32: board1)
+  const Int_t seg_list[2] = {31, 32};
+  for(Int_t i=0; i<2; ++i){
+    c1->cd(i+3);
+    auto hall = GHist::get(HistMaker::getUniqueID(kSCH, 0, kTOT, seg_list[i]+1));
+    auto h = GHist::get(HistMaker::getUniqueID(kSCH, 0, kTOTwTDC, seg_list[i]+1));
+    if(!hall || !h) continue;
+    hall->SetLineColor(kBlack);
+    hall->Draw();
+    h->SetLineColor(kRed);
+    h->SetFillColor(kRed);
+    h->SetFillStyle(3001);
+    h->Draw("same");
+  }
   return c1;
 }
 
 //____________________________________________________________________________
-// Current peak of the board-sum TOT = mean within +-3 bins of the maximum bin
+// Current position of the board-sum TOT = mean within a fixed TOT range
 void
 UpdateSCHTOTPeak()
 {
@@ -566,34 +580,35 @@ UpdateSCHTOTPeak()
   static auto c1 = (TCanvas*)gROOT->FindObject("SCHTOTBoard");
   if(!c1) return;
   const Double_t min_entries = 200.;
+  const Double_t tot_min = 35.; // [ch] above the noise part
+  const Double_t tot_max = 100.;
   for(Int_t board=0; board<2; ++board){
     c1->cd(board+1);
     TH1 *h = GHist::get(HistMaker::getUniqueID(kSCH, 0, kTOTwTDC, 100+board+1));
     if(!h) continue;
+    const Int_t b1 = h->FindBin(tot_min + 1.e-6);
+    const Int_t b2 = TMath::Min(h->GetNbinsX(), h->FindBin(tot_max - 1.e-6));
+    Double_t sw = 0., swx = 0.;
+    for(Int_t b=b1; b<=b2; ++b){
+      sw  += h->GetBinContent(b);
+      swx += h->GetBinContent(b)*h->GetBinCenter(b);
+    }
     TString text;
-    if(h->Integral() < min_entries){
-      text = "peak: low statistics";
+    if(sw < min_entries){
+      text = Form("mean[%.0f-%.0f]: low statistics", tot_min, tot_max);
     }else{
-      const Int_t bmax = h->GetMaximumBin();
-      const Int_t b1 = TMath::Max(1, bmax-3);
-      const Int_t b2 = TMath::Min(h->GetNbinsX(), bmax+3);
-      Double_t sw = 0., swx = 0.;
-      for(Int_t b=b1; b<=b2; ++b){
-	sw  += h->GetBinContent(b);
-	swx += h->GetBinContent(b)*h->GetBinCenter(b);
-      }
       const Double_t peak = swx/sw;
       if(sch_tot_ref[board] < 0.)
-	text = Form("peak %.2f  (ref not set)", peak);
+	text = Form("mean[%.0f-%.0f] %.2f  (ref not set)", tot_min, tot_max, peak);
       else
-	text = Form("peak %.2f  ref %.2f  diff %+.2f",
-		    peak, sch_tot_ref[board], peak - sch_tot_ref[board]);
+	text = Form("mean[%.0f-%.0f] %.2f  ref %.2f  diff %+.2f",
+		    tot_min, tot_max, peak, sch_tot_ref[board], peak - sch_tot_ref[board]);
     }
     if(tex[board]) delete tex[board];
     tex[board] = new TText;
     tex[board]->SetNDC();
-    tex[board]->SetTextSize(0.045);
-    tex[board]->SetText(0.30, 0.80, text);
+    tex[board]->SetTextSize(0.035);
+    tex[board]->SetText(0.13, 0.86, text);
     tex[board]->Draw();
   }
 }

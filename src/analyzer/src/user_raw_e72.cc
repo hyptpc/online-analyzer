@@ -854,7 +854,7 @@ process_event( void )
 	  hid=gHist.getSequentialID(kDET,0,kTOT,seg+1);
 	  hptr_array[hid]->Fill(leading_array.at(m) - tdc);
 	  hid=gHist.getSequentialID(kDET,0,kTOTwTDC,seg+1);
-	  if(ntdc>0){
+        if(tdc_min < (UInt_t)leading_array.at(m) && (UInt_t)leading_array.at(m) < tdc_max){
 	    hptr_array[hid]->Fill(leading_array.at(m) - tdc);
 	  }
 	  hid=gHist.getSequentialID(kDET,0,kADC2D,seg+1);
