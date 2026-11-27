@@ -229,9 +229,18 @@ process_begin( const std::vector<std::string>& argv )
   // gHttp.Register(http::HTOFThreshold());
   gHttp.Register(http::KVC());
   gHttp.Register(http::T1T2T3());
+  { // SCH TOT reference peak [ch] for board0/board1 (UserParam: SCH_TOT_REF, optional)
+    double sch_tot_ref[2] = {-1., -1.};
+    if(gUser.GetSize("SCH_TOT_REF") >= 2){
+      sch_tot_ref[0] = gUser.GetParameter("SCH_TOT_REF", 0);
+      sch_tot_ref[1] = gUser.GetParameter("SCH_TOT_REF", 1);
+    }
+    http::SetSCHTOTRef(sch_tot_ref[0], sch_tot_ref[1]);
+  }
   gHttp.Register(http::SCHTOT());
   gHttp.Register(http::SCHTDC());
   gHttp.Register(http::SCHTDCVSTOT());
+  gHttp.Register(http::SCHTOTBoard());
   gHttp.Register(http::CVCADC());
   gHttp.Register(http::CVCTDC());
   gHttp.Register(http::SAC3());
@@ -818,7 +827,7 @@ process_event( void )
       int ntdc = 0;
       int nhit = gUnpacker.get_entries(k_device, 0, seg, 0, k_l);
       if( nhit==0 ) continue;
-      ++multiplicity;
+      // ++multiplicity; // counted hits outside the TDC window (double count)
       ntdc = 0;
       std::vector< int > leading_array;
       int leading_size = nhit;
@@ -850,6 +859,11 @@ process_event( void )
 	  }
 	  hid=gHist.getSequentialID(kDET,0,kADC2D,seg+1);
 	  hptr_array[hid]->Fill(leading_array.at(m), leading_array.at(m) - tdc);
+	  // board-sum TOT (board0: seg 0-31, board1: seg 32-63), gated hit by hit
+	  if(tdc_min < (UInt_t)leading_array.at(m) && (UInt_t)leading_array.at(m) < tdc_max){
+	    hid=gHist.getSequentialID(kDET,0,kTOTwTDC,100+seg/32+1);
+	    hptr_array[hid]->Fill(leading_array.at(m) - tdc);
+	  }
 	}
       }
       if(ntdc>0){
@@ -1416,6 +1430,7 @@ process_event( void )
     auto prev_level = gErrorIgnoreLevel;
     gErrorIgnoreLevel = kError;
     http::UpdateCounterEfficiency();
+    http::UpdateSCHTOTPeak();
     //http::UpdateBcOutEfficiency();
     //http::UpdateSdcInOutEfficiency();
     // http::UpdateT0PeakFitting();

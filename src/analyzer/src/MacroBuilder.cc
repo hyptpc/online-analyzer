@@ -482,6 +482,39 @@ T1T2T3()
 }
 
 //____________________________________________________________________________
+// SCH TOT reference peak [ch] for board0 (seg 0-31) and board1 (seg 32-63).
+// A negative value means "not set": no reference marker is drawn.
+namespace
+{
+Double_t sch_tot_ref[2] = {-1., -1.};
+
+// thin red marker at the reference position, clipped at the top of the frame
+TH1*
+SCHTOTRefMarker(Int_t board)
+{
+  static TH1* h[2] = {nullptr, nullptr};
+  if(sch_tot_ref[board] < 0.) return nullptr;
+  if(!h[board]){
+    h[board] = new TH1D(Form("SCH_TOT_Ref_Board%d", board), "", 1000, 0., 100.);
+    h[board]->SetDirectory(nullptr);
+    h[board]->SetStats(kFALSE);
+    h[board]->SetLineColor(kRed);
+    h[board]->SetFillColor(kRed);
+    h[board]->SetBinContent(h[board]->FindBin(sch_tot_ref[board]), 1.e12);
+  }
+  return h[board];
+}
+}
+
+//____________________________________________________________________________
+void
+SetSCHTOTRef(Double_t ref_board0, Double_t ref_board1)
+{
+  sch_tot_ref[0] = ref_board0;
+  sch_tot_ref[1] = ref_board1;
+}
+
+//____________________________________________________________________________
 TCanvas*
 SCHTOT()
 {
@@ -493,8 +526,69 @@ SCHTOT()
     auto h = GHist::get(HistMaker::getUniqueID(kSCH, 0, kTOT, seg+1));
     if(!h) continue;
     h->Draw();
+    auto href = SCHTOTRefMarker(seg/32);
+    if(href) href->Draw("hist same");
   }
   return c1;
+}
+
+//____________________________________________________________________________
+// Board-sum TOT (TDC gated). Red marker: reference peak, text: UpdateSCHTOTPeak()
+TCanvas*
+SCHTOTBoard()
+{
+  TCanvas *c1 = new TCanvas(__func__, __func__);
+  c1->Divide(2, 1);
+  for(Int_t board=0; board<2; ++board){
+    c1->cd(board+1);
+    auto h = GHist::get(HistMaker::getUniqueID(kSCH, 0, kTOTwTDC, 100+board+1));
+    if(!h) continue;
+    h->Draw();
+    auto href = SCHTOTRefMarker(board);
+    if(href) href->Draw("hist same");
+  }
+  return c1;
+}
+
+//____________________________________________________________________________
+// Current peak of the board-sum TOT = mean within +-3 bins of the maximum bin
+void
+UpdateSCHTOTPeak()
+{
+  static std::vector<TText*> tex(2);
+  static auto c1 = (TCanvas*)gROOT->FindObject("SCHTOTBoard");
+  if(!c1) return;
+  const Double_t min_entries = 200.;
+  for(Int_t board=0; board<2; ++board){
+    c1->cd(board+1);
+    TH1 *h = GHist::get(HistMaker::getUniqueID(kSCH, 0, kTOTwTDC, 100+board+1));
+    if(!h) continue;
+    TString text;
+    if(h->Integral() < min_entries){
+      text = "peak: low statistics";
+    }else{
+      const Int_t bmax = h->GetMaximumBin();
+      const Int_t b1 = TMath::Max(1, bmax-3);
+      const Int_t b2 = TMath::Min(h->GetNbinsX(), bmax+3);
+      Double_t sw = 0., swx = 0.;
+      for(Int_t b=b1; b<=b2; ++b){
+	sw  += h->GetBinContent(b);
+	swx += h->GetBinContent(b)*h->GetBinCenter(b);
+      }
+      const Double_t peak = swx/sw;
+      if(sch_tot_ref[board] < 0.)
+	text = Form("peak %.2f  (ref not set)", peak);
+      else
+	text = Form("peak %.2f  ref %.2f  diff %+.2f",
+		    peak, sch_tot_ref[board], peak - sch_tot_ref[board]);
+    }
+    if(tex[board]) delete tex[board];
+    tex[board] = new TText;
+    tex[board]->SetNDC();
+    tex[board]->SetTextSize(0.045);
+    tex[board]->SetText(0.30, 0.80, text);
+    tex[board]->Draw();
+  }
 }
 
 //____________________________________________________________________________

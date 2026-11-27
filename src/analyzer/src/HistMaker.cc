@@ -1072,6 +1072,15 @@ TList* HistMaker::createSCH(DetectorType kDET, std::string strDet, const int nse
     }
   }
   
+  { // board-sum TOT with TDC gate (board0: seg 0-31, board1: seg 32-63)
+    int target_id = getUniqueID(kDET, 0, kTOTwTDC, 100);
+    for(int j = 0; j<2; ++j){
+      const char* title = Form("%s_TOTwTDC_Board%d", nameDetector, j);
+      top_dir->Add(createTH1(target_id + j+1, title,
+			     100, 0., 100., "TOT [ch]", ""));
+    }
+  }
+
   for(size_t i=size-3; i<size-2;i++){
     // Declaration of the sub-directory
     const char* nameSubDir = list[i].type_name.Data();

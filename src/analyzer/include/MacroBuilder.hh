@@ -48,6 +48,8 @@ TCanvas*  T1T2T3();
 TCanvas*  SCHTOT();
 TCanvas*  SCHTDC();
 TCanvas*  SCHTDCVSTOT();
+TCanvas*  SCHTOTBoard();
+void      SetSCHTOTRef(Double_t ref_board0, Double_t ref_board1);
 TCanvas*  CVCADC();
 TCanvas*  CVCTDC();
 TCanvas*  SAC3();
@@ -115,6 +117,7 @@ TCanvas* SHS2D_wotpc( void );
 
 void      UpdateBLDCEfficiency();
 void      UpdateCounterEfficiency();
+void      UpdateSCHTOTPeak();
 // RK target x (TPC_BeamProfile_RK) scaled to the TPC_BeamProfile peak on TPC2D
 void      UpdateTPCBeamProfile();
 }
