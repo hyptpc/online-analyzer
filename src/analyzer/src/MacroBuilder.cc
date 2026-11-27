@@ -580,7 +580,7 @@ UpdateSCHTOTPeak()
   static auto c1 = (TCanvas*)gROOT->FindObject("SCHTOTBoard");
   if(!c1) return;
   const Double_t min_entries = 200.;
-  const Double_t tot_min = 35.; // [ch] above the noise part
+  const Double_t tot_min = 0.; // [ch] above the noise part
   const Double_t tot_max = 100.;
   for(Int_t board=0; board<2; ++board){
     c1->cd(board+1);
