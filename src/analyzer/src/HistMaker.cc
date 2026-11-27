@@ -521,9 +521,9 @@ HistMaker::createK18Tracking(Bool_t flag_ps)
   for(const auto& [ch, name] : t2_counts){
     auto h = createTH1(getUniqueID(kK18Tracking, 0, kMulti, ch),
                        Form("%s_%s", nameDetector, name.Data()),
-                       4, -0.5, 3.5, "", "");
-    const char* labels[] = {"Tracks", "InBox", "HTOF", "InBox&HTOF"};
-    for(Int_t i=0; i<4; ++i) h->GetXaxis()->SetBinLabel(i+1, labels[i]);
+                       5, -0.5, 4.5, "", "");
+    const char* labels[] = {"Tracks", "InBox", "HTOF", "InBox&HTOF", "InBox&HTOF&T2"};
+    for(Int_t i=0; i<5; ++i) h->GetXaxis()->SetBinLabel(i+1, labels[i]);
     top_dir->Add(h);
   }
   return top_dir;

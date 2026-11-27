@@ -41,8 +41,11 @@ void Initialize(const std::string& d5_file);
 // filled to Beam_Momentum (all) and to Beam_Momentum_Pi / _K
 // htof_segs = HTOF segments with U&D hits in the HTOF_TDC window: the T2
 // counts (Beam_T2_Count_Pi/K) use those behind T2 as the real T2 arrivals
+// t2_hit = T2 leading TDC in the T2_TDC window: T2 eff. =
+// InBox&HTOF&T2 / InBox&HTOF
 void Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array,
-          Int_t particle, const std::vector<Int_t>& htof_segs);
+          Int_t particle, const std::vector<Int_t>& htof_segs,
+          Bool_t t2_hit);
 // T2 box center x, HypTPC local [mm] (DCGEO T2), 0 without T2: the T2
 // histogram x range is centered on it (HistMaker::createK18Tracking)
 Double_t T2CenterX();

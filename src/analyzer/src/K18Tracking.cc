@@ -317,14 +317,15 @@ SetupT2Box()
 }
 
 // T2 efficiency text on the canvas (same style as the Multiplicity eff.):
-// InBox&HTOF / HTOF from the count histogram
+// T2 detector eff. InBox&HTOF&T2 / InBox&HTOF from the count histogram
+// (T2 hit = leading TDC in the T2_TDC window)
 void
 UpdateT2Text(TText* text, const TH1* h)
 {
   if(!text || !h) return;
-  const Double_t n_htof = h->GetBinContent(3);
   const Double_t n_both = h->GetBinContent(4);
-  text->SetTitle(Form("eff. %.3f", n_htof > 0. ? n_both/n_htof : 0.));
+  const Double_t n_t2   = h->GetBinContent(5);
+  text->SetTitle(Form("eff. %.3f", n_both > 0. ? n_t2/n_both : 0.));
 }
 
 // z of a DCGEO entry in the HypTPC local frame, NaN if missing
@@ -531,7 +532,7 @@ LocalZ(const TString& name)
 //_____________________________________________________________________________
 void
 Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array, Int_t particle,
-     const std::vector<Int_t>& htof_segs)
+     const std::vector<Int_t>& htof_segs, Bool_t t2_hit)
 {
   static const Int_t multi_id  = HistMaker::getSequentialID(kK18Tracking, 0, kMulti,   1);
   static const Int_t mom_id    = HistMaker::getSequentialID(kK18Tracking, 0, kEnergy1, 1);
@@ -560,7 +561,7 @@ Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array, Int_t particle,
   static const Int_t bac_cnt_k_id  = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 6);
   static const Int_t tgt_cnt_pi_id = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 7);
   static const Int_t tgt_cnt_k_id  = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 8);
-  // T2 counts per particle: Tracks, InBox, HTOF, InBox&HTOF
+  // T2 counts per particle: Tracks, InBox, HTOF, InBox&HTOF, InBox&HTOF&T2
   static const Int_t t2_cnt_pi_id = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 3);
   static const Int_t t2_cnt_k_id  = HistMaker::getSequentialID(kK18Tracking, 0, kMulti, 4);
 
@@ -643,6 +644,7 @@ Fill(const DCAnalyzer& dcAna, std::vector<TH1*>& hptr_array, Int_t particle,
         if(in_box)             h->Fill(1);
         if(htof_hit)           h->Fill(2);
         if(in_box && htof_hit) h->Fill(3);
+        if(in_box && htof_hit && t2_hit) h->Fill(4);
         UpdateT2Text(T2CountText(particle), h);
       }
     }
