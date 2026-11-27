@@ -859,6 +859,9 @@ process_event( void )
 	  }
 	  hid=gHist.getSequentialID(kDET,0,kADC2D,seg+1);
 	  hptr_array[hid]->Fill(leading_array.at(m), leading_array.at(m) - tdc);
+	  // board-sum TOT (board0: seg 0-31, board1: seg 32-63), all hits
+	  hid=gHist.getSequentialID(kDET,0,kTOT,100+seg/32+1);
+	  hptr_array[hid]->Fill(leading_array.at(m) - tdc);
 	  // board-sum TOT (board0: seg 0-31, board1: seg 32-63), gated hit by hit
 	  if(tdc_min < (UInt_t)leading_array.at(m) && (UInt_t)leading_array.at(m) < tdc_max){
 	    hid=gHist.getSequentialID(kDET,0,kTOTwTDC,100+seg/32+1);

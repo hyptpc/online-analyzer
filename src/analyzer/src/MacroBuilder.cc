@@ -488,7 +488,7 @@ namespace
 {
 Double_t sch_tot_ref[2] = {-1., -1.};
 
-// thin red marker at the reference position, clipped at the top of the frame
+// thin blue marker at the reference position, clipped at the top of the frame
 TH1*
 SCHTOTRefMarker(Int_t board)
 {
@@ -498,8 +498,8 @@ SCHTOTRefMarker(Int_t board)
     h[board] = new TH1D(Form("SCH_TOT_Ref_Board%d", board), "", 1000, 0., 100.);
     h[board]->SetDirectory(nullptr);
     h[board]->SetStats(kFALSE);
-    h[board]->SetLineColor(kRed);
-    h[board]->SetFillColor(kRed);
+    h[board]->SetLineColor(kBlue);
+    h[board]->SetFillColor(kBlue);
     h[board]->SetBinContent(h[board]->FindBin(sch_tot_ref[board]), 1.e12);
   }
   return h[board];
@@ -533,7 +533,8 @@ SCHTOT()
 }
 
 //____________________________________________________________________________
-// Board-sum TOT (TDC gated). Red marker: reference peak, text: UpdateSCHTOTPeak()
+// Board-sum TOT. Black: all hits, red: inside the TDC window.
+// Blue marker: reference peak, text: UpdateSCHTOTPeak() (peak of the red one)
 TCanvas*
 SCHTOTBoard()
 {
@@ -541,9 +542,15 @@ SCHTOTBoard()
   c1->Divide(2, 1);
   for(Int_t board=0; board<2; ++board){
     c1->cd(board+1);
+    auto hall = GHist::get(HistMaker::getUniqueID(kSCH, 0, kTOT, 100+board+1));
     auto h = GHist::get(HistMaker::getUniqueID(kSCH, 0, kTOTwTDC, 100+board+1));
-    if(!h) continue;
-    h->Draw();
+    if(!hall || !h) continue;
+    hall->SetLineColor(kBlack);
+    hall->Draw();
+    h->SetLineColor(kRed);
+    h->SetFillColor(kRed);
+    h->SetFillStyle(3001);
+    h->Draw("same");
     auto href = SCHTOTRefMarker(board);
     if(href) href->Draw("hist same");
   }
