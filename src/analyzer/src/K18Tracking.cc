@@ -25,6 +25,7 @@
 #include "FieldMan.hh"
 #include "HistMaker.hh"
 #include "TransferMatrixMan.hh"
+#include "UserParamMan.hh"
 #include "ThreeVector.hh"
 
 #include <UnpackerManager.hh>
@@ -32,6 +33,7 @@
 namespace
 {
 auto& gTM = TransferMatrixMan::GetInstance();
+const auto& gUser = UserParamMan::GetInstance();
 const auto& gGeom = DCGeomMan::GetInstance();
 const auto& gField = FieldMan::GetInstance();
 
@@ -64,6 +66,29 @@ BeamCharge()
 }
 
 //_____________________________________________________________________________
+// D5 momentum calibration, read once from UserParam (optional keys):
+//   D5FLDFACTOR / D5MOMOFFSET [GeV/c] -> offline D5FieldMan,
+//   p0 = 0.299792458 * |B| * 2.0408 m * D5FLDFACTOR + D5MOMOFFSET
+// without D5FLDFACTOR the old online kD5Radius * kFieldFactor is used
+struct D5CalibParam { Double_t radius, factor, offset; };
+const D5CalibParam&
+D5Calib()
+{
+  static const D5CalibParam c = []{
+    static const Double_t kOfflineRadius = 2.0408; // [m] offline D5FieldMan
+    D5CalibParam p = {kD5Radius, kFieldFactor, 0.};
+    if(gUser.GetSize("D5FLDFACTOR") > 0){
+      p.radius = kOfflineRadius;
+      p.factor = gUser.GetParameter("D5FLDFACTOR");
+      if(gUser.GetSize("D5MOMOFFSET") > 0)
+        p.offset = gUser.GetParameter("D5MOMOFFSET");
+    }
+    return p;
+  }();
+  return c;
+}
+
+//_____________________________________________________________________________
 // read the D5 field and set the central momentum; on failure the previous
 // central momentum is kept
 void
@@ -91,7 +116,9 @@ UpdateD5Field()
     Double_t field;
     if(!(iss >> field)) continue;
     g_d5_field = field;
-    gTM.SetCentralMomentum(0.299792458*TMath::Abs(field)*kD5Radius*kFieldFactor);
+    const auto& c = D5Calib();
+    gTM.SetCentralMomentum(0.299792458*TMath::Abs(field)*c.radius*c.factor
+                           + c.offset);
     std::cout << "#D K18Tracking D5 = " << field << " T from " << g_d5_file
               << " -> central momentum " << gTM.GetCentralMomentum()
               << " GeV/c" << std::endl;
